@@ -1,0 +1,13 @@
+# Змінні середовища — НІКОЛИ не пушити в git
+.env
+.env.local
+.env.production
+
+# Vercel
+.vercel
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/
