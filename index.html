@@ -837,6 +837,11 @@ create table if not exists audience_portrait (
   updated_at timestamptz default now(),
   unique (user_id)
 );
+create table if not exists mentor_plan (
+  user_id uuid primary key references auth.users,
+  plan jsonb,
+  generated_at timestamptz default now()
+);
 create table if not exists user_questionnaire (
   user_id uuid primary key references auth.users,
   gender text,
@@ -896,9 +901,12 @@ alter table audience_portrait enable row level security;
 alter table baseline enable row level security;
 alter table chats enable row level security;
 alter table user_questionnaire enable row level security;
+alter table mentor_plan enable row level security;
 create policy if not exists "own_chats" on chats
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
 create policy if not exists "own_questionnaire" on user_questionnaire
+  using (auth.uid()=user_id) with check (auth.uid()=user_id);
+create policy if not exists "own_mentor_plan" on mentor_plan
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
 create policy if not exists "own_notes" on notes
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
@@ -1546,6 +1554,7 @@ function goTab(name) {
   if(name==='ai') renderChatList();
   if(name==='home') renderHome();
   if(name==='practice') renderPractice();
+  if(name==='mentor') renderMentor();
   closeMenu();
   window.scrollTo({top:0,behavior:'instant'});
 }
@@ -1972,6 +1981,208 @@ async function checkProfileNudge() {
   const p = await dbProfile();
   const isEmpty = !p || (!p.field_experience && !p.niche && (!p.blockers || !p.blockers.length));
   el.classList.toggle('on', isEmpty && !dismissed);
+}
+
+// ──────────────────────────────────────────
+// MENTOR PLAN — AI-generated
+// ──────────────────────────────────────────
+async function dbMentorPlan() {
+  const local = lload('mentor_plan', null);
+  if (!sbUser) return local;
+  try {
+    const { data, error } = await sb.from('mentor_plan').select('plan').eq('user_id', sbUser.id);
+    if (error) return local;
+    return (data && data[0]?.plan) || local;
+  } catch(e) { return local; }
+}
+
+async function dbSaveMentorPlan(plan) {
+  try { lsave('mentor_plan', plan); } catch(e) {}
+  if (!sbUser) return { ok: true, local: true };
+  try {
+    const { data: existing, error: selErr } = await sb.from('mentor_plan').select('user_id').eq('user_id', sbUser.id);
+    if (selErr) return { ok: false, error: selErr.message };
+    const payload = { plan, generated_at: new Date().toISOString() };
+    let writeErr;
+    if (existing && existing.length) {
+      const { error } = await sb.from('mentor_plan').update(payload).eq('user_id', sbUser.id);
+      writeErr = error;
+    } else {
+      const { error } = await sb.from('mentor_plan').insert({ user_id: sbUser.id, ...payload });
+      writeErr = error;
+    }
+    if (writeErr) return { ok: false, error: writeErr.message };
+    return { ok: true };
+  } catch(e) { return { ok: false, error: e.message }; }
+}
+
+function extractJSON(text) {
+  if (!text) return null;
+  try { return JSON.parse(text); } catch {}
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) { try { return JSON.parse(fence[1]); } catch {} }
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    try { return JSON.parse(text.slice(start, end+1)); } catch {}
+  }
+  return null;
+}
+
+async function generateMentorPlan() {
+  const profile = await dbProfile();
+  if (!profile || (!profile.has_blog && (!profile.blockers || !profile.blockers.length) && !profile.profession)) {
+    if (confirm('Спочатку заповни анкету профіля — тоді план буде дійсно персональним. Відкрити анкету?')) {
+      openProfileModal();
+    }
+    return;
+  }
+  const btn = document.getElementById('generateMentorBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Генерую план... (~30 сек)'; }
+
+  const profileCtx = await getProfileContext();
+  const stats = await dbStats();
+  const audience = await dbAudience();
+
+  const system = `Ти стратег контент-маркетингу і ментор для контент-творців. На основі профіля користувача згенеруй ПЕРСОНАЛЬНИЙ ментор-план у форматі JSON.
+
+ВАЖЛИВО:
+- Поверни ТІЛЬКИ валідний JSON. Без markdown-цитат, без коментарів, без пояснень до/після.
+- Усе українською.
+- Будь конкретним. Бери до уваги тип блогу, блокери, цілі і досвід.
+- Уникай загальних фраз. Кожна рекомендація має бути дієвою.
+
+Структура JSON:
+{
+  "positioning": "2-3 речення: хто користувач і що дає підписникам",
+  "pillars": [
+    {"emoji":"🎯","name":"Назва опори","desc":"опис 1 речення","tags":["тег1","тег2","тег3"]},
+    {"emoji":"🏛","name":"...","desc":"...","tags":[...]},
+    {"emoji":"📅","name":"...","desc":"...","tags":[...]}
+  ],
+  "weeks": [
+    {"num":"01","name":"Назва тижня (2-3 слова)","focus":"Головний фокус","items":["Конкретна дія 1","Дія 2","Дія 3"]},
+    ... всього 6-8 тижнів від базового до просунутого
+  ],
+  "formula": {
+    "label":"Назва (наприклад 70/20/10)",
+    "parts":[
+      {"percent":"70%","label":"Що це","desc":"Приклади з ніші"},
+      {"percent":"20%","label":"...","desc":"..."},
+      {"percent":"10%","label":"...","desc":"..."}
+    ]
+  },
+  "reflection_questions":[
+    {"q":"Питання","cat":"Контент|Голова|Ріст|Аудиторія|Цінності|Творчість"},
+    ... 8-10 питань під блокери користувача
+  ],
+  "quick_prompts":[
+    {"label":"📊 Назва","text":"Готовий промпт для AI-чату"},
+    ... 6-8 промптів під нішу
+  ],
+  "this_week":["Дія 1","Дія 2","Дія 3","Дія 4"],
+  "strategy_per_blocker":[
+    {"blocker":"Назва блокера","advice":"Конкретна стратегія як подолати"}
+  ]
+}`;
+
+  const userMsg = `${profileCtx}\n\nДодатково: статистика за ${stats.length} місяців${audience?.ai_result?', портрет ЦА вже згенеровано':''}.\n\nЗгенеруй мій персональний ментор-план як JSON.`;
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4000,
+        system,
+        messages: [{ role: 'user', content: userMsg }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || data.error.type || 'API error');
+    const text = data.content?.find(b => b.type === 'text')?.text || '';
+    const plan = extractJSON(text);
+    if (!plan || !plan.positioning) throw new Error('Не вдалося розпарсити відповідь ШІ');
+    const saveResult = await dbSaveMentorPlan(plan);
+    showToast(saveResult.ok ? '✓ План згенеровано' : '⚠ Згенеровано локально', saveResult.ok ? 'success' : 'error');
+    renderMentor();
+  } catch(e) {
+    console.error('mentor gen', e);
+    showToast('Помилка генерації: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 Згенерувати персональний план'; }
+  }
+}
+
+async function regenerateMentorPlan() {
+  if (!confirm('Перегенерувати план? Поточний буде замінено.')) return;
+  await generateMentorPlan();
+}
+
+function renderMentorPlan(plan) {
+  const u = USERS[CU];
+  const c = u.color;
+  const positioning = plan.positioning ? `<div class="cncpt"><div class="cnl" style="color:${c}">🎯 позиціонування</div><p class="cnt">${plan.positioning}</p></div>` : '';
+  const thisWeek = (plan.this_week && plan.this_week.length) ? `
+    <div class="card" style="border-left:3px solid ${c}">
+      <div class="ctitle">📌 Що зробити цього тижня</div>
+      <ul class="qlist" style="margin-top:8px">${plan.this_week.map(t=>`<li>${t}</li>`).join('')}</ul>
+    </div>` : '';
+  const pillars = plan.pillars && plan.pillars.length ? `
+    <div class="slbl">Опори контенту</div>
+    <div class="pillars">${plan.pillars.map(p=>`
+      <div class="pillar">
+        <span class="pe">${p.emoji||'🎯'}</span>
+        <div class="pname">${p.name||''}</div>
+        <div class="pdesc">${p.desc||''}</div>
+        ${(p.tags&&p.tags.length)?`<div class="ptags">${p.tags.map(t=>`<span class="ptag">${t}</span>`).join('')}</div>`:''}
+      </div>`).join('')}</div>` : '';
+  const formula = plan.formula && plan.formula.parts ? `
+    <div class="slbl">Формула контенту${plan.formula.label?' — '+plan.formula.label:''}</div>
+    <div class="fmlbox">${plan.formula.parts.map(p=>`
+      <div>
+        <div class="fpct" style="color:${c}">${p.percent||''}</div>
+        <div class="flbl">${(p.label||'')}${p.desc?' — '+p.desc:''}</div>
+      </div>`).join('')}</div>` : '';
+  const weeks = plan.weeks && plan.weeks.length ? `
+    <div class="slbl">Тижнева дорога</div>
+    ${plan.weeks.map(w=>`
+      <div class="wkcard">
+        <div class="wkg">
+          <div class="wkn" style="background:#111">
+            <div class="wknum" style="color:${c}">${w.num||''}</div>
+            <div class="wkname">${w.name||''}</div>
+          </div>
+          <div class="wkc">
+            <div class="wkf">${w.focus||''}</div>
+            <ul class="wki">${(w.items||[]).map(i=>`<li>${i}</li>`).join('')}</ul>
+          </div>
+        </div>
+      </div>`).join('')}` : '';
+  const blockers = plan.strategy_per_blocker && plan.strategy_per_blocker.length ? `
+    <div class="slbl">Стратегії під твої блокери</div>
+    ${plan.strategy_per_blocker.map(b=>`
+      <div class="card">
+        <div style="font-size:14px;font-weight:700;color:${c};margin-bottom:6px">${b.blocker||''}</div>
+        <div style="font-size:14px;line-height:1.6;color:var(--ink2)">${b.advice||''}</div>
+      </div>`).join('')}` : '';
+  const prompts = plan.quick_prompts && plan.quick_prompts.length ? `
+    <div class="slbl">Швидкі ШІ-промпти під твою нішу</div>
+    <div class="chips" style="margin-bottom:18px">${plan.quick_prompts.map(p=>`<div class="chip" onclick="askAiFromDash(${JSON.stringify(p.text||'').replace(/"/g,'&quot;')})">${p.label||''}</div>`).join('')}</div>` : '';
+
+  return `<div class="sec">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+      <div class="slbl" style="margin:0">Твій персональний план</div>
+      <button class="btn btn-out btn-sm" onclick="regenerateMentorPlan()">↻ Перегенерувати</button>
+    </div>
+    ${positioning}
+    ${thisWeek}
+    ${pillars}
+    ${formula}
+    ${weeks}
+    ${blockers}
+    ${prompts}
+  </div>`;
 }
 
 async function getProfileContext() {
@@ -3525,15 +3736,21 @@ function renderTools() {
 // ══════════════════════════════════════════
 // MENTOR CONTENT
 // ══════════════════════════════════════════
-function renderMentor() {
+async function renderMentor() {
   document.getElementById('mbg').textContent = USERS[CU].name.toLowerCase();
   document.getElementById('mtag').textContent = USERS[CU].heroTag;
   document.getElementById('mtitle').innerHTML = 'Хто ти і що ти <span style="color:'+USERS[CU].color+'">даєш</span>';
   const el = document.getElementById('mentorcontent');
-  if(CU==='vika') el.innerHTML = vikaM();
-  else if(CU==='aluna') el.innerHTML = alunaM();
-  else if(CU==='dodo') el.innerHTML = dodoM();
-  else el.innerHTML = genericM();
+  if(CU==='vika') { el.innerHTML = vikaM(); return; }
+  if(CU==='aluna') { el.innerHTML = alunaM(); return; }
+  if(CU==='dodo') { el.innerHTML = dodoM(); return; }
+  // default / demo / new user: check for AI-generated plan
+  const plan = (CU === 'demo') ? null : await dbMentorPlan();
+  if (plan && plan.positioning) {
+    el.innerHTML = renderMentorPlan(plan);
+  } else {
+    el.innerHTML = genericM();
+  }
 }
 
 function genericM() {
@@ -3542,7 +3759,16 @@ function genericM() {
     <div class="cncpt"><div class="cnl">🎯 ментор-план</div><p class="cnt">${isDemo
       ? 'У реальному акаунті тут — <strong>персональний</strong> план: позиціонування, опори контенту, 12-тижнева дорога, формула 70/20/10. У демо показуємо загальну структуру.'
       : 'Твій персональний план будемо генерувати на основі анкети. Поки що тут — загальна структура того, що буде доступно.'}</p></div>
-    <div class="slbl">Структура ментор-плану</div>
+
+    ${isDemo ? '' : `
+      <div class="card" style="text-align:center;padding:26px 22px;margin-bottom:14px">
+        <div style="font-size:14px;color:var(--muted);margin-bottom:14px">Заповни профіль і згенеруй персональний план — позиціонування, опори, тижнева дорога, формула, питання рефлексії, промпти і стратегії під твої блокери.</div>
+        <button class="btn btn-ac" id="generateMentorBtn" onclick="generateMentorPlan()">🤖 Згенерувати персональний план</button>
+        <div style="font-size:12px;color:var(--muted);margin-top:10px">Займе ~30 секунд</div>
+      </div>
+    `}
+
+    <div class="slbl">Що буде у твоєму плані</div>
     <div class="pillars">
       <div class="pillar"><span class="pe">🎯</span><div class="pname">Позиціонування</div><div class="pdesc">Чим ти відрізняєшся. Що отримує підписниця коли йде до тебе.</div></div>
       <div class="pillar"><span class="pe">🏛</span><div class="pname">3 опори</div><div class="pdesc">3 ключові теми навколо яких будується твій контент.</div></div>
