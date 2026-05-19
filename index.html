@@ -191,6 +191,21 @@ label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bot
 .ciw{display:flex;gap:7px;align-items:flex-end;}
 .ciw textarea{min-height:50px;max-height:110px;}
 
+/* DASHBOARD */
+.dash-widget{margin-bottom:24px;}
+.dash-widget:last-child{margin-bottom:8px;}
+.dash-widget-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;}
+.dash-widget-title{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);}
+.dash-widget-action{font-size:12px;color:var(--ac);background:none;border:none;cursor:pointer;font-family:'Geologica',sans-serif;padding:4px 6px;border-radius:6px;font-weight:500;}
+.dash-widget-action:hover{background:rgba(0,0,0,.04);}
+.dash-opt{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-radius:9px;border:1px solid var(--border);margin-bottom:6px;transition:border-color .15s,background .15s;}
+.dash-opt:hover{border-color:var(--b2);}
+.dash-opt input{width:auto;cursor:pointer;flex-shrink:0;}
+.dash-opt span{font-size:14px;}
+.dash-opt input:checked ~ span{font-weight:600;}
+body.theme-modern .dash-opt{background:var(--card);box-shadow:var(--shadow-card);border:none;}
+body.theme-modern .dash-opt:hover{box-shadow:var(--shadow-card-hover);}
+
 /* PROGRESS */
 .streak-row{display:flex;align-items:baseline;gap:24px;margin:14px 0 16px;}
 .streak-big{font-size:48px;font-weight:700;line-height:1;color:var(--ac);}
@@ -750,6 +765,19 @@ create policy if not exists "own_baseline" on baseline
   </div>
 </div>
 
+<!-- DASHBOARD SETTINGS MODAL -->
+<div class="modal-bg" id="dashboard-modal">
+  <div class="modal">
+    <h2>Налаштувати дашборд</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Обери що показувати на головній. Порядок як у списку — згори вниз.</p>
+    <div id="dashboardOptions" style="margin-bottom:16px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ac" onclick="saveDashSettings()">Зберегти</button>
+      <button class="btn btn-out" onclick="document.getElementById('dashboard-modal').classList.remove('on')">Скасувати</button>
+    </div>
+  </div>
+</div>
+
 <!-- APP -->
 <div id="app">
   <nav>
@@ -791,13 +819,8 @@ create policy if not exists "own_baseline" on baseline
       <div class="pills" id="hpills"></div>
     </div>
     <div class="sec">
-      <div class="slbl">Останні нотатки</div>
-      <div id="homenotes"></div>
-      <button class="btn btn-out" onclick="goTab('notes')" style="margin-top:10px">Всі нотатки →</button>
-      <div class="divider"></div>
-      <div class="slbl">Статистика — останній місяць</div>
-      <div class="scards" id="homestats"></div>
-      <button class="btn btn-out" onclick="goTab('stats')" style="margin-top:10px">Детальніше →</button>
+      <div id="dashboardWidgets"></div>
+      <button class="btn btn-out btn-sm" onclick="openDashSettings()" style="margin-top:12px">⚙ Налаштувати дашборд</button>
     </div>
   </div>
 
@@ -1372,23 +1395,201 @@ const DEMO_STATS = [
 // ══════════════════════════════════════════
 // HOME
 // ══════════════════════════════════════════
-async function renderHome() {
-  const notes = await dbNotes();
-  const el = document.getElementById('homenotes');
-  el.innerHTML = !notes.length
-    ? '<div style="color:var(--muted);font-size:14px">Нотаток ще немає</div>'
-    : notes.slice(0,3).map(n=>`<div class="nitem" onclick="goTab('notes')" style="margin-bottom:8px">
-        <div class="ndt">${n.created_at ? new Date(n.created_at).toLocaleDateString('uk-UA') : (n.date||'')}</div>
-        <div class="nttl">${n.title||'Без назви'}</div>
-        <div class="nprv">${(n.content||n.text||'')}</div></div>`).join('');
+const DASHBOARD_WIDGETS = [
+  {id:'streak',      name:'🔥 Стрік публікацій',           default:false},
+  {id:'goals',       name:'🎯 Цілі (прогрес)',             default:false},
+  {id:'stats',       name:'📊 Статистика останнього місяця',default:true},
+  {id:'growth',      name:'📈 Графік росту IG/TT',         default:false},
+  {id:'notes',       name:'📝 Останні нотатки',            default:true},
+  {id:'reflectDay',  name:'🪞 Питання дня з рефлексії',    default:false},
+  {id:'checklist',   name:'✅ Прогрес чекліста',           default:false},
+  {id:'audience',    name:'👥 Портрет ЦА (підсумок)',       default:false},
+  {id:'aiChips',     name:'🤖 Швидкі ШІ-запити',           default:false},
+];
 
+function getDashSelection() {
+  const saved = localStorage.getItem('kishkas-dashboard-'+CU);
+  if (saved) { try { return JSON.parse(saved); } catch{} }
+  return DASHBOARD_WIDGETS.filter(w=>w.default).map(w=>w.id);
+}
+
+function openDashSettings() {
+  const selected = getDashSelection();
+  document.getElementById('dashboardOptions').innerHTML = DASHBOARD_WIDGETS.map(w=>`
+    <label class="dash-opt">
+      <input type="checkbox" value="${w.id}" ${selected.includes(w.id)?'checked':''}>
+      <span>${w.name}</span>
+    </label>`).join('');
+  document.getElementById('dashboard-modal').classList.add('on');
+}
+
+function saveDashSettings() {
+  const checked = Array.from(document.querySelectorAll('#dashboardOptions input:checked')).map(i=>i.value);
+  localStorage.setItem('kishkas-dashboard-'+CU, JSON.stringify(checked));
+  document.getElementById('dashboard-modal').classList.remove('on');
+  renderHome();
+}
+
+async function renderHome() {
+  const selected = getDashSelection();
+  const order = DASHBOARD_WIDGETS.filter(w=>selected.includes(w.id)).map(w=>w.id);
+  const container = document.getElementById('dashboardWidgets');
+  if (!order.length) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:14px;text-align:center;padding:40px 0">Дашборд пустий. Натисни «⚙ Налаштувати» щоб обрати віджети.</div>';
+    return;
+  }
+  const renders = await Promise.all(order.map(id=>renderDashWidget(id)));
+  container.innerHTML = renders.filter(Boolean).join('');
+  if (order.includes('growth')) drawDashGrowth();
+}
+
+async function renderDashWidget(id) {
+  switch(id) {
+    case 'streak':     return await widgetStreak();
+    case 'goals':      return await widgetGoals();
+    case 'stats':      return await widgetStats();
+    case 'growth':     return await widgetGrowth();
+    case 'notes':      return await widgetNotes();
+    case 'reflectDay': return widgetReflectDay();
+    case 'checklist':  return widgetChecklist();
+    case 'audience':   return await widgetAudience();
+    case 'aiChips':    return widgetAiChips();
+    default:           return '';
+  }
+}
+
+async function widgetStreak() {
+  const days = await dbStreakDays();
+  const { current, max } = computeStreak(days);
+  const today = new Date().toISOString().slice(0,10);
+  const marked = days.includes(today);
+  return `<div class="dash-widget">
+    <div class="dash-widget-head"><div class="dash-widget-title">🔥 Стрік</div></div>
+    <div class="card">
+      <div class="streak-row">
+        <div><div class="sv streak-big">${current}</div><div class="sl">днів підряд</div></div>
+        <div><div class="sv streak-small">${max}</div><div class="sl">рекорд</div></div>
+      </div>
+      ${marked
+        ? '<div style="font-size:13px;color:var(--muted)">✓ Сьогодні відмічено</div>'
+        : '<button class="btn btn-ac btn-sm" onclick="markPostedToday().then(renderHome)">+ Я опублікувала сьогодні</button>'}
+    </div>
+  </div>`;
+}
+
+async function widgetGoals() {
+  const goals = await dbGoals();
+  if (!goals.length) return '';
   const stats = await dbStats();
-  const sel = document.getElementById('homestats');
-  if (!stats.length) { sel.innerHTML='<div style="color:var(--muted);font-size:14px;grid-column:1/-1">Статистика ще не додана</div>'; return; }
+  const last = stats[stats.length-1] || {};
+  return `<div class="dash-widget">
+    <div class="dash-widget-head"><div class="dash-widget-title">🎯 Цілі</div><button class="dash-widget-action" onclick="goTab('stats')">Управління →</button></div>
+    <div class="card">${goals.map(g=>{
+      const cur=last[g.network]||0, pct=g.target>0?Math.min(100,Math.round(cur/g.target*100)):0;
+      return `<div class="goal-row">
+        <div class="goal-head"><strong>${g.network==='ig'?'Instagram':'TikTok'}: ${cur} / ${g.target}</strong></div>
+        <div class="goal-bar"><div class="goal-fill" style="width:${pct}%"></div></div>
+        <div class="goal-meta">${pct}%${g.deadline?` · до ${g.deadline}`:''}</div>
+      </div>`;
+    }).join('')}</div>
+  </div>`;
+}
+
+async function widgetStats() {
+  const stats = await dbStats();
+  if (!stats.length) return `<div class="dash-widget">
+    <div class="dash-widget-head"><div class="dash-widget-title">📊 Статистика</div></div>
+    <div class="card"><div style="color:var(--muted);font-size:14px">Ще немає даних. <button class="dash-widget-action" onclick="goTab('stats')">Додати →</button></div></div>
+  </div>`;
   const last=stats[stats.length-1], prev=stats.length>1?stats[stats.length-2]:null;
   const chg=(a,b,k)=>{ if(!b) return ''; const d=(a[k]||0)-(b[k]||0); return d>0?`<div class="schg cup">+${d}</div>`:d<0?`<div class="schg cdn">${d}</div>`:`<div class="schg cfl">без змін</div>`; };
-  sel.innerHTML=[{k:'ig',l:'Instagram'},{k:'tt',l:'TikTok'},{k:'posts',l:'Постів'},{k:'stories',l:'Сторіс'},{k:'reels',l:'Reels/TT'},{k:'reach',l:'Охоплення'}]
-    .map(s=>`<div class="scard"><div class="sv">${last[s.k]||0}</div><div class="sl">${s.l}</div>${chg(last,prev,s.k)}</div>`).join('');
+  return `<div class="dash-widget">
+    <div class="dash-widget-head"><div class="dash-widget-title">📊 ${last.month} ${last.year}</div><button class="dash-widget-action" onclick="goTab('stats')">Детальніше →</button></div>
+    <div class="scards">${[{k:'ig',l:'Instagram'},{k:'tt',l:'TikTok'},{k:'posts',l:'Постів'},{k:'stories',l:'Сторіс'},{k:'reels',l:'Reels/TT'},{k:'reach',l:'Охоплення'}].map(s=>`<div class="scard"><div class="sv">${last[s.k]||0}</div><div class="sl">${s.l}</div>${chg(last,prev,s.k)}</div>`).join('')}</div>
+  </div>`;
+}
+
+async function widgetGrowth() {
+  const stats = await dbStats();
+  if (stats.length < 2) return '';
+  return `<div class="dash-widget">
+    <div class="dash-widget-head"><div class="dash-widget-title">📈 Підписники</div><button class="dash-widget-action" onclick="goTab('stats')">Більше →</button></div>
+    <div class="card"><canvas id="dashGrowthCanvas" height="90"></canvas></div>
+  </div>`;
+}
+
+async function drawDashGrowth() {
+  const canvas = document.getElementById('dashGrowthCanvas');
+  if (!canvas) return;
+  const stats = await dbStats();
+  if (charts['dashGrowth']) charts['dashGrowth'].destroy();
+  charts['dashGrowth'] = new Chart(canvas.getContext('2d'), {
+    type:'line',
+    data:{labels:stats.map(m=>m.month.substring(0,3)),datasets:[
+      {label:'IG',data:stats.map(m=>m.ig||0),borderColor:'#FF6B9D',backgroundColor:'rgba(255,107,157,.08)',tension:.4,fill:true},
+      {label:'TT',data:stats.map(m=>m.tt||0),borderColor:'#003a80',backgroundColor:'rgba(0,58,128,.08)',tension:.4,fill:true},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,display:false},x:{display:true}}}
+  });
+}
+
+async function widgetNotes() {
+  const notes = await dbNotes();
+  if (!notes.length) return `<div class="dash-widget">
+    <div class="dash-widget-head"><div class="dash-widget-title">📝 Нотатки</div></div>
+    <div class="card"><div style="color:var(--muted);font-size:14px">Нотаток ще немає. <button class="dash-widget-action" onclick="goTab('notes')">Створити →</button></div></div>
+  </div>`;
+  return `<div class="dash-widget">
+    <div class="dash-widget-head"><div class="dash-widget-title">📝 Останні нотатки</div><button class="dash-widget-action" onclick="goTab('notes')">Всі →</button></div>
+    ${notes.slice(0,3).map(n=>`<div class="nitem" onclick="goTab('notes')" style="margin-bottom:8px">
+      <div class="ndt">${n.created_at?new Date(n.created_at).toLocaleDateString('uk-UA'):(n.date||'')}</div>
+      <div class="nttl">${n.title||'Без назви'}</div>
+      <div class="nprv">${n.content||n.text||''}</div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function widgetReflectDay() {
+  const pool = REFLECT_QS[CU] || REFLECT_QS.vika || [];
+  if (!pool.length) return '';
+  const dayIdx = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0).getTime()) / 86400000);
+  const q = pool[dayIdx % pool.length];
+  return `<div class="dash-widget">
+    <div class="dash-widget-head"><div class="dash-widget-title">🪞 Питання дня</div><button class="dash-widget-action" onclick="goTab('reflect')">Всі →</button></div>
+    <div class="card">
+      <div class="rqcat">${q.cat}</div>
+      <div class="rqtxt">${q.q}</div>
+    </div>
+  </div>`;
+}
+
+function widgetChecklist() {
+  const state = lload('checklist-state', {});
+  const done = Object.values(state).filter(Boolean).length;
+  const total = CHECKLIST_ITEMS.length;
+  return `<div class="dash-widget">
+    <div class="dash-widget-head"><div class="dash-widget-title">✅ Чекліст: ${done}/${total}</div><button class="dash-widget-action" onclick="goTab('stats')">Повний →</button></div>
+    <div class="card"><div class="goal-bar"><div class="goal-fill" style="width:${(done/total)*100}%"></div></div></div>
+  </div>`;
+}
+
+async function widgetAudience() {
+  const a = await dbAudience();
+  if (!a || !a.ai_result) return '';
+  const preview = a.ai_result.slice(0,260) + (a.ai_result.length > 260 ? '...' : '');
+  return `<div class="dash-widget">
+    <div class="dash-widget-head"><div class="dash-widget-title">👥 Портрет ЦА</div><button class="dash-widget-action" onclick="goTab('stats')">Повний →</button></div>
+    <div class="card"><div style="font-size:13px;color:var(--ink2);line-height:1.6;white-space:pre-wrap">${preview}</div></div>
+  </div>`;
+}
+
+function widgetAiChips() {
+  const u = USERS[CU];
+  if (!u.chips) return '';
+  return `<div class="dash-widget">
+    <div class="dash-widget-head"><div class="dash-widget-title">🤖 Швидкі ШІ-запити</div></div>
+    <div class="chips" style="margin-bottom:0">${u.chips.map((c,i)=>`<div class="chip" onclick="goTab('ai');setTimeout(()=>{const el=document.getElementById('aiq');if(el)el.value=${JSON.stringify(u.chipTexts[i])}},100)">${c}</div>`).join('')}</div>
+  </div>`;
 }
 
 // ══════════════════════════════════════════
