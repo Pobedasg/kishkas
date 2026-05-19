@@ -600,11 +600,24 @@ create table if not exists stats (
   reels int default 0, reach int default 0,
   note text, created_at timestamptz default now()
 );
+create table if not exists reflections (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users,
+  question_idx int not null,
+  question_text text, category text,
+  answer text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique (user_id, question_idx)
+);
 alter table notes enable row level security;
 alter table stats enable row level security;
+alter table reflections enable row level security;
 create policy if not exists "own_notes" on notes
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
 create policy if not exists "own_stats" on stats
+  using (auth.uid()=user_id) with check (auth.uid()=user_id);
+create policy if not exists "own_reflections" on reflections
   using (auth.uid()=user_id) with check (auth.uid()=user_id);</pre>
     <button class="btn btn-ink" onclick="document.getElementById('setup-modal').classList.remove('on')">Зрозуміло</button>
   </div>
@@ -705,6 +718,8 @@ create policy if not exists "own_stats" on stats
       <div id="chartsec" style="display:none">
         <div class="cb"><div class="ctitle">Підписники</div><canvas id="chfol" height="160"></canvas></div>
         <div class="cb"><div class="ctitle">Публікації</div><canvas id="chposts" height="160"></canvas></div>
+        <div class="cb"><div class="ctitle">Охоплення</div><canvas id="chreach" height="160"></canvas></div>
+        <div class="cb"><div class="ctitle">Приріст підписників (місяць до місяця)</div><canvas id="chgrowth" height="160"></canvas></div>
       </div>
       <div class="slbl" style="margin-top:24px">Всі місяці</div>
       <div class="mlist" id="mlist"></div>
@@ -970,6 +985,7 @@ function loginSuccess() {
   renderTheory();
   renderTools();
   renderReflect();
+  if (u.reflectRotate) syncReflectFromSupabase();
   loadNotes();
   loadStats();
   renderHome();
@@ -1227,7 +1243,7 @@ async function renderCharts() {
   const stats = await dbStats();
   if (!stats.length) return;
   const labels = stats.map(m=>m.month.substring(0,3)+' '+m.year);
-  ['chfol','chposts'].forEach(id=>{ if(charts[id]) charts[id].destroy(); });
+  ['chfol','chposts','chreach','chgrowth'].forEach(id=>{ if(charts[id]) charts[id].destroy(); });
   charts['chfol']=new Chart(document.getElementById('chfol').getContext('2d'),{
     type:'line',data:{labels,datasets:[
       {label:'Instagram',data:stats.map(m=>m.ig||0),borderColor:'#FF6B9D',backgroundColor:'rgba(255,107,157,.08)',tension:0.4,fill:true},
@@ -1240,6 +1256,20 @@ async function renderCharts() {
       {label:'Сторіс',data:stats.map(m=>m.stories||0),backgroundColor:'rgba(255,160,190,.7)'},
       {label:'Reels/TT',data:stats.map(m=>m.reels||0),backgroundColor:'rgba(0,58,128,.7)'},
     ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}
+  });
+  charts['chreach']=new Chart(document.getElementById('chreach').getContext('2d'),{
+    type:'line',data:{labels,datasets:[
+      {label:'Охоплення',data:stats.map(m=>m.reach||0),borderColor:'#6C5CE7',backgroundColor:'rgba(108,92,231,.1)',tension:0.4,fill:true},
+    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}
+  });
+  const igDelta = stats.map((m,i)=>i>0?(m.ig||0)-(stats[i-1].ig||0):null);
+  const ttDelta = stats.map((m,i)=>i>0?(m.tt||0)-(stats[i-1].tt||0):null);
+  const colorBars = (arr, pos, neg) => arr.map(v => v==null ? 'transparent' : v>=0 ? pos : neg);
+  charts['chgrowth']=new Chart(document.getElementById('chgrowth').getContext('2d'),{
+    type:'bar',data:{labels,datasets:[
+      {label:'IG',data:igDelta,backgroundColor:colorBars(igDelta,'rgba(34,197,94,.75)','rgba(220,38,38,.75)')},
+      {label:'TikTok',data:ttDelta,backgroundColor:colorBars(ttDelta,'rgba(34,197,94,.45)','rgba(220,38,38,.45)')},
+    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}
   });
 }
 
@@ -1399,6 +1429,61 @@ function saveReflectAnswer(idx, text) {
   const data = JSON.parse(localStorage.getItem(key) || '{}');
   if (text) data[idx] = text; else delete data[idx];
   localStorage.setItem(key, JSON.stringify(data));
+  if (!sbUser) return;
+  saveReflectAnswer._t = saveReflectAnswer._t || {};
+  clearTimeout(saveReflectAnswer._t[idx]);
+  saveReflectAnswer._t[idx] = setTimeout(async () => {
+    const q = REFLECT_QS[CU]?.[idx]; if (!q) return;
+    try {
+      if (text) {
+        const { data: existing } = await sb.from('reflections')
+          .select('id').eq('user_id', sbUser.id).eq('question_idx', idx);
+        if (existing && existing.length) {
+          await sb.from('reflections').update({
+            answer: text, category: q.cat, question_text: q.q,
+            updated_at: new Date().toISOString()
+          }).eq('id', existing[0].id);
+        } else {
+          await sb.from('reflections').insert({
+            user_id: sbUser.id, question_idx: idx,
+            answer: text, category: q.cat, question_text: q.q
+          });
+        }
+      } else {
+        await sb.from('reflections').delete()
+          .eq('user_id', sbUser.id).eq('question_idx', idx);
+      }
+    } catch (e) { console.error('reflect save failed', e); }
+  }, 700);
+}
+
+async function syncReflectFromSupabase() {
+  if (!sbUser) return;
+  const key = 'kishkas-reflect-answers-'+CU;
+  const local = JSON.parse(localStorage.getItem(key) || '{}');
+  const { data, error } = await sb.from('reflections')
+    .select('question_idx, answer').eq('user_id', sbUser.id);
+  if (error) { console.error('reflect load failed', error); return; }
+  const remote = {};
+  (data || []).forEach(r => { remote[r.question_idx] = r.answer; });
+  for (const [idx, text] of Object.entries(local)) {
+    if (text && remote[idx] === undefined) {
+      const q = REFLECT_QS[CU]?.[idx];
+      if (q) {
+        try {
+          await sb.from('reflections').insert({
+            user_id: sbUser.id, question_idx: parseInt(idx),
+            answer: text, category: q.cat, question_text: q.q
+          });
+          remote[idx] = text;
+        } catch(e) { console.error('reflect migrate', e); }
+      }
+    }
+  }
+  localStorage.setItem(key, JSON.stringify(remote));
+  if (document.getElementById('tab-reflect')?.classList.contains('on')) {
+    renderReflect();
+  }
 }
 
 function renderReflect() {
