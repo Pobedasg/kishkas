@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>кішкас · платформа</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Geologica:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
@@ -385,8 +385,8 @@ body.theme-modern .res-item:hover{box-shadow:var(--shadow-card-hover);}
 
 @media(max-width:900px){
   .burger{display:inline-flex;}
-  .nlinks{position:fixed;top:calc(52px + env(safe-area-inset-top,0px));left:0;right:0;flex-direction:column;background:rgba(17,17,17,.99);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:10px 12px 18px;gap:4px;border-bottom:1px solid rgba(255,255,255,.08);transform:translateY(-110%);transition:transform .28s cubic-bezier(.4,0,.2,1);z-index:99;max-height:calc(100vh - 52px - env(safe-area-inset-top,0px));overflow-y:auto;pointer-events:none;}
-  .nlinks.on{transform:translateY(0);pointer-events:auto;box-shadow:0 10px 30px rgba(0,0,0,.45);}
+  .nlinks{position:fixed;top:calc(52px + env(safe-area-inset-top,0px));left:0;right:0;flex-direction:column;background:rgba(17,17,17,.99);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:10px 12px 18px;gap:4px;border-bottom:1px solid rgba(255,255,255,.08);transform:translateY(-110%);visibility:hidden;transition:transform .28s cubic-bezier(.4,0,.2,1),visibility 0s linear .28s;z-index:99;max-height:calc(100vh - 52px - env(safe-area-inset-top,0px));overflow-y:auto;pointer-events:none;}
+  .nlinks.on{transform:translateY(0);visibility:visible;transition:transform .28s cubic-bezier(.4,0,.2,1),visibility 0s linear 0s;pointer-events:auto;box-shadow:0 10px 30px rgba(0,0,0,.45);}
   .nlinks .nb{font-size:15px;padding:13px 14px;text-align:left;width:100%;border-radius:10px;font-weight:500;}
   .nlinks .nb.on{background:rgba(255,255,255,.12);color:white;}
   .nlinks .nb:hover{background:rgba(255,255,255,.08);}
@@ -401,7 +401,7 @@ body.theme-modern .res-item:hover{box-shadow:var(--shadow-card-hover);}
   /* classic mode: horizontal scrolling nav (no burger) */
   body.nav-classic .burger{display:none;}
   body.nav-classic .nav-backdrop{display:none !important;}
-  body.nav-classic .nlinks{position:static;top:auto;flex-direction:row;background:none;padding:0;gap:2px;border:none;box-shadow:none;transform:none;transition:none;z-index:auto;max-height:none;overflow-x:auto;overflow-y:hidden;pointer-events:auto;backdrop-filter:none;-webkit-backdrop-filter:none;scrollbar-width:none;}
+  body.nav-classic .nlinks{position:static;top:auto;flex-direction:row;background:none;padding:0;gap:2px;border:none;box-shadow:none;transform:none;transition:none;visibility:visible;z-index:auto;max-height:none;overflow-x:auto;overflow-y:hidden;pointer-events:auto;backdrop-filter:none;-webkit-backdrop-filter:none;scrollbar-width:none;}
   body.nav-classic .nlinks::-webkit-scrollbar{display:none;}
   body.nav-classic .nlinks .nb{font-size:12px;padding:6px 10px;width:auto;text-align:center;font-weight:500;border-radius:7px;}
   body.nav-classic .nlinks .nb.on{background:rgba(255,255,255,.1);color:white;}
