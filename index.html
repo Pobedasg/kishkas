@@ -1561,19 +1561,41 @@ function blk(id, body, action) {
   </div>`;
 }
 
+const SNAP_GRID = 40;
+const SNAP_MAGNET = 30;
+
+function snapBlockSize(el) {
+  const id = el.dataset.widget;
+  if (!id) return;
+  let w = Math.round(el.offsetWidth / SNAP_GRID) * SNAP_GRID;
+  let h = Math.round(el.offsetHeight / SNAP_GRID) * SNAP_GRID;
+  // Magnetic to neighbours in the same row
+  const myTop = el.getBoundingClientRect().top;
+  const siblings = Array.from(el.parentElement.children).filter(c => c !== el && c.classList.contains('dash-block'));
+  const sameRow = siblings.filter(s => Math.abs(s.getBoundingClientRect().top - myTop) < 20);
+  if (sameRow.length) {
+    const closestH = sameRow.map(s => s.offsetHeight).reduce((best, hh) => Math.abs(h - hh) < Math.abs(h - best) ? hh : best, sameRow[0].offsetHeight);
+    if (Math.abs(h - closestH) <= SNAP_MAGNET) h = closestH;
+    const closestW = sameRow.map(s => s.offsetWidth).reduce((best, ww) => Math.abs(w - ww) < Math.abs(w - best) ? ww : best, sameRow[0].offsetWidth);
+    if (Math.abs(w - closestW) <= SNAP_MAGNET) w = closestW;
+  }
+  if (window.innerWidth <= 759) w = el.offsetWidth;
+  el.style.width = w + 'px';
+  el.style.height = h + 'px';
+  saveBlockDims(id, w, h);
+  if (id === 'growth') drawDashGrowth();
+}
+
 function observeBlockResize() {
   if (!window.ResizeObserver) return;
   if (window._blockRO) window._blockRO.disconnect();
   window._blockRO = new ResizeObserver(entries => {
     for (const entry of entries) {
       const el = entry.target;
-      const id = el.dataset.widget;
-      if (!id || !el._sizeReady) { el._sizeReady = true; continue; }
+      if (!el.dataset.widget) continue;
+      if (!el._sizeReady) { el._sizeReady = true; continue; }
       clearTimeout(el._saveTimer);
-      el._saveTimer = setTimeout(() => {
-        saveBlockDims(id, el.offsetWidth, el.offsetHeight);
-        if (id === 'growth') drawDashGrowth();
-      }, 250);
+      el._saveTimer = setTimeout(() => snapBlockSize(el), 300);
     }
   });
   document.querySelectorAll('.dash-block').forEach(b => window._blockRO.observe(b));
