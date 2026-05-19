@@ -198,6 +198,45 @@ label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bot
 .audience-out.on{display:block;}
 body.theme-modern .audience-out{background:var(--border);}
 
+/* PRACTICE */
+.practice-cat{margin-bottom:32px;}
+.practice-cat-name{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.practice-card{background:var(--card);border:1px solid var(--border);border-radius:13px;margin-bottom:8px;overflow:hidden;}
+.practice-head{display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;user-select:none;transition:background .15s;}
+.practice-head:hover{background:rgba(0,0,0,.02);}
+.practice-name{font-size:15px;font-weight:600;flex:1;}
+.practice-time{font-size:12px;color:var(--muted);background:var(--bg);padding:3px 10px;border-radius:100px;flex-shrink:0;}
+.practice-arr{font-size:13px;color:var(--muted);transition:transform .2s;}
+.practice-card.on .practice-arr{transform:rotate(180deg);}
+.practice-body{display:none;padding:0 18px 18px;border-top:1px solid var(--border);}
+.practice-card.on .practice-body{display:block;padding-top:14px;}
+.practice-goal{font-size:14px;line-height:1.6;color:var(--ink2);margin-bottom:14px;}
+.practice-steps{margin-bottom:14px;}
+.practice-step{font-size:14px;line-height:1.55;color:var(--ink2);padding:6px 0 6px 18px;position:relative;border-bottom:1px solid rgba(0,0,0,.04);}
+.practice-step:last-child{border-bottom:none;}
+.practice-step::before{content:'·';position:absolute;left:6px;color:var(--ac);font-weight:700;}
+.practice-analyze{background:var(--bg);border-radius:11px;padding:14px 16px;margin-top:10px;}
+.practice-analyze-intro{font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.55;}
+.practice-result{display:none;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.65;color:var(--ink2);white-space:pre-wrap;}
+.practice-result.on{display:block;}
+
+body.theme-modern .practice-card{box-shadow:var(--shadow-card);border:none;}
+body.theme-modern .practice-head:hover{background:var(--border);}
+body.theme-modern .practice-step{border-bottom-color:var(--border);}
+body.theme-modern .practice-analyze{background:var(--border);}
+body.theme-modern .practice-result{background:var(--card);border:none;box-shadow:var(--shadow-card);}
+
+/* RESOURCES */
+.res-cat{margin-bottom:28px;}
+.res-cat-name{font-size:13px;font-weight:700;margin-bottom:12px;}
+.res-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px;}
+.res-item{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:14px 16px;text-decoration:none;color:inherit;display:block;transition:border-color .15s,transform .15s;}
+.res-item:hover{border-color:var(--ink);transform:translateY(-1px);}
+.res-name{font-size:14px;font-weight:600;margin-bottom:4px;}
+.res-desc{font-size:13px;color:var(--muted);line-height:1.5;}
+body.theme-modern .res-item{box-shadow:var(--shadow-card);border:none;}
+body.theme-modern .res-item:hover{box-shadow:var(--shadow-card-hover);}
+
 /* REFLECT */
 .rqbox{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:15px 17px;margin-bottom:9px;}
 .rqtxt{font-size:14px;font-weight:600;margin-bottom:9px;line-height:1.5;}
@@ -689,6 +728,7 @@ create policy if not exists "own_audience" on audience_portrait
       <button class="nb" onclick="goTab('ai')">ШІ-чат</button>
       <button class="nb" onclick="goTab('reflect')">Рефлексія</button>
       <button class="nb" onclick="goTab('progress')">Прогрес</button>
+      <button class="nb" onclick="goTab('practice')">Практика</button>
       <button class="nb" onclick="goTab('mentor')">Ментор</button>
       <button class="nb" onclick="goTab('theory')">Теорія</button>
       <button class="nb" onclick="goTab('tools')">Інструменти</button>
@@ -825,7 +865,18 @@ create policy if not exists "own_audience" on audience_portrait
       <div class="card">
         <div class="ctitle">🎯 Цілі</div>
         <div id="goalsWidget" style="margin:14px 0"></div>
-        <button class="btn btn-out btn-sm" onclick="addGoal()">+ Нова ціль</button>
+        <div id="goalForm" style="display:none;background:var(--bg);border-radius:11px;padding:16px;margin-bottom:12px">
+          <div class="fgrid">
+            <div class="fg"><label>Мережа</label><select id="goalNetwork"><option value="ig">Instagram</option><option value="tt">TikTok</option></select></div>
+            <div class="fg"><label>Ціль (підписників)</label><input type="number" id="goalTarget" placeholder="10000"></div>
+            <div class="fg"><label>Дедлайн (опц.)</label><input type="date" id="goalDeadline"></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-ac btn-sm" onclick="saveNewGoal()">Зберегти</button>
+            <button class="btn btn-out btn-sm" onclick="hideGoalForm()">Скасувати</button>
+          </div>
+        </div>
+        <button class="btn btn-out btn-sm" id="goalAddBtn" onclick="showGoalForm()">+ Нова ціль</button>
       </div>
 
       <div class="card">
@@ -841,6 +892,15 @@ create policy if not exists "own_audience" on audience_portrait
         <button class="btn btn-ac" id="audienceBtn" onclick="generateAudiencePortrait()" style="margin-top:10px">Згенерувати портрет →</button>
         <div id="audienceResult" class="audience-out"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- PRACTICE -->
+  <div id="tab-practice" class="tab">
+    <div class="sec">
+      <div class="stitle">Практика</div>
+      <div class="cl cl-p">Вправи на конкретні скіли. Деякі — короткі рутини в голові чи нотатнику. Інші мають аналіз ШІ — впиши результат і отримай feedback.</div>
+      <div id="practiceList"></div>
     </div>
   </div>
 
@@ -1109,6 +1169,7 @@ function goTab(name) {
   if(name==='stats') renderCharts();
   if(name==='home') renderHome();
   if(name==='progress') renderProgress();
+  if(name==='practice') renderPractice();
   closeMenu();
   window.scrollTo({top:0,behavior:'instant'});
 }
@@ -1707,13 +1768,26 @@ async function dbDelGoal(id) {
   renderProgress();
 }
 
-async function addGoal() {
-  const network = (prompt('Мережа (ig або tt):', 'ig') || '').trim().toLowerCase();
-  if (!['ig','tt'].includes(network)) return;
-  const target = parseInt(prompt('Ціль (кількість підписників):', '10000'));
-  if (!target || target <= 0) return;
-  const deadline = (prompt('Дедлайн (РРРР-ММ-ДД, опціонально):', '') || '').trim() || null;
+function showGoalForm() {
+  document.getElementById('goalForm').style.display = 'block';
+  document.getElementById('goalAddBtn').style.display = 'none';
+  setTimeout(()=>document.getElementById('goalTarget').focus(), 50);
+}
+
+function hideGoalForm() {
+  document.getElementById('goalForm').style.display = 'none';
+  document.getElementById('goalAddBtn').style.display = '';
+  document.getElementById('goalTarget').value = '';
+  document.getElementById('goalDeadline').value = '';
+}
+
+async function saveNewGoal() {
+  const network = document.getElementById('goalNetwork').value;
+  const target = parseInt(document.getElementById('goalTarget').value);
+  const deadline = document.getElementById('goalDeadline').value || null;
+  if (!target || target <= 0) { alert('Введи число для цілі'); return; }
   await dbSaveGoal({id:Date.now().toString(), network, target, deadline});
+  hideGoalForm();
   renderProgress();
 }
 
@@ -1841,6 +1915,117 @@ async function renderProgress() {
 }
 
 // ══════════════════════════════════════════
+// PRACTICE
+// ══════════════════════════════════════════
+const PRACTICES = [
+  {cat:'✨ Творчі', items:[
+    {id:'brain-dump', name:'Brain dump', time:'10 хв',
+     goal:'Вивантажити всі ідеї без фільтра — звільнити голову і знайти 2–3 «золоті».',
+     steps:['Постав таймер на 10 хв','Пиши все що приходить — теми, ідеї, страхи, образи','Без редагування і без оцінок','Коли таймер дзвонить — зупинись'],
+     analyze:{intro:'Встав сюди свій список — ШІ виділить топ-5 ідей з найбільшим потенціалом і пояснить чому.',
+              system:'Ти стратег контент-маркетингу. Проаналізуй список ідей блогера. Виділи топ-5 з найбільшим потенціалом стати залучаючим контентом. Поясни ЧОМУ кожна. Конкретно. Українською.'}},
+    {id:'mood-board', name:'Mood board', time:'20 хв',
+     goal:'Зрозуміти свою візуальну естетику через референси.',
+     steps:['Відкрий Pinterest / Instagram saved','Збери 20 фото які тебе зачіпають','Подивись що в них спільного: кольори, композиція, настрій','Запиши 3–5 спільних рис — це твій візуальний код']},
+    {id:'voice-memo', name:'Голосове на 5 хв', time:'5 хв',
+     goal:'Висловити вголос що відбувається — часто звідти приходять ідеї.',
+     steps:['Увімкни диктофон','Говори що було сьогодні, як почуваєшся','Не редагуй — це для себе','Послухай ввечері — звідки прийшла ідея?']},
+  ]},
+  {cat:'🎬 Технічні', items:[
+    {id:'hook-test', name:'Тест гачка', time:'5 хв',
+     goal:'Знайти найсильніший варіант першої секунди для Reels.',
+     steps:['Запиши 3 варіанти першої секунди','Варіант 1 — питання («Ти знала що…?»)','Варіант 2 — заява («Ось чому…»)','Варіант 3 — wow-кадр (опис візуального шоку)'],
+     analyze:{intro:'Встав 3 варіанти гачка — ШІ ранжує їх за силою і пояснить чому.',
+              system:'Ти експерт з Reels і алгоритмів IG/TikTok. Ранжуй 3 варіанти гачка з 1 до 3 (1 — найсильніший). Поясни чому. Дай 2 поради як зробити переможця ще сильнішим. Українською.'}},
+    {id:'storyboard', name:'Розкадровка Reels', time:'10 хв',
+     goal:'Спланувати Reels — менше часу на зйомці, чіткіша структура.',
+     steps:['Запиши 4–6 кадрів','Кадр 1 = гачок (1–2 сек)','Середні = розвиток (3–5 сек кожен)','Останній = висновок / CTA (1–2 сек)','Поряд із кожним — текст overlay'],
+     analyze:{intro:'Встав свою розкадровку — ШІ оцінить структуру і запропонує покращення.',
+              system:'Ти експерт з Reels. Оцінюй розкадровку за гачком, темпом, CTA. Дай конкретні поради. Українською.'}},
+    {id:'shot-list', name:'Shot list дня', time:'5 хв',
+     goal:'Не імпровізувати — мати готовий список моментів для зйомки.',
+     steps:['Подумай про день наперед','Запиши 5 моментів які варто зняти','Поряд з кожним — навіщо (що показуєш?)','Тримай список у нотатках телефону']},
+  ]},
+  {cat:'💭 Психологічні', items:[
+    {id:'letter-self', name:'Лист собі через рік', time:'15 хв',
+     goal:'Уявити майбутню себе — щоб краще побачити поточні блокери.',
+     steps:['Уяви: 1 рік минув, ціль досягнута','Опиши свій день — від ранку до вечора','Який контент ти зараз робиш?','Як змінилось ставлення до себе?','Що та-ти сказала б тобі-зараз?']},
+    {id:'cringe', name:'Cringe-вправа', time:'10 хв',
+     goal:'Розблокувати страх «це cringe» — він майже завжди в голові.',
+     steps:['Знайди найбільш cringe пост у себе','Подивись очима незнайомця','Чи дійсно це жахливо?','Або це просто незвично — бачити себе?']},
+    {id:'letter-follower', name:'Лист одній підписниці', time:'10 хв',
+     goal:'Знайти щирий тон — ти пишеш людині, не «аудиторії».',
+     steps:['Уяви одну реальну підписницю','Напиши їй особистий лист на 200–300 слів','Без хештегів, без «контентного» формату','Розкажи що тебе хвилює зараз'],
+     analyze:{intro:'Встав свого листа — ШІ оцінить щирість і допоможе адаптувати у пост.',
+              system:'Ти редактор контенту. Оціни щирість листа. Запропонуй як адаптувати в пост / Reels не втрачаючи особистого тону. Українською.'}},
+  ]},
+  {cat:'📊 Аналітичні', items:[
+    {id:'weekly-review', name:'Тижневий розбір', time:'20 хв',
+     goal:'Зрозуміти що працює — на основі даних, а не відчуттів.',
+     steps:['Відкрий статистику тижня','Виділи 3 топ-пости за engagement','Що в них спільного — тема, час, структура?','Запиши 1 гіпотезу для наступного тижня'],
+     analyze:{intro:'Опиши тиждень — числа, що працювало, що ні — ШІ дасть структурований звіт і 3 рекомендації.',
+              system:'Ти аналітик контенту. Зроби тижневий звіт з висновками і 3 конкретними рекомендаціями на наступний тиждень. Українською.'}},
+    {id:'audience-interview', name:'Інтерв\'ю з підписницею', time:'30 хв',
+     goal:'Реальні слова реальної людини > здогадки.',
+     steps:['Знайди 2–3 підписниці що активно реагують','Напиши у DM: «Хочу зробити контент кращим — допоможеш з 5 питаннями?»','Питай: Хто ти? Що любиш зараз? Що читаєш? Який мій контент тебе зачіпає? Що б хотіла бачити більше?','Запиши відповіді — це сценарії наступних постів']},
+  ]},
+];
+
+function renderPractice() {
+  document.getElementById('practiceList').innerHTML = PRACTICES.map(c => `
+    <div class="practice-cat">
+      <div class="practice-cat-name">${c.cat}</div>
+      ${c.items.map(p => `
+        <div class="practice-card">
+          <div class="practice-head" onclick="this.parentElement.classList.toggle('on')">
+            <div class="practice-name">${p.name}</div>
+            <div class="practice-time">${p.time}</div>
+            <div class="practice-arr">↓</div>
+          </div>
+          <div class="practice-body">
+            <div class="practice-goal"><strong>Мета:</strong> ${p.goal}</div>
+            <div class="practice-steps">${p.steps.map(s=>`<div class="practice-step">${s}</div>`).join('')}</div>
+            ${p.analyze ? `
+              <div class="practice-analyze">
+                <div class="practice-analyze-intro">${p.analyze.intro}</div>
+                <textarea id="pr-${p.id}" placeholder="Встав сюди свій результат..." style="min-height:100px"></textarea>
+                <button class="btn btn-ac btn-sm" onclick="analyzePractice('${p.id}')" style="margin-top:8px">Проаналізувати →</button>
+                <div class="practice-result" id="pr-${p.id}-out"></div>
+              </div>` : ''}
+          </div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+async function analyzePractice(id) {
+  let practice = null;
+  for (const c of PRACTICES) {
+    const found = c.items.find(p => p.id === id);
+    if (found) { practice = found; break; }
+  }
+  if (!practice || !practice.analyze) return;
+  const input = document.getElementById('pr-'+id).value.trim();
+  if (!input) return alert('Спочатку напиши результат');
+  const out = document.getElementById('pr-'+id+'-out');
+  out.textContent = 'ШІ думає...';
+  out.classList.add('on');
+  try {
+    const res = await fetch('/api/chat',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6', max_tokens:1000,
+        system: practice.analyze.system + '\n\nКонтекст блогера: ' + USERS[CU].aiCtx,
+        messages:[{role:'user', content: input}]
+      })
+    });
+    const data = await res.json();
+    out.textContent = data.content?.find(b=>b.type==='text')?.text || 'Помилка.';
+  } catch(e) {
+    out.textContent = 'Помилка з\'єднання.';
+  }
+}
+
+// ══════════════════════════════════════════
 // THEORY
 // ══════════════════════════════════════════
 function renderTheory() {
@@ -1955,12 +2140,41 @@ function renderTools() {
     {e:'🎵',n:'Трендова музика',d:'IG показує в пошуку по музиці. Використовуй популярні треки.'},
     {e:'🔗',n:'Посилай на Reels',d:'«Дивись Reel» в сторіс → крос-промо. Сторіс приводять глядачів на Reels.'},
   ];
+  const resources = [
+    {cat:'📱 SMM і контент', items:[
+      {n:'Later — Blog', d:'Стратегії Instagram, аналіз трендів, гайди', u:'https://later.com/blog'},
+      {n:'Buffer — Library', d:'Соцмережі: дослідження, кейси, інструменти', u:'https://buffer.com/library'},
+      {n:'Adam Mosseri (@mosseri)', d:'Head of Instagram постить про алгоритм', u:'https://www.instagram.com/mosseri/'},
+      {n:'HubSpot Academy', d:'Безкоштовні курси з маркетингу та SMM', u:'https://academy.hubspot.com/'},
+    ]},
+    {cat:'✍️ Бренд і копірайт', items:[
+      {n:'Justin Welsh', d:'Гайди для творців і solopreneurs — стратегія, монетизація', u:'https://www.justinwelsh.me/'},
+      {n:'Visualize Value', d:'Як ідеї перетворювати на візуальний контент', u:'https://visualizevalue.com/'},
+      {n:'Austin Kleon — Show Your Work', d:'Класична книга про процес як контент', u:'https://austinkleon.com/show-your-work/'},
+      {n:'James Clear — Atomic Habits', d:'Звички — фундамент регулярного контенту', u:'https://jamesclear.com/atomic-habits'},
+    ]},
+    {cat:'🎨 UI / UX дизайн', items:[
+      {n:'Refactoring UI', d:'Найкраща книга з дизайну для не-дизайнерів', u:'https://www.refactoringui.com/'},
+      {n:'Nielsen Norman Group', d:'UX-дослідження від класиків професії', u:'https://www.nngroup.com/'},
+      {n:'Smashing Magazine', d:'Глибокі статті про веб і фронтенд', u:'https://www.smashingmagazine.com/'},
+      {n:'Mobbin', d:'Бібліотека реальних мобільних UI — натхнення', u:'https://mobbin.com/'},
+      {n:'Awwwards', d:'Найкращий веб-дизайн — щоденне натхнення', u:'https://www.awwwards.com/'},
+      {n:'Figma Community', d:'Безкоштовні дизайн-системи і шаблони', u:'https://www.figma.com/community'},
+    ]},
+    {cat:'📺 YouTube', items:[
+      {n:'Flux Academy', d:'Дизайн і фриланс — стратегія + практика', u:'https://www.youtube.com/@FluxAcademy'},
+      {n:'DesignCourse', d:'UI/UX уроки, тренди, кейси', u:'https://www.youtube.com/@DesignCourse'},
+      {n:'Ali Abdaal', d:'Продуктивність і фокус для творців', u:'https://www.youtube.com/@aliabdaal'},
+    ]},
+  ];
   document.getElementById('toolscontent').innerHTML =
     sections.map(s=>`<div class="tsec"><div class="tsect">${s.title}</div><div class="tgrid">${s.tools.map(t=>`<div class="toolc"><span class="toole">${t.e}</span><div class="tooln">${t.n}</div><div class="toold">${t.d}</div><span class="tooltag">${t.tag}</span></div>`).join('')}</div></div>`).join('') +
     '<div class="divider"></div><div class="slbl">Лайфхаки CapCut</div><div class="cl cl-dk" style="margin-bottom:14px">Найпопулярніший редактор. Ось що реально варто знати.</div>' +
     capcut.map(s=>`<div class="tcard" onclick="this.classList.toggle(\'on\')" style="margin-bottom:9px"><div class="thead"><div class="ticon" style="background:#fff8e0">💡</div><div><div class="ttl2">${s.title}</div></div><div class="tarr">↓</div></div><div class="tbody">${s.items.map(it=>`<div class="titem"><div class="tdot" style="background:var(--ac)"></div><div class="ttxt">${it}</div></div>`).join('')}</div></div>`).join('') +
     '<div class="divider"></div><div class="slbl">Лайфхаки для сторіс</div><div class="tgrid" style="margin-bottom:28px">' +
-    stories.map(s=>`<div class="toolc"><span class="toole">${s.e}</span><div class="tooln">${s.n}</div><div class="toold">${s.d}</div></div>`).join('') + '</div>';
+    stories.map(s=>`<div class="toolc"><span class="toole">${s.e}</span><div class="tooln">${s.n}</div><div class="toold">${s.d}</div></div>`).join('') + '</div>' +
+    '<div class="divider"></div><div class="slbl">Матеріали для розвитку</div><div class="cl cl-b" style="margin-bottom:18px">Перевірені блоги, книги і канали — SMM, бренд, дизайн. Зовнішні посилання.</div>' +
+    resources.map(r=>`<div class="res-cat"><div class="res-cat-name">${r.cat}</div><div class="res-list">${r.items.map(i=>`<a class="res-item" href="${i.u}" target="_blank" rel="noopener"><div class="res-name">${i.n} ↗</div><div class="res-desc">${i.d}</div></a>`).join('')}</div></div>`).join('');
 }
 
 // ══════════════════════════════════════════
