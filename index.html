@@ -549,6 +549,15 @@ body.theme-modern .nav-icon-btn:hover{background:var(--border);}
 .profile-form .pf-head{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ac);margin:6px 0 -4px;padding-bottom:6px;border-bottom:1px solid var(--border);}
 .profile-form .pf-head:first-child{margin-top:0;}
 .profile-form label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+
+/* Big visual blog-type toggle */
+.blogtype-toggle{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.btype-btn{background:transparent;border:2px solid var(--border);border-radius:14px;padding:16px 14px;cursor:pointer;text-align:center;font-family:'Geologica',sans-serif;transition:all .15s;color:var(--ink);}
+.btype-btn:hover{border-color:var(--b2);}
+.btype-btn.on{border-color:var(--ac);background:var(--ac);color:#fff;}
+.btype-icon{font-size:24px;margin-bottom:6px;line-height:1;}
+.btype-name{font-size:14px;font-weight:700;margin-bottom:3px;}
+.btype-desc{font-size:11px;opacity:.7;line-height:1.35;}
 .profile-form select,.profile-form input,.profile-form textarea{font-family:inherit;}
 .multi-chips{display:flex;flex-wrap:wrap;gap:6px;}
 .m-chip{font-size:12px;padding:6px 12px;border-radius:100px;border:1.5px solid var(--border);background:transparent;color:var(--ink2);cursor:pointer;font-family:'Geologica',sans-serif;transition:all .15s;}
@@ -1773,8 +1782,11 @@ async function dbSaveProfile(p) {
 
 function profileFormHTML(p) {
   p = p || {};
-  // Backwards-compat: if old 'niche' is set and new fields empty, surface it as blog_topic
+  // Backwards-compat
   if (p.niche && !p.blog_topic) p.blog_topic = p.niche;
+  // Old blog_type values → new
+  if (p.blog_type === 'lifestyle') p.blog_type = 'personal';
+  else if (p.blog_type === 'expert' || p.blog_type === 'mixed') p.blog_type = 'professional';
 
   const sel = (id, label, options, current) => `
     <div class="pf-row">
@@ -1811,6 +1823,24 @@ function profileFormHTML(p) {
   const hasBlog = p.has_blog;
   const showBlogBlock = hasBlog === 'yes' || hasBlog === 'planning';
   const showBlogExp = hasBlog === 'yes';
+  const showProfBlock = showBlogBlock && p.blog_type === 'professional';
+
+  const typeToggle = `
+    <div class="pf-row">
+      <label>Який блог</label>
+      <div class="blogtype-toggle" data-name="blog_type">
+        <button type="button" class="btype-btn ${p.blog_type==='personal'?'on':''}" data-value="personal" onclick="onBlogTypeChange('personal')">
+          <div class="btype-icon">🌿</div>
+          <div class="btype-name">Особистий</div>
+          <div class="btype-desc">Лайфстайл, мої інтереси — не про роботу</div>
+        </button>
+        <button type="button" class="btype-btn ${p.blog_type==='professional'?'on':''}" data-value="professional" onclick="onBlogTypeChange('professional')">
+          <div class="btype-icon">🎯</div>
+          <div class="btype-name">Професійний</div>
+          <div class="btype-desc">Про мою роботу або експертизу</div>
+        </button>
+      </div>
+    </div>`;
 
   return [
     head('Про тебе'),
@@ -1819,10 +1849,8 @@ function profileFormHTML(p) {
       {v:'m', l:'У чоловічому роді'},
       {v:'n', l:'Нейтрально / без роду'},
     ], p.gender),
-    ta('p-profession', 'Чим займаєшся професійно (основна діяльність)', p.profession, 'Наприклад: брова-майстер, стоматолог, дизайнерка, програміст, домогосподарка, студент...'),
-    sel('p-fieldexp', 'Скільки часу в цій сфері', expOptions, p.field_experience),
 
-    head('Про блог'),
+    head('Блог'),
     `<div class="pf-row">
       <label>Чи ведеш блог зараз</label>
       <select id="p-hasblog" onchange="onHasBlogChange(this.value)">
@@ -1833,12 +1861,12 @@ function profileFormHTML(p) {
       </select>
     </div>`,
     `<div id="pf-blog-block" style="display:${showBlogBlock?'contents':'none'}">
-      ${sel('p-blogtype', 'Тип блогу', [
-        {v:'expert', l:'Експертний — про мою сферу/професію'},
-        {v:'lifestyle', l:'Лайфстайл — про моє життя, не пов\'язано з роботою'},
-        {v:'mixed', l:'Змішаний — і про роботу, і про життя'},
-      ], p.blog_type)}
-      ${ta('p-blogtopic', 'Про що блог конкретно', p.blog_topic, 'Наприклад: показую процес нарощування вій, або огляди косметики, або моя рутина дня, або кулінарія для зайнятих')}
+      ${typeToggle}
+      <div id="pf-profession-block" style="display:${showProfBlock?'contents':'none'}">
+        ${ta('p-profession', 'Чим займаєшся професійно', p.profession, 'Наприклад: брова-майстер, стоматолог, дизайнерка, програміст...')}
+        ${sel('p-fieldexp', 'Скільки часу в цій сфері', expOptions, p.field_experience)}
+      </div>
+      ${ta('p-blogtopic', 'Про що блог конкретно', p.blog_topic, 'Наприклад: показую процес нарощування вій, рутина дня, кулінарія для зайнятих')}
       <div class="pf-row" id="pf-blogexp-row" style="display:${showBlogExp?'flex':'none'};flex-direction:column">
         <label>Скільки часу ведеш блог</label>
         <select id="p-blogexp">
@@ -1875,6 +1903,14 @@ function onHasBlogChange(v) {
   if (exp) exp.style.display = (v === 'yes') ? 'flex' : 'none';
 }
 
+function onBlogTypeChange(v) {
+  document.querySelectorAll('.blogtype-toggle .btype-btn').forEach(b => {
+    b.classList.toggle('on', b.dataset.value === v);
+  });
+  const profBlock = document.getElementById('pf-profession-block');
+  if (profBlock) profBlock.style.display = (v === 'professional') ? 'contents' : 'none';
+}
+
 async function openProfileModal() {
   const p = await dbProfile() || {};
   document.getElementById('profileForm').innerHTML = profileFormHTML(p);
@@ -1893,12 +1929,13 @@ async function saveProfile() {
   try {
     const get = id => document.getElementById(id)?.value || '';
     const multi = name => Array.from(document.querySelectorAll(`.multi-chips[data-name="${name}"] .m-chip.on`)).map(c => c.dataset.value);
+    const blogType = document.querySelector('.blogtype-toggle .btype-btn.on')?.dataset.value || '';
     const data = {
       gender: get('p-gender'),
-      profession: get('p-profession'),
-      field_experience: get('p-fieldexp'),
+      profession: blogType === 'professional' ? get('p-profession') : '',
+      field_experience: blogType === 'professional' ? get('p-fieldexp') : '',
       has_blog: get('p-hasblog'),
-      blog_type: get('p-blogtype'),
+      blog_type: blogType,
       blog_topic: get('p-blogtopic'),
       blog_experience: get('p-blogexp'),
       hours_per_week: get('p-hours'),
@@ -1944,7 +1981,7 @@ async function getProfileContext() {
   const NDS = Object.fromEntries(PROFILE_NEEDS.map(b=>[b.v,b.l]));
   const FE = {'<6m':'менше 6 місяців','6m-1y':'6 місяців – 1 рік','1-3y':'1–3 роки','3-5y':'3–5 років','5+':'5+ років'};
   const HB = {yes:'так, веде',planning:'планує почати',no:'не веде і не планує'};
-  const BT = {expert:'експертний — про професійну сферу',lifestyle:'лайфстайл — не пов\'язаний з роботою',mixed:'змішаний — і про роботу, і про життя'};
+  const BT = {personal:'особистий — лайфстайл, інтереси, не про професію',professional:'професійний — про роботу/експертизу',expert:'професійний — про роботу/експертизу',lifestyle:'особистий — лайфстайл',mixed:'професійний — про роботу/експертизу'};
   const HRS = {'<2':'до 2 год','2-5':'2–5 год','5-10':'5–10 год','10-20':'10–20 год','20+':'20+ год'};
   const MON = {no:'без монетизації',planning:'планує монетизацію',partial:'частково монетизує',main:'основний дохід'};
   const G = {f:'жіночий рід',m:'чоловічий рід',n:'нейтральний рід'};
@@ -1961,8 +1998,8 @@ async function getProfileContext() {
   if (p.needs && p.needs.length) s += `\n- Потрібна допомога з: ${p.needs.map(n=>NDS[n]||n).join(', ')}`;
   if (p.monetization) s += `\n- Монетизація: ${MON[p.monetization]||p.monetization}`;
   if (p.goals) s += `\n- Цілі: ${p.goals}`;
-  if (p.blog_type === 'lifestyle' && p.profession) {
-    s += `\n\nВАЖЛИВО: блог лайфстайл — НЕ давай порад через призму професії "${p.profession}". Блог про життя, не про роботу.`;
+  if ((p.blog_type === 'personal' || p.blog_type === 'lifestyle') && p.profession) {
+    s += `\n\nВАЖЛИВО: блог особистий — НЕ давай порад через призму професії "${p.profession}". Блог про життя, не про роботу.`;
   }
   return s;
 }
