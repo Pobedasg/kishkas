@@ -543,8 +543,10 @@ body.theme-modern .nav-icon-btn{color:var(--ink);}
 body.theme-modern .nav-icon-btn:hover{background:var(--border);}
 
 /* Profile modal form */
-.profile-form{display:flex;flex-direction:column;gap:16px;}
+.profile-form{display:flex;flex-direction:column;gap:14px;}
 .profile-form .pf-row{display:flex;flex-direction:column;}
+.profile-form .pf-head{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ac);margin:6px 0 -4px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.profile-form .pf-head:first-child{margin-top:0;}
 .profile-form label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
 .profile-form select,.profile-form input,.profile-form textarea{font-family:inherit;}
 .multi-chips{display:flex;flex-wrap:wrap;gap:6px;}
@@ -822,8 +824,11 @@ create table if not exists audience_portrait (
 create table if not exists user_questionnaire (
   user_id uuid primary key references auth.users,
   gender text,
+  profession text,
   field_experience text,
   has_blog text,
+  blog_type text,
+  blog_topic text,
   blog_experience text,
   niche text,
   hours_per_week text,
@@ -833,6 +838,10 @@ create table if not exists user_questionnaire (
   goals text,
   updated_at timestamptz default now()
 );
+-- For existing installs:
+alter table user_questionnaire add column if not exists profession text;
+alter table user_questionnaire add column if not exists blog_type text;
+alter table user_questionnaire add column if not exists blog_topic text;
 create table if not exists chats (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users,
@@ -1872,6 +1881,9 @@ async function dbSaveProfile(p) {
 
 function profileFormHTML(p) {
   p = p || {};
+  // Backwards-compat: if old 'niche' is set and new fields empty, surface it as blog_topic
+  if (p.niche && !p.blog_topic) p.blog_topic = p.niche;
+
   const sel = (id, label, options, current) => `
     <div class="pf-row">
       <label>${label}</label>
@@ -1892,62 +1904,83 @@ function profileFormHTML(p) {
   const ta = (id, label, current, placeholder='') => `
     <div class="pf-row">
       <label>${label}</label>
-      <textarea id="${id}" placeholder="${placeholder}" style="min-height:70px">${(current||'').replace(/</g,'&lt;')}</textarea>
+      <textarea id="${id}" placeholder="${placeholder}" style="min-height:60px">${(current||'').replace(/</g,'&lt;')}</textarea>
     </div>`;
+  const head = (t) => `<div class="pf-head">${t}</div>`;
 
-  const blogExpRow = `<div class="pf-row" id="pf-blogexp-row" style="display:${p.has_blog==='yes'?'flex':'none'};flex-direction:column">
-    <label>Скільки часу ведеш блог</label>
-    <select id="p-blogexp">
-      <option value="">—</option>
-      <option value="<6m" ${p.blog_experience==='<6m'?'selected':''}>Менше 6 місяців</option>
-      <option value="6m-1y" ${p.blog_experience==='6m-1y'?'selected':''}>6 місяців – 1 рік</option>
-      <option value="1-3y" ${p.blog_experience==='1-3y'?'selected':''}>1–3 роки</option>
-      <option value="3-5y" ${p.blog_experience==='3-5y'?'selected':''}>3–5 років</option>
-      <option value="5+" ${p.blog_experience==='5+'?'selected':''}>5+ років</option>
-    </select>
-  </div>`;
+  const expOptions = [
+    {v:'<6m', l:'Менше 6 місяців'},
+    {v:'6m-1y', l:'6 місяців – 1 рік'},
+    {v:'1-3y', l:'1–3 роки'},
+    {v:'3-5y', l:'3–5 років'},
+    {v:'5+', l:'5+ років'},
+  ];
+
+  const hasBlog = p.has_blog;
+  const showBlogBlock = hasBlog === 'yes' || hasBlog === 'planning';
+  const showBlogExp = hasBlog === 'yes';
 
   return [
+    head('Про тебе'),
     sel('p-gender', 'Як до тебе звертатись', [
       {v:'f', l:'У жіночому роді'},
       {v:'m', l:'У чоловічому роді'},
       {v:'n', l:'Нейтрально / без роду'},
     ], p.gender),
-    sel('p-fieldexp', 'Скільки часу в своїй сфері (професії)', [
-      {v:'<6m', l:'Менше 6 місяців'},
-      {v:'6m-1y', l:'6 місяців – 1 рік'},
-      {v:'1-3y', l:'1–3 роки'},
-      {v:'3-5y', l:'3–5 років'},
-      {v:'5+', l:'5+ років'},
-    ], p.field_experience),
+    ta('p-profession', 'Чим займаєшся професійно (основна діяльність)', p.profession, 'Наприклад: брова-майстер, стоматолог, дизайнерка, програміст, домогосподарка, студент...'),
+    sel('p-fieldexp', 'Скільки часу в цій сфері', expOptions, p.field_experience),
+
+    head('Про блог'),
     `<div class="pf-row">
       <label>Чи ведеш блог зараз</label>
-      <select id="p-hasblog" onchange="document.getElementById('pf-blogexp-row').style.display=this.value==='yes'?'flex':'none'">
+      <select id="p-hasblog" onchange="onHasBlogChange(this.value)">
         <option value="">—</option>
-        <option value="yes" ${p.has_blog==='yes'?'selected':''}>Так, веду</option>
-        <option value="planning" ${p.has_blog==='planning'?'selected':''}>Поки ні, планую почати</option>
-        <option value="no" ${p.has_blog==='no'?'selected':''}>Ні і не планую</option>
+        <option value="yes" ${hasBlog==='yes'?'selected':''}>Так, веду</option>
+        <option value="planning" ${hasBlog==='planning'?'selected':''}>Поки ні, планую почати</option>
+        <option value="no" ${hasBlog==='no'?'selected':''}>Ні і не планую</option>
       </select>
     </div>`,
-    blogExpRow,
-    ta('p-niche', 'Чим займаєшся / тематика', p.niche, 'Наприклад: лайфстайл-блог про організацію простору, або б\'юті-майстер з нарощування вій, або веду магазин штор'),
-    sel('p-hours', 'Скільки годин на тиждень готовий_а приділяти', [
+    `<div id="pf-blog-block" style="display:${showBlogBlock?'contents':'none'}">
+      ${sel('p-blogtype', 'Тип блогу', [
+        {v:'expert', l:'Експертний — про мою сферу/професію'},
+        {v:'lifestyle', l:'Лайфстайл — про моє життя, не пов\'язано з роботою'},
+        {v:'mixed', l:'Змішаний — і про роботу, і про життя'},
+      ], p.blog_type)}
+      ${ta('p-blogtopic', 'Про що блог конкретно', p.blog_topic, 'Наприклад: показую процес нарощування вій, або огляди косметики, або моя рутина дня, або кулінарія для зайнятих')}
+      <div class="pf-row" id="pf-blogexp-row" style="display:${showBlogExp?'flex':'none'};flex-direction:column">
+        <label>Скільки часу ведеш блог</label>
+        <select id="p-blogexp">
+          <option value="">—</option>
+          ${expOptions.map(o => `<option value="${o.v}" ${p.blog_experience===o.v?'selected':''}>${o.l}</option>`).join('')}
+        </select>
+      </div>
+    </div>`,
+
+    head('Практичне'),
+    sel('p-hours', 'Скільки годин на тиждень готовий_а приділяти блогу', [
       {v:'<2', l:'До 2 годин'},
       {v:'2-5', l:'2–5 годин'},
       {v:'5-10', l:'5–10 годин'},
       {v:'10-20', l:'10–20 годин'},
       {v:'20+', l:'20+ годин'},
     ], p.hours_per_week),
-    multi('blockers', 'Головні блокери зараз', PROFILE_BLOCKERS, p.blockers),
-    multi('needs', 'Що найбільше потрібно', PROFILE_NEEDS, p.needs),
     sel('p-monetization', 'Монетизація', [
       {v:'no', l:'Поки що ні'},
       {v:'planning', l:'Планую'},
       {v:'partial', l:'Частково (додатковий дохід)'},
       {v:'main', l:'Це мій основний дохід'},
     ], p.monetization),
-    ta('p-goals', 'Цілі на найближчі 3–6 місяців', p.goals, 'Наприклад: дійти до 10k підписників, запустити курс, монетизувати через рекламу...'),
+    multi('blockers', 'Головні блокери зараз', PROFILE_BLOCKERS, p.blockers),
+    multi('needs', 'Що найбільше потрібно', PROFILE_NEEDS, p.needs),
+    ta('p-goals', 'Цілі на найближчі 3–6 місяців', p.goals, 'Наприклад: дійти до 5k підписників, запустити курс, побороти страх показувати обличчя...'),
   ].join('');
+}
+
+function onHasBlogChange(v) {
+  const block = document.getElementById('pf-blog-block');
+  const exp = document.getElementById('pf-blogexp-row');
+  if (block) block.style.display = (v === 'yes' || v === 'planning') ? 'contents' : 'none';
+  if (exp) exp.style.display = (v === 'yes') ? 'flex' : 'none';
 }
 
 async function openProfileModal() {
@@ -1961,10 +1994,12 @@ async function saveProfile() {
   const multi = name => Array.from(document.querySelectorAll(`.multi-chips[data-name="${name}"] .m-chip.on`)).map(c => c.dataset.value);
   const data = {
     gender: get('p-gender'),
+    profession: get('p-profession'),
     field_experience: get('p-fieldexp'),
     has_blog: get('p-hasblog'),
+    blog_type: get('p-blogtype'),
+    blog_topic: get('p-blogtopic'),
     blog_experience: get('p-blogexp'),
-    niche: get('p-niche'),
     hours_per_week: get('p-hours'),
     blockers: multi('blockers'),
     needs: multi('needs'),
@@ -2000,20 +2035,27 @@ async function getProfileContext() {
   const BLK = Object.fromEntries(PROFILE_BLOCKERS.map(b=>[b.v,b.l]));
   const NDS = Object.fromEntries(PROFILE_NEEDS.map(b=>[b.v,b.l]));
   const FE = {'<6m':'менше 6 місяців','6m-1y':'6 місяців – 1 рік','1-3y':'1–3 роки','3-5y':'3–5 років','5+':'5+ років'};
-  const HB = {yes:'так',planning:'планує почати',no:'не веде'};
+  const HB = {yes:'так, веде',planning:'планує почати',no:'не веде і не планує'};
+  const BT = {expert:'експертний — про професійну сферу',lifestyle:'лайфстайл — не пов\'язаний з роботою',mixed:'змішаний — і про роботу, і про життя'};
   const HRS = {'<2':'до 2 год','2-5':'2–5 год','5-10':'5–10 год','10-20':'10–20 год','20+':'20+ год'};
   const MON = {no:'без монетизації',planning:'планує монетизацію',partial:'частково монетизує',main:'основний дохід'};
   const G = {f:'жіночий рід',m:'чоловічий рід',n:'нейтральний рід'};
   let s = '\n\nКОНТЕКСТ КОРИСТУВАЧА:';
   if (p.gender) s += `\n- Звертайся у ${G[p.gender]||'нейтральний рід'}`;
-  if (p.field_experience) s += `\n- Досвід у своїй сфері: ${FE[p.field_experience]||p.field_experience}`;
-  if (p.has_blog) s += `\n- Блог: ${HB[p.has_blog]||p.has_blog}` + (p.blog_experience ? ` (${FE[p.blog_experience]||p.blog_experience})` : '');
-  if (p.niche) s += `\n- Тематика / чим займається: ${p.niche}`;
-  if (p.hours_per_week) s += `\n- Готовий_а приділяти: ${HRS[p.hours_per_week]||p.hours_per_week}`;
+  if (p.profession) s += `\n- Професія / основна діяльність: ${p.profession}`;
+  if (p.field_experience) s += `\n- Досвід у цій сфері: ${FE[p.field_experience]||p.field_experience}`;
+  if (p.has_blog) s += `\n- Блог: ${HB[p.has_blog]||p.has_blog}`;
+  if (p.blog_type) s += `\n- Тип блогу: ${BT[p.blog_type]||p.blog_type}`;
+  if (p.blog_topic || p.niche) s += `\n- Тема блогу: ${p.blog_topic || p.niche}`;
+  if (p.blog_experience) s += `\n- Досвід ведення блогу: ${FE[p.blog_experience]||p.blog_experience}`;
+  if (p.hours_per_week) s += `\n- Готовий_а приділяти блогу: ${HRS[p.hours_per_week]||p.hours_per_week} на тиждень`;
   if (p.blockers && p.blockers.length) s += `\n- Блокери: ${p.blockers.map(b=>BLK[b]||b).join(', ')}`;
   if (p.needs && p.needs.length) s += `\n- Потрібна допомога з: ${p.needs.map(n=>NDS[n]||n).join(', ')}`;
   if (p.monetization) s += `\n- Монетизація: ${MON[p.monetization]||p.monetization}`;
   if (p.goals) s += `\n- Цілі: ${p.goals}`;
+  if (p.blog_type === 'lifestyle' && p.profession) {
+    s += `\n\nВАЖЛИВО: блог лайфстайл — НЕ давай порад через призму професії "${p.profession}". Блог про життя, не про роботу.`;
+  }
   return s;
 }
 
