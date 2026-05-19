@@ -203,12 +203,22 @@ label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bot
 .dash-grid{display:grid;grid-template-columns:1fr;gap:14px;}
 @media(min-width:760px){.dash-grid{grid-template-columns:repeat(2,1fr);}}
 @media(min-width:1100px){.dash-grid{grid-template-columns:repeat(3,1fr);}}
-.dash-block{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;position:relative;overflow:hidden;cursor:grab;transition:transform .2s ease,box-shadow .2s ease;user-select:none;}
+.dash-block{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;position:relative;overflow:hidden;cursor:grab;transition:transform .2s ease,box-shadow .2s ease;user-select:none;display:flex;flex-direction:column;}
 .dash-block:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.06);}
 .dash-block:active{cursor:grabbing;}
 .dash-block.size-wide{grid-column:1/-1;}
 @media(min-width:1100px){.dash-block.size-wide{grid-column:span 2;}}
 .dash-block.size-full{grid-column:1/-1;}
+.dash-block.size-tall{grid-row:span 2;}
+@media(min-width:760px){
+  .dash-block.size-tall{min-height:380px;}
+}
+.dash-size-controls{display:flex;gap:4px;align-items:center;}
+.size-btn{font-size:10px;font-weight:700;padding:3px 7px;border-radius:5px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:'Geologica',sans-serif;letter-spacing:0;line-height:1;transition:all .15s;opacity:.5;}
+.dash-block:hover .size-btn{opacity:1;}
+.size-btn:hover{border-color:var(--ink);color:var(--ink);}
+.size-btn.on{background:var(--ink);color:var(--bg);border-color:var(--ink);opacity:1;}
+@media(hover:none){.size-btn{opacity:.85;}}
 .dash-accent{position:absolute;top:0;left:0;right:0;height:4px;}
 .dash-block-title{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
 .dash-block-action{font-size:11px;color:var(--ac);background:none;border:none;cursor:pointer;font-family:'Geologica',sans-serif;padding:4px 8px;border-radius:6px;font-weight:600;}
@@ -770,16 +780,24 @@ create table if not exists audience_portrait (
 create table if not exists baseline (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users,
-  ig_followers int default 0,
-  tt_followers int default 0,
-  total_posts int default 0,
-  total_stories int default 0,
-  total_reels int default 0,
+  ig_followers int default 0, tt_followers int default 0,
+  tg_followers int default 0, yt_followers int default 0,
+  total_posts int default 0, total_stories int default 0, total_reels int default 0,
+  total_tt_videos int default 0,
+  total_tg_posts int default 0,
+  total_yt_videos int default 0, total_yt_shorts int default 0,
   set_at date,
   created_at timestamptz default now(),
   updated_at timestamptz default now(),
   unique (user_id)
 );
+-- For existing installs:
+alter table baseline add column if not exists tg_followers int default 0;
+alter table baseline add column if not exists yt_followers int default 0;
+alter table baseline add column if not exists total_tt_videos int default 0;
+alter table baseline add column if not exists total_tg_posts int default 0;
+alter table baseline add column if not exists total_yt_videos int default 0;
+alter table baseline add column if not exists total_yt_shorts int default 0;
 alter table notes enable row level security;
 alter table stats enable row level security;
 alter table reflections enable row level security;
@@ -899,15 +917,44 @@ create policy if not exists "own_baseline" on baseline
         <div class="ctitle">📍 Початкова точка</div>
         <div id="baselineDisplay"></div>
         <div id="baselineForm" style="display:none;background:var(--bg);border-radius:11px;padding:16px;margin-top:12px">
-          <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Скільки публікацій і підписників було ДО того як почала вести статистику тут. Заповнюєш один раз — після можна редагувати.</p>
-          <div class="fgrid">
-            <div class="fg"><label>IG підписники</label><input type="number" id="bIg" placeholder="0"></div>
-            <div class="fg"><label>TikTok підписники</label><input type="number" id="bTt" placeholder="0"></div>
-            <div class="fg"><label>Постів IG (всього)</label><input type="number" id="bPosts" placeholder="0"></div>
-            <div class="fg"><label>Сторіс (всього)</label><input type="number" id="bStories" placeholder="0"></div>
-            <div class="fg"><label>Reels / TikTok (всього)</label><input type="number" id="bReels" placeholder="0"></div>
-            <div class="fg"><label>Дата відліку</label><input type="date" id="bDate"></div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Скільки публікацій і підписників було ДО того як почала вести статистику тут. Поля з'являються залежно від мереж, які ти ведеш (чіпи внизу).</p>
+
+          <div id="bl-ig-section" class="platform-section">
+            <div class="platform-section-head">📷 Instagram</div>
+            <div class="fgrid">
+              <div class="fg"><label>Підписники</label><input type="number" id="bIg" placeholder="0"></div>
+              <div class="fg"><label>Постів (всього)</label><input type="number" id="bPosts" placeholder="0"></div>
+              <div class="fg"><label>Сторіс (всього)</label><input type="number" id="bStories" placeholder="0"></div>
+              <div class="fg"><label>Reels (всього)</label><input type="number" id="bReels" placeholder="0"></div>
+            </div>
           </div>
+
+          <div id="bl-tt-section" class="platform-section">
+            <div class="platform-section-head">🎵 TikTok</div>
+            <div class="fgrid">
+              <div class="fg"><label>Підписники</label><input type="number" id="bTt" placeholder="0"></div>
+              <div class="fg"><label>Відео (всього)</label><input type="number" id="bTtVideos" placeholder="0"></div>
+            </div>
+          </div>
+
+          <div id="bl-tg-section" class="platform-section">
+            <div class="platform-section-head">✈️ Telegram</div>
+            <div class="fgrid">
+              <div class="fg"><label>Підписники</label><input type="number" id="bTg" placeholder="0"></div>
+              <div class="fg"><label>Постів (всього)</label><input type="number" id="bTgPosts" placeholder="0"></div>
+            </div>
+          </div>
+
+          <div id="bl-yt-section" class="platform-section">
+            <div class="platform-section-head">📺 YouTube</div>
+            <div class="fgrid">
+              <div class="fg"><label>Підписники</label><input type="number" id="bYt" placeholder="0"></div>
+              <div class="fg"><label>Відео (всього)</label><input type="number" id="bYtVideos" placeholder="0"></div>
+              <div class="fg"><label>Shorts (всього)</label><input type="number" id="bYtShorts" placeholder="0"></div>
+            </div>
+          </div>
+
+          <div class="fg" style="margin:14px 0 0"><label>Дата відліку</label><input type="date" id="bDate"></div>
           <div style="display:flex;gap:8px;margin-top:12px">
             <button class="btn btn-ac btn-sm" onclick="saveBaseline()">Зберегти</button>
             <button class="btn btn-out btn-sm" onclick="hideBaselineForm()">Скасувати</button>
@@ -1500,12 +1547,37 @@ const DASHBOARD_WIDGETS = [
 
 const WIDGET_BY_ID = Object.fromEntries(DASHBOARD_WIDGETS.map(w => [w.id, w]));
 
+function getWidgetSize(id) {
+  const sizes = JSON.parse(localStorage.getItem('kishkas-dashboard-sizes-'+CU) || '{}');
+  return sizes[id] || WIDGET_BY_ID[id]?.size || 'small';
+}
+
+function setWidgetSize(id, size) {
+  const sizes = JSON.parse(localStorage.getItem('kishkas-dashboard-sizes-'+CU) || '{}');
+  sizes[id] = size;
+  localStorage.setItem('kishkas-dashboard-sizes-'+CU, JSON.stringify(sizes));
+  const block = document.querySelector(`.dash-block[data-widget="${id}"]`);
+  if (!block) return;
+  block.classList.remove('size-small','size-wide','size-tall');
+  block.classList.add('size-' + size);
+  block.querySelectorAll('.size-btn').forEach(b => {
+    b.classList.toggle('on', b.dataset.size === size);
+  });
+  if (id === 'growth') setTimeout(drawDashGrowth, 250);
+}
+
 function blk(id, body, action) {
   const cfg = WIDGET_BY_ID[id];
+  const size = getWidgetSize(id);
   const actBtn = action ? `<button class="dash-block-action" onclick="${action.fn}">${action.label}</button>` : '';
-  return `<div class="dash-block size-${cfg.size}" data-widget="${id}">
+  const sizeBtns = `<div class="dash-size-controls">
+    <button class="size-btn ${size==='small'?'on':''}" data-size="small" onclick="event.stopPropagation();setWidgetSize('${id}','small')" title="1×1">1×1</button>
+    <button class="size-btn ${size==='wide'?'on':''}" data-size="wide" onclick="event.stopPropagation();setWidgetSize('${id}','wide')" title="2×1">2×1</button>
+    <button class="size-btn ${size==='tall'?'on':''}" data-size="tall" onclick="event.stopPropagation();setWidgetSize('${id}','tall')" title="1×2">1×2</button>
+  </div>`;
+  return `<div class="dash-block size-${size}" data-widget="${id}">
     <div class="dash-accent" style="background:${cfg.color}"></div>
-    <div class="dash-block-title"><span>${cfg.name}</span>${actBtn}</div>
+    <div class="dash-block-title"><span>${cfg.name}</span><div style="display:flex;gap:8px;align-items:center">${sizeBtns}${actBtn}</div></div>
     ${body}
   </div>`;
 }
@@ -1810,6 +1882,8 @@ function togglePlatform(id) {
   if (i >= 0) p.splice(i,1); else p.push(id);
   setPlatforms(p);
   applyPlatformVisibility();
+  applyBaselinePlatformVisibility();
+  renderBaseline();
   loadStats();
   renderCharts();
   renderHome();
@@ -2476,38 +2550,60 @@ async function dbBaseline() {
 async function dbSaveBaseline(b) {
   if (!sbUser) { lsave('baseline', b); return; }
   const { data: existing } = await sb.from('baseline').select('id').eq('user_id', sbUser.id);
+  const fields = {
+    ig_followers: b.ig_followers||0, tt_followers: b.tt_followers||0,
+    tg_followers: b.tg_followers||0, yt_followers: b.yt_followers||0,
+    total_posts: b.total_posts||0, total_stories: b.total_stories||0, total_reels: b.total_reels||0,
+    total_tt_videos: b.total_tt_videos||0,
+    total_tg_posts: b.total_tg_posts||0,
+    total_yt_videos: b.total_yt_videos||0, total_yt_shorts: b.total_yt_shorts||0,
+    set_at: b.set_at,
+    updated_at: new Date().toISOString()
+  };
   if (existing && existing.length) {
-    await sb.from('baseline').update({
-      ig_followers: b.ig_followers, tt_followers: b.tt_followers,
-      total_posts: b.total_posts, total_stories: b.total_stories,
-      total_reels: b.total_reels, set_at: b.set_at,
-      updated_at: new Date().toISOString()
-    }).eq('id', existing[0].id);
+    await sb.from('baseline').update(fields).eq('id', existing[0].id);
   } else {
-    await sb.from('baseline').insert({user_id:sbUser.id, ...b});
+    await sb.from('baseline').insert({user_id:sbUser.id, ...fields});
   }
 }
 
 function showBaselineForm(){ document.getElementById('baselineForm').style.display='block'; }
 function hideBaselineForm(){ document.getElementById('baselineForm').style.display='none'; }
 
+function applyBaselinePlatformVisibility() {
+  const enabled = getPlatforms();
+  ['ig','tt','tg','yt'].forEach(p => {
+    const sec = document.getElementById('bl-' + p + '-section');
+    if (sec) sec.style.display = enabled.includes(p) ? '' : 'none';
+  });
+}
+
 async function prepBaselineForm() {
   const b = await dbBaseline();
   document.getElementById('bIg').value = b?.ig_followers || '';
   document.getElementById('bTt').value = b?.tt_followers || '';
+  document.getElementById('bTg').value = b?.tg_followers || '';
+  document.getElementById('bYt').value = b?.yt_followers || '';
   document.getElementById('bPosts').value = b?.total_posts || '';
   document.getElementById('bStories').value = b?.total_stories || '';
   document.getElementById('bReels').value = b?.total_reels || '';
+  document.getElementById('bTtVideos').value = b?.total_tt_videos || '';
+  document.getElementById('bTgPosts').value = b?.total_tg_posts || '';
+  document.getElementById('bYtVideos').value = b?.total_yt_videos || '';
+  document.getElementById('bYtShorts').value = b?.total_yt_shorts || '';
   document.getElementById('bDate').value = b?.set_at || '';
+  applyBaselinePlatformVisibility();
 }
 
 async function saveBaseline() {
+  const n = id => parseInt(document.getElementById(id).value) || 0;
   const b = {
-    ig_followers: parseInt(document.getElementById('bIg').value) || 0,
-    tt_followers: parseInt(document.getElementById('bTt').value) || 0,
-    total_posts: parseInt(document.getElementById('bPosts').value) || 0,
-    total_stories: parseInt(document.getElementById('bStories').value) || 0,
-    total_reels: parseInt(document.getElementById('bReels').value) || 0,
+    ig_followers: n('bIg'), tt_followers: n('bTt'),
+    tg_followers: n('bTg'), yt_followers: n('bYt'),
+    total_posts: n('bPosts'), total_stories: n('bStories'), total_reels: n('bReels'),
+    total_tt_videos: n('bTtVideos'),
+    total_tg_posts: n('bTgPosts'),
+    total_yt_videos: n('bYtVideos'), total_yt_shorts: n('bYtShorts'),
     set_at: document.getElementById('bDate').value || new Date().toISOString().slice(0,10)
   };
   await dbSaveBaseline(b);
@@ -2519,26 +2615,33 @@ async function renderBaseline() {
   const b = await dbBaseline();
   const el = document.getElementById('baselineDisplay');
   if (!el) return;
-  const empty = !b || (!b.ig_followers && !b.tt_followers && !b.total_posts && !b.total_stories && !b.total_reels);
-  if (empty) {
+  const platforms = getPlatforms();
+  const hasAny = b && (b.ig_followers||b.tt_followers||b.tg_followers||b.yt_followers||b.total_posts||b.total_stories||b.total_reels||b.total_tt_videos||b.total_tg_posts||b.total_yt_videos||b.total_yt_shorts);
+  if (!hasAny) {
     el.innerHTML = `<p style="font-size:13px;color:var(--muted);margin:8px 0 12px">Необов'язково. Це допомагає бачити загальний результат разом з тим що відстежуєш тут.</p>
       <button class="btn btn-out btn-sm" onclick="prepBaselineForm().then(()=>showBaselineForm())">+ Задати початкову точку</button>`;
-  } else {
-    const date = b.set_at ? new Date(b.set_at).toLocaleDateString('uk-UA') : '';
-    const cards = [
-      b.ig_followers && {v:b.ig_followers, l:'IG підписники'},
-      b.tt_followers && {v:b.tt_followers, l:'TikTok'},
-      b.total_posts && {v:b.total_posts, l:'Постів IG'},
-      b.total_stories && {v:b.total_stories, l:'Сторіс'},
-      b.total_reels && {v:b.total_reels, l:'Reels/TT'},
-    ].filter(Boolean);
-    el.innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:12px 0">
-        ${cards.map(c=>`<div><div class="sv" style="font-size:22px">${c.v}</div><div class="sl">${c.l}</div></div>`).join('')}
-      </div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Станом на ${date}</div>
-      <button class="btn btn-out btn-sm" onclick="prepBaselineForm().then(()=>showBaselineForm())">Редагувати</button>`;
+    return;
   }
+  const date = b.set_at ? new Date(b.set_at).toLocaleDateString('uk-UA') : '';
+  const allCards = [
+    platforms.includes('ig') && b.ig_followers && {v:b.ig_followers, l:'IG підписники'},
+    platforms.includes('tt') && b.tt_followers && {v:b.tt_followers, l:'TikTok підписники'},
+    platforms.includes('tg') && b.tg_followers && {v:b.tg_followers, l:'TG підписники'},
+    platforms.includes('yt') && b.yt_followers && {v:b.yt_followers, l:'YT підписники'},
+    platforms.includes('ig') && b.total_posts && {v:b.total_posts, l:'Постів IG'},
+    platforms.includes('ig') && b.total_stories && {v:b.total_stories, l:'Сторіс'},
+    platforms.includes('ig') && b.total_reels && {v:b.total_reels, l:'Reels'},
+    platforms.includes('tt') && b.total_tt_videos && {v:b.total_tt_videos, l:'TT відео'},
+    platforms.includes('tg') && b.total_tg_posts && {v:b.total_tg_posts, l:'TG пости'},
+    platforms.includes('yt') && b.total_yt_videos && {v:b.total_yt_videos, l:'YT відео'},
+    platforms.includes('yt') && b.total_yt_shorts && {v:b.total_yt_shorts, l:'YT Shorts'},
+  ].filter(Boolean);
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:12px 0">
+      ${allCards.map(c=>`<div><div class="sv" style="font-size:22px">${c.v}</div><div class="sl">${c.l}</div></div>`).join('')}
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Станом на ${date}</div>
+    <button class="btn btn-out btn-sm" onclick="prepBaselineForm().then(()=>showBaselineForm())">Редагувати</button>`;
 }
 
 async function renderProgress() {
