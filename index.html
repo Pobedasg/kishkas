@@ -998,7 +998,7 @@ async function sendChat() {
   bubbleEl.textContent = '';
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/chat', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
@@ -1080,7 +1080,7 @@ async function analyzeReflect(i) {
   st.textContent = '⏳'; out.classList.remove('on');
   const q = REFLECT_QS[CU][i].q;
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
+    const res = await fetch('/api/chat',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',max_tokens:600,
