@@ -191,6 +191,13 @@ label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bot
 .ciw{display:flex;gap:7px;align-items:flex-end;}
 .ciw textarea{min-height:50px;max-height:110px;}
 
+/* PLATFORMS */
+.platform-section{margin-bottom:14px;}
+.platform-section-head{font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.platform-chip{font-size:11px;padding:5px 11px;border-radius:100px;border:1.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'Geologica',sans-serif;transition:all .15s;white-space:nowrap;}
+.platform-chip:hover{border-color:var(--b2);}
+.platform-chip.on{background:var(--ac);border-color:var(--ac);color:#fff;}
+
 /* DASHBOARD */
 .dash-widget{margin-bottom:24px;}
 .dash-widget:last-child{margin-bottom:8px;}
@@ -910,20 +917,39 @@ create policy if not exists "own_baseline" on baseline
       <div class="slbl">Статистика по місяцях</div>
 
       <div class="card">
-        <div style="font-size:14px;font-weight:700;margin-bottom:14px">+ Новий місяць</div>
-        <div class="fgrid">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:14px;font-weight:700" id="statFormTitle">+ Новий місяць</div>
+          <div id="platformChips" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+        </div>
+        <div class="fgrid" style="margin-bottom:14px">
           <div class="fg"><label>Місяць</label>
             <select id="stmo"><option>Січень</option><option>Лютий</option><option>Березень</option><option>Квітень</option><option>Травень</option><option>Червень</option><option>Липень</option><option>Серпень</option><option>Вересень</option><option>Жовтень</option><option>Листопад</option><option>Грудень</option></select></div>
           <div class="fg"><label>Рік</label><input type="number" id="styr" value="2025"></div>
-          <div class="fg"><label>IG підписники (всього на кінець)</label><input type="number" id="stig" placeholder="0"></div>
-          <div class="fg"><label>TikTok (всього на кінець)</label><input type="number" id="sttt" placeholder="0"></div>
-          <div class="fg"><label>Постів IG за місяць</label><input type="number" id="stp" placeholder="0"></div>
-          <div class="fg"><label>Сторіс за місяць</label><input type="number" id="sts" placeholder="0"></div>
-          <div class="fg"><label>Reels / TikTok за місяць</label><input type="number" id="str" placeholder="0"></div>
-          <div class="fg"><label>Охоплення (середнє)</label><input type="number" id="streach" placeholder="0"></div>
         </div>
-        <div class="fg" style="margin:10px 0"><label>Нотатка до місяця</label><textarea id="stnote" placeholder="Що важливого цього місяця?"></textarea></div>
-        <button class="btn btn-ac" id="statsavebtn" onclick="addMonth()">Зберегти</button>
+
+        <div id="ig-section" class="platform-section">
+          <div class="platform-section-head">📷 Instagram</div>
+          <div class="fgrid">
+            <div class="fg"><label>Підписники (всього)</label><input type="number" id="stig" placeholder="0"></div>
+            <div class="fg"><label>Постів за місяць</label><input type="number" id="stp" placeholder="0"></div>
+            <div class="fg"><label>Сторіс за місяць</label><input type="number" id="sts" placeholder="0"></div>
+            <div class="fg"><label>Reels за місяць</label><input type="number" id="str" placeholder="0"></div>
+            <div class="fg"><label>Охоплення (середнє)</label><input type="number" id="streach" placeholder="0"></div>
+          </div>
+        </div>
+
+        <div id="tt-section" class="platform-section">
+          <div class="platform-section-head">🎵 TikTok</div>
+          <div class="fgrid">
+            <div class="fg"><label>Підписники (всього)</label><input type="number" id="sttt" placeholder="0"></div>
+          </div>
+        </div>
+
+        <div class="fg" style="margin:14px 0 10px"><label>Нотатка до місяця</label><textarea id="stnote" placeholder="Що важливого цього місяця?"></textarea></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ac" id="statsavebtn" onclick="addMonth()">Зберегти</button>
+          <button class="btn btn-out btn-sm" id="statcancelbtn" onclick="cancelEditMonth()" style="display:none">Скасувати редагування</button>
+        </div>
       </div>
       <div id="chartsec" style="display:none">
         <div class="cb"><div class="ctitle">Підписники</div><canvas id="chfol" height="160"></canvas></div>
@@ -1282,7 +1308,7 @@ function goTab(name) {
     });
   }
 
-  if(name==='stats') { renderCharts(); renderProgress(); }
+  if(name==='stats') { renderCharts(); renderProgress(); applyPlatformVisibility(); }
   if(name==='home') renderHome();
   if(name==='practice') renderPractice();
   closeMenu();
@@ -1664,23 +1690,106 @@ function closeNote() {
 // ══════════════════════════════════════════
 // STATS
 // ══════════════════════════════════════════
+const PLATFORMS_AVAILABLE = [
+  {id:'ig', name:'Instagram', emoji:'📷'},
+  {id:'tt', name:'TikTok',    emoji:'🎵'},
+];
+
+function getPlatforms() {
+  const saved = localStorage.getItem('kishkas-platforms-'+CU);
+  if (saved) { try { return JSON.parse(saved); } catch{} }
+  return ['ig','tt'];
+}
+
+function setPlatforms(arr) {
+  localStorage.setItem('kishkas-platforms-'+CU, JSON.stringify(arr));
+}
+
+function togglePlatform(id) {
+  const p = getPlatforms();
+  const i = p.indexOf(id);
+  if (i >= 0) p.splice(i,1); else p.push(id);
+  setPlatforms(p);
+  applyPlatformVisibility();
+  loadStats();
+  renderCharts();
+  renderHome();
+}
+
+function renderPlatformChips() {
+  const enabled = getPlatforms();
+  const el = document.getElementById('platformChips');
+  if (!el) return;
+  el.innerHTML = PLATFORMS_AVAILABLE.map(p =>
+    `<button class="platform-chip ${enabled.includes(p.id)?'on':''}" onclick="togglePlatform('${p.id}')">${p.emoji} ${p.name}</button>`
+  ).join('');
+}
+
+function applyPlatformVisibility() {
+  const enabled = getPlatforms();
+  const ig = document.getElementById('ig-section');
+  const tt = document.getElementById('tt-section');
+  if (ig) ig.style.display = enabled.includes('ig') ? '' : 'none';
+  if (tt) tt.style.display = enabled.includes('tt') ? '' : 'none';
+  document.getElementById('chfol').parentElement.style.display = (enabled.includes('ig')||enabled.includes('tt')) ? '' : 'none';
+  document.getElementById('chposts').parentElement.style.display = enabled.includes('ig') ? '' : 'none';
+  document.getElementById('chreach').parentElement.style.display = enabled.includes('ig') ? '' : 'none';
+  document.getElementById('chgrowth').parentElement.style.display = (enabled.includes('ig')||enabled.includes('tt')) ? '' : 'none';
+  renderPlatformChips();
+}
+
+let editingMonthId = null;
+
+function clearStatForm() {
+  ['stig','sttt','stp','sts','str','streach','stnote'].forEach(id => document.getElementById(id).value='');
+}
+
 async function loadStats() {
   const stats = await dbStats();
+  const platforms = getPlatforms();
   document.getElementById('chartsec').style.display = stats.length ? 'block' : 'none';
   document.getElementById('mlist').innerHTML = !stats.length
     ? '<div style="color:var(--muted);font-size:14px">Місяців ще немає</div>'
     : [...stats].reverse().map(m=>`<div class="mrow">
         <div><div class="mn">${m.month} ${m.year}</div>${m.note?`<div class="mm">${m.note.substring(0,60)}${m.note.length>60?'...':''}</div>`:''}</div>
         <div class="mbadges">
-          <span class="mbadge">IG ${m.ig||0}</span>
-          <span class="mbadge">TT ${m.tt||0}</span>
+          ${platforms.includes('ig')?`<span class="mbadge">IG ${m.ig||0}</span>`:''}
+          ${platforms.includes('tt')?`<span class="mbadge">TT ${m.tt||0}</span>`:''}
+          <button class="btn btn-out btn-sm" onclick="editMonth('${m.id}')">✎</button>
           <button class="btn btn-red btn-sm" onclick="delMonthById('${m.id}')">✕</button>
         </div></div>`).join('');
 }
 
+async function editMonth(id) {
+  const stats = await dbStats();
+  const m = stats.find(s => String(s.id) === String(id));
+  if (!m) return;
+  editingMonthId = id;
+  document.getElementById('stmo').value = m.month;
+  document.getElementById('styr').value = m.year;
+  document.getElementById('stig').value = m.ig || '';
+  document.getElementById('sttt').value = m.tt || '';
+  document.getElementById('stp').value = m.posts || '';
+  document.getElementById('sts').value = m.stories || '';
+  document.getElementById('str').value = m.reels || '';
+  document.getElementById('streach').value = m.reach || '';
+  document.getElementById('stnote').value = m.note || '';
+  document.getElementById('statFormTitle').textContent = `✎ Редагування: ${m.month} ${m.year}`;
+  document.getElementById('statcancelbtn').style.display = '';
+  document.querySelector('#tab-stats .card[id]')?.scrollIntoView({behavior:'smooth',block:'start'});
+  window.scrollTo({top: document.querySelector('#stmo').closest('.card').offsetTop - 80, behavior:'smooth'});
+}
+
+function cancelEditMonth() {
+  editingMonthId = null;
+  clearStatForm();
+  document.getElementById('statFormTitle').textContent = '+ Новий місяць';
+  document.getElementById('statcancelbtn').style.display = 'none';
+}
+
 async function addMonth() {
   const entry = {
-    id: Date.now().toString(),
+    id: editingMonthId || Date.now().toString(),
     month: document.getElementById('stmo').value,
     year: parseInt(document.getElementById('styr').value),
     ig: parseInt(document.getElementById('stig').value)||0,
@@ -1695,12 +1804,14 @@ async function addMonth() {
   await loadStats();
   renderCharts();
   renderHome();
+  cancelEditMonth();
   alert('Збережено ✓');
 }
 
 async function delMonthById(id) {
   if (!confirm('Видалити місяць?')) return;
   await dbDelStat(id);
+  if (editingMonthId === id) cancelEditMonth();
   await loadStats();
   renderCharts();
   renderHome();
@@ -1709,35 +1820,48 @@ async function delMonthById(id) {
 async function renderCharts() {
   const stats = await dbStats();
   if (!stats.length) return;
+  const platforms = getPlatforms();
   const labels = stats.map(m=>m.month.substring(0,3)+' '+m.year);
   ['chfol','chposts','chreach','chgrowth'].forEach(id=>{ if(charts[id]) charts[id].destroy(); });
-  charts['chfol']=new Chart(document.getElementById('chfol').getContext('2d'),{
-    type:'line',data:{labels,datasets:[
-      {label:'Instagram',data:stats.map(m=>m.ig||0),borderColor:'#FF6B9D',backgroundColor:'rgba(255,107,157,.08)',tension:0.4,fill:true},
-      {label:'TikTok',data:stats.map(m=>m.tt||0),borderColor:'#003a80',backgroundColor:'rgba(0,58,128,.08)',tension:0.4,fill:true},
-    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}
+
+  const folDs = [];
+  if (platforms.includes('ig')) folDs.push({label:'Instagram',data:stats.map(m=>m.ig||0),borderColor:'#FF6B9D',backgroundColor:'rgba(255,107,157,.08)',tension:0.4,fill:true});
+  if (platforms.includes('tt')) folDs.push({label:'TikTok',data:stats.map(m=>m.tt||0),borderColor:'#003a80',backgroundColor:'rgba(0,58,128,.08)',tension:0.4,fill:true});
+  if (folDs.length) charts['chfol']=new Chart(document.getElementById('chfol').getContext('2d'),{
+    type:'line',data:{labels,datasets:folDs},
+    options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}
   });
-  charts['chposts']=new Chart(document.getElementById('chposts').getContext('2d'),{
+
+  if (platforms.includes('ig')) charts['chposts']=new Chart(document.getElementById('chposts').getContext('2d'),{
     type:'bar',data:{labels,datasets:[
       {label:'Пости',data:stats.map(m=>m.posts||0),backgroundColor:'rgba(255,107,157,.7)'},
       {label:'Сторіс',data:stats.map(m=>m.stories||0),backgroundColor:'rgba(255,160,190,.7)'},
-      {label:'Reels/TT',data:stats.map(m=>m.reels||0),backgroundColor:'rgba(0,58,128,.7)'},
+      {label:'Reels',data:stats.map(m=>m.reels||0),backgroundColor:'rgba(108,92,231,.7)'},
     ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}
   });
-  charts['chreach']=new Chart(document.getElementById('chreach').getContext('2d'),{
+
+  if (platforms.includes('ig')) charts['chreach']=new Chart(document.getElementById('chreach').getContext('2d'),{
     type:'line',data:{labels,datasets:[
       {label:'Охоплення',data:stats.map(m=>m.reach||0),borderColor:'#6C5CE7',backgroundColor:'rgba(108,92,231,.1)',tension:0.4,fill:true},
     ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}
   });
-  const igDelta = stats.map((m,i)=>i>0?(m.ig||0)-(stats[i-1].ig||0):null);
-  const ttDelta = stats.map((m,i)=>i>0?(m.tt||0)-(stats[i-1].tt||0):null);
+
   const colorBars = (arr, pos, neg) => arr.map(v => v==null ? 'transparent' : v>=0 ? pos : neg);
-  charts['chgrowth']=new Chart(document.getElementById('chgrowth').getContext('2d'),{
-    type:'bar',data:{labels,datasets:[
-      {label:'IG',data:igDelta,backgroundColor:colorBars(igDelta,'rgba(34,197,94,.75)','rgba(220,38,38,.75)')},
-      {label:'TikTok',data:ttDelta,backgroundColor:colorBars(ttDelta,'rgba(34,197,94,.45)','rgba(220,38,38,.45)')},
-    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}
+  const growDs = [];
+  if (platforms.includes('ig')) {
+    const igDelta = stats.map((m,i)=>i>0?(m.ig||0)-(stats[i-1].ig||0):null);
+    growDs.push({label:'IG',data:igDelta,backgroundColor:colorBars(igDelta,'rgba(34,197,94,.75)','rgba(220,38,38,.75)')});
+  }
+  if (platforms.includes('tt')) {
+    const ttDelta = stats.map((m,i)=>i>0?(m.tt||0)-(stats[i-1].tt||0):null);
+    growDs.push({label:'TikTok',data:ttDelta,backgroundColor:colorBars(ttDelta,'rgba(34,197,94,.45)','rgba(220,38,38,.45)')});
+  }
+  if (growDs.length) charts['chgrowth']=new Chart(document.getElementById('chgrowth').getContext('2d'),{
+    type:'bar',data:{labels,datasets:growDs},
+    options:{responsive:true,plugins:{legend:{position:'bottom'}}}
   });
+
+  applyPlatformVisibility();
 }
 
 // ══════════════════════════════════════════
