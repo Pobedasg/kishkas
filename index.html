@@ -199,26 +199,17 @@ label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bot
 .platform-chip:hover{border-color:var(--b2);}
 .platform-chip.on{background:var(--ac);border-color:var(--ac);color:#fff;}
 
-/* DASHBOARD — bento grid */
-.dash-grid{display:grid;grid-template-columns:1fr;gap:14px;}
-@media(min-width:760px){.dash-grid{grid-template-columns:repeat(2,1fr);}}
-@media(min-width:1100px){.dash-grid{grid-template-columns:repeat(3,1fr);}}
-.dash-block{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;position:relative;overflow:hidden;cursor:grab;transition:transform .2s ease,box-shadow .2s ease;user-select:none;display:flex;flex-direction:column;}
-.dash-block:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.06);}
-.dash-block:active{cursor:grabbing;}
-.dash-block.size-wide{grid-column:1/-1;}
-@media(min-width:1100px){.dash-block.size-wide{grid-column:span 2;}}
-.dash-block.size-full{grid-column:1/-1;}
-.dash-block.size-tall{grid-row:span 2;}
-@media(min-width:760px){
-  .dash-block.size-tall{min-height:380px;}
+/* DASHBOARD — free-resize bento */
+.dash-grid{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;}
+.dash-block{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;position:relative;overflow:auto;resize:both;width:300px;height:240px;min-width:240px;min-height:140px;max-width:100%;transition:box-shadow .2s ease;display:flex;flex-direction:column;}
+.dash-block:hover{box-shadow:0 8px 24px rgba(0,0,0,.06);}
+.dash-block-title{cursor:grab;}
+.dash-block-title:active{cursor:grabbing;}
+@media(max-width:759px){
+  .dash-block{width:100%!important;resize:vertical;}
 }
-.dash-size-controls{display:flex;gap:4px;align-items:center;}
-.size-btn{font-size:10px;font-weight:700;padding:3px 7px;border-radius:5px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:'Geologica',sans-serif;letter-spacing:0;line-height:1;transition:all .15s;opacity:.5;}
-.dash-block:hover .size-btn{opacity:1;}
-.size-btn:hover{border-color:var(--ink);color:var(--ink);}
-.size-btn.on{background:var(--ink);color:var(--bg);border-color:var(--ink);opacity:1;}
-@media(hover:none){.size-btn{opacity:.85;}}
+.dash-drag-ghost{opacity:.3;}
+.dash-drag-chosen{box-shadow:0 16px 40px rgba(0,0,0,.18)!important;}
 .dash-accent{position:absolute;top:0;left:0;right:0;height:4px;}
 .dash-block-title{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
 .dash-block-action{font-size:11px;color:var(--ac);background:none;border:none;cursor:pointer;font-family:'Geologica',sans-serif;padding:4px 8px;border-radius:6px;font-weight:600;}
@@ -1547,39 +1538,45 @@ const DASHBOARD_WIDGETS = [
 
 const WIDGET_BY_ID = Object.fromEntries(DASHBOARD_WIDGETS.map(w => [w.id, w]));
 
-function getWidgetSize(id) {
-  const sizes = JSON.parse(localStorage.getItem('kishkas-dashboard-sizes-'+CU) || '{}');
-  return sizes[id] || WIDGET_BY_ID[id]?.size || 'small';
+function getBlockDims(id) {
+  const dims = JSON.parse(localStorage.getItem('kishkas-dashboard-dims-'+CU) || '{}');
+  return dims[id] || null;
 }
 
-function setWidgetSize(id, size) {
-  const sizes = JSON.parse(localStorage.getItem('kishkas-dashboard-sizes-'+CU) || '{}');
-  sizes[id] = size;
-  localStorage.setItem('kishkas-dashboard-sizes-'+CU, JSON.stringify(sizes));
-  const block = document.querySelector(`.dash-block[data-widget="${id}"]`);
-  if (!block) return;
-  block.classList.remove('size-small','size-wide','size-tall');
-  block.classList.add('size-' + size);
-  block.querySelectorAll('.size-btn').forEach(b => {
-    b.classList.toggle('on', b.dataset.size === size);
-  });
-  if (id === 'growth') setTimeout(drawDashGrowth, 250);
+function saveBlockDims(id, w, h) {
+  const dims = JSON.parse(localStorage.getItem('kishkas-dashboard-dims-'+CU) || '{}');
+  dims[id] = { w, h };
+  localStorage.setItem('kishkas-dashboard-dims-'+CU, JSON.stringify(dims));
 }
 
 function blk(id, body, action) {
   const cfg = WIDGET_BY_ID[id];
-  const size = getWidgetSize(id);
+  const dims = getBlockDims(id);
+  const sizeStyle = dims ? `style="width:${dims.w}px;height:${dims.h}px"` : '';
   const actBtn = action ? `<button class="dash-block-action" onclick="${action.fn}">${action.label}</button>` : '';
-  const sizeBtns = `<div class="dash-size-controls">
-    <button class="size-btn ${size==='small'?'on':''}" data-size="small" onclick="event.stopPropagation();setWidgetSize('${id}','small')" title="1×1">1×1</button>
-    <button class="size-btn ${size==='wide'?'on':''}" data-size="wide" onclick="event.stopPropagation();setWidgetSize('${id}','wide')" title="2×1">2×1</button>
-    <button class="size-btn ${size==='tall'?'on':''}" data-size="tall" onclick="event.stopPropagation();setWidgetSize('${id}','tall')" title="1×2">1×2</button>
-  </div>`;
-  return `<div class="dash-block size-${size}" data-widget="${id}">
+  return `<div class="dash-block" data-widget="${id}" ${sizeStyle}>
     <div class="dash-accent" style="background:${cfg.color}"></div>
-    <div class="dash-block-title"><span>${cfg.name}</span><div style="display:flex;gap:8px;align-items:center">${sizeBtns}${actBtn}</div></div>
+    <div class="dash-block-title"><span>${cfg.name}</span>${actBtn}</div>
     ${body}
   </div>`;
+}
+
+function observeBlockResize() {
+  if (!window.ResizeObserver) return;
+  if (window._blockRO) window._blockRO.disconnect();
+  window._blockRO = new ResizeObserver(entries => {
+    for (const entry of entries) {
+      const el = entry.target;
+      const id = el.dataset.widget;
+      if (!id || !el._sizeReady) { el._sizeReady = true; continue; }
+      clearTimeout(el._saveTimer);
+      el._saveTimer = setTimeout(() => {
+        saveBlockDims(id, el.offsetWidth, el.offsetHeight);
+        if (id === 'growth') drawDashGrowth();
+      }, 250);
+    }
+  });
+  document.querySelectorAll('.dash-block').forEach(b => window._blockRO.observe(b));
 }
 
 function getDashSelection() {
@@ -1623,6 +1620,7 @@ async function renderHome() {
   container.innerHTML = renders.filter(Boolean).join('');
   if (order.includes('growth')) drawDashGrowth();
   initDashSortable();
+  observeBlockResize();
 }
 
 function initDashSortable() {
@@ -1633,10 +1631,7 @@ function initDashSortable() {
     animation: 200,
     ghostClass: 'dash-drag-ghost',
     chosenClass: 'dash-drag-chosen',
-    filter: 'button, a, .chip, .nitem, input, textarea, select, .goal-bar',
-    preventOnFilter: false,
-    delay: 100,
-    delayOnTouchOnly: true,
+    handle: '.dash-block-title',
     onEnd: function() {
       const order = Array.from(container.querySelectorAll('.dash-block')).map(b => b.dataset.widget);
       localStorage.setItem('kishkas-dashboard-order-'+CU, JSON.stringify(order));
