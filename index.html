@@ -177,7 +177,32 @@ label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bot
 .mbadges{display:flex;gap:5px;flex-wrap:wrap;}
 .mbadge{font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--bg);color:var(--muted);}
 
-/* AI CHAT */
+/* AI CHAT — Claude-style layout */
+.ai-layout{display:flex;align-items:stretch;min-height:calc(100vh - 80px);}
+.chat-sidebar{width:280px;flex-shrink:0;border-right:1px solid var(--border);padding:24px 16px;overflow-y:auto;background:var(--bg);}
+body.theme-modern .chat-sidebar{background:transparent;}
+.chat-main{flex:1;min-width:0;}
+.chat-list{display:flex;flex-direction:column;gap:4px;}
+.chat-list-item{padding:10px 12px;border-radius:9px;cursor:pointer;font-size:13px;line-height:1.4;color:var(--ink2);transition:background .15s;display:flex;align-items:center;gap:8px;}
+.chat-list-item:hover{background:rgba(0,0,0,.04);}
+body.theme-modern .chat-list-item:hover{background:var(--border);}
+.chat-list-item.active{background:var(--ink);color:var(--bg);}
+.chat-list-item .chat-list-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.chat-list-empty{color:var(--muted);font-size:13px;padding:8px;}
+.chat-list-day{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:10px 8px 4px;}
+.chat-list-day:first-child{margin-top:0;}
+.chat-header{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.chat-sidebar-toggle{display:none;}
+.chat-sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:85;}
+@media(max-width:899px){
+  .ai-layout{display:block;}
+  .chat-sidebar{position:fixed;top:calc(52px + env(safe-area-inset-top,0px));bottom:0;left:0;z-index:86;width:280px;max-width:80%;transform:translateX(-100%);transition:transform .25s ease;box-shadow:0 0 32px rgba(0,0,0,.18);}
+  body.theme-modern .chat-sidebar{background:var(--bg);}
+  .chat-sidebar.open{transform:translateX(0);}
+  .chat-sidebar-backdrop.open{display:block;}
+  .chat-sidebar-toggle{display:inline-flex;}
+}
+
 .chatw{display:flex;flex-direction:column;gap:9px;margin-bottom:14px;max-height:450px;overflow-y:auto;padding:3px 0;}
 .chatm{display:flex;gap:9px;align-items:flex-start;}
 .chatm.u{flex-direction:row-reverse;}
@@ -768,6 +793,14 @@ create table if not exists audience_portrait (
   updated_at timestamptz default now(),
   unique (user_id)
 );
+create table if not exists chats (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users,
+  title text,
+  messages jsonb default '[]'::jsonb,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
 create table if not exists baseline (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users,
@@ -796,6 +829,9 @@ alter table streak_days enable row level security;
 alter table goals enable row level security;
 alter table audience_portrait enable row level security;
 alter table baseline enable row level security;
+alter table chats enable row level security;
+create policy if not exists "own_chats" on chats
+  using (auth.uid()=user_id) with check (auth.uid()=user_id);
 create policy if not exists "own_notes" on notes
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
 create policy if not exists "own_stats" on stats
@@ -1069,21 +1105,34 @@ create policy if not exists "own_baseline" on baseline
 
   <!-- AI CHAT -->
   <div id="tab-ai" class="tab">
-    <div class="sec">
-      <div class="stitle">ШІ-чат</div>
-      <div class="cl cl-p">Питай що завгодно: аналіз статистики, ідеї постів, написати сценарій, текст для підпису, стратегія. ШІ знає твій профіль і статистику.</div>
-      <div class="slbl">Швидкі запити</div>
-      <div class="chips" id="aichips"></div>
-      <div class="chatw" id="chatw">
-        <div class="chatm"><div class="chatav">🤖</div><div class="chatb">Привіт! Я твій ШІ-помічник. Можу допомогти з аналізом статистики, ідеями постів, написати підпис або сценарій для Reels. Що хочеш?</div></div>
-      </div>
-      <div class="ciw">
-        <textarea id="aiq" placeholder="Запитай або опиши ідею..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
-        <button class="btn btn-ac btn-sm" id="aisend" onclick="sendChat()" style="height:52px;white-space:nowrap;flex-shrink:0">→</button>
-      </div>
-      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <button class="btn btn-out btn-sm" onclick="clearChat()">Очистити чат</button>
-        <span id="aist" style="font-size:12px;color:var(--muted)"></span>
+    <div class="ai-layout">
+      <aside class="chat-sidebar" id="chatSidebar">
+        <button class="btn btn-ac" onclick="newChat()" style="width:100%;margin-bottom:14px">+ Новий чат</button>
+        <div class="chat-list" id="chatList"></div>
+      </aside>
+      <div class="chat-sidebar-backdrop" id="chatSidebarBackdrop" onclick="toggleChatSidebar(false)"></div>
+      <div class="chat-main">
+        <div class="sec" style="max-width:760px">
+          <div class="chat-header">
+            <button class="btn btn-out btn-sm chat-sidebar-toggle" onclick="toggleChatSidebar()" aria-label="Список чатів">☰</button>
+            <div class="stitle" id="chatTitle" style="margin:0;font-size:24px;flex:1">ШІ-чат</div>
+            <button class="btn btn-out btn-sm" onclick="renameCurrentChat()" id="renameChatBtn" style="display:none" title="Перейменувати">✎</button>
+            <button class="btn btn-red btn-sm" onclick="deleteCurrentChat()" id="delChatBtn" style="display:none" title="Видалити">✕</button>
+          </div>
+          <div class="cl cl-p" id="chatIntro">Питай що завгодно: аналіз статистики, ідеї постів, сценарії. ШІ знає твій профіль і статистику.</div>
+          <div class="slbl">Швидкі запити</div>
+          <div class="chips" id="aichips"></div>
+          <div class="chatw" id="chatw">
+            <div class="chatm"><div class="chatav">🤖</div><div class="chatb">Привіт! Я твій ШІ-помічник. Чим допомогти?</div></div>
+          </div>
+          <div class="ciw">
+            <textarea id="aiq" placeholder="Запитай або опиши ідею..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+            <button class="btn btn-ac btn-sm" id="aisend" onclick="sendChat()" style="height:52px;white-space:nowrap;flex-shrink:0">→</button>
+          </div>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span id="aist" style="font-size:12px;color:var(--muted)"></span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1404,6 +1453,7 @@ function goTab(name) {
   }
 
   if(name==='stats') { renderCharts(); renderProgress(); applyPlatformVisibility(); }
+  if(name==='ai') renderChatList();
   if(name==='home') renderHome();
   if(name==='practice') renderPractice();
   closeMenu();
@@ -2173,6 +2223,153 @@ function addMsg(role, text) {
   return div.querySelector('.chatb');
 }
 
+// ──────────────────────────────────────────
+// CHAT — multi-conversation
+// ──────────────────────────────────────────
+let currentChatId = null;
+
+async function dbChats() {
+  if (!sbUser) return lload('chats', []);
+  const { data } = await sb.from('chats')
+    .select('*').eq('user_id', sbUser.id)
+    .order('updated_at', { ascending: false });
+  return data || [];
+}
+
+async function dbCreateChat(title, messages) {
+  if (!sbUser) {
+    const list = lload('chats', []);
+    const c = { id: 'lc-'+Date.now(), title, messages, updated_at: new Date().toISOString() };
+    list.unshift(c);
+    lsave('chats', list);
+    return c;
+  }
+  const { data } = await sb.from('chats')
+    .insert({ user_id: sbUser.id, title, messages })
+    .select();
+  return data?.[0];
+}
+
+async function dbUpdateChat(id, patch) {
+  if (!sbUser) {
+    const list = lload('chats', []);
+    const i = list.findIndex(c => String(c.id) === String(id));
+    if (i >= 0) { Object.assign(list[i], patch, { updated_at: new Date().toISOString() }); lsave('chats', list); }
+    return;
+  }
+  await sb.from('chats').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', id);
+}
+
+async function dbDelChat(id) {
+  if (!sbUser) { lsave('chats', lload('chats', []).filter(c => String(c.id) !== String(id))); return; }
+  await sb.from('chats').delete().eq('id', id);
+}
+
+function escapeHTML(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+}
+
+function renderChatMessages() {
+  const u = USERS[CU];
+  const wrap = document.getElementById('chatw');
+  if (!chatHistory.length) {
+    wrap.innerHTML = '<div class="chatm"><div class="chatav">🤖</div><div class="chatb">Привіт! Я твій ШІ-помічник. Чим допомогти?</div></div>';
+    return;
+  }
+  wrap.innerHTML = chatHistory.map(m => {
+    const av = m.role === 'user' ? u.emoji : '🤖';
+    const cls = 'chatm' + (m.role === 'user' ? ' u' : '');
+    return `<div class="${cls}"><div class="chatav">${av}</div><div class="chatb">${escapeHTML(m.content)}</div></div>`;
+  }).join('');
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function relativeDay(iso) {
+  const d = new Date(iso);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const yest = new Date(today); yest.setDate(today.getDate()-1);
+  const dStart = new Date(d); dStart.setHours(0,0,0,0);
+  if (dStart.getTime() === today.getTime()) return 'Сьогодні';
+  if (dStart.getTime() === yest.getTime()) return 'Вчора';
+  const days = Math.floor((today - dStart) / 86400000);
+  if (days < 7) return days + ' дн. тому';
+  return d.toLocaleDateString('uk-UA');
+}
+
+async function renderChatList() {
+  const list = await dbChats();
+  const el = document.getElementById('chatList');
+  if (!el) return;
+  if (!list.length) {
+    el.innerHTML = '<div class="chat-list-empty">Жодного чату ще немає</div>';
+    return;
+  }
+  // Group by day
+  const groups = {};
+  list.forEach(c => {
+    const day = relativeDay(c.updated_at || c.created_at || new Date().toISOString());
+    (groups[day] = groups[day] || []).push(c);
+  });
+  el.innerHTML = Object.entries(groups).map(([day, chats]) => `
+    <div class="chat-list-day">${day}</div>
+    ${chats.map(c => `<div class="chat-list-item ${String(c.id)===String(currentChatId)?'active':''}" onclick="loadChat('${c.id}')">
+      <span class="chat-list-title">${escapeHTML(c.title || 'Без назви')}</span>
+    </div>`).join('')}
+  `).join('');
+}
+
+async function loadChat(id) {
+  const list = await dbChats();
+  const c = list.find(x => String(x.id) === String(id));
+  if (!c) return;
+  currentChatId = c.id;
+  chatHistory = Array.isArray(c.messages) ? c.messages.slice() : [];
+  document.getElementById('chatTitle').textContent = c.title || 'Без назви';
+  document.getElementById('delChatBtn').style.display = '';
+  document.getElementById('renameChatBtn').style.display = '';
+  renderChatMessages();
+  renderChatList();
+  toggleChatSidebar(false);
+}
+
+function newChat() {
+  currentChatId = null;
+  chatHistory = [];
+  document.getElementById('chatTitle').textContent = 'Новий чат';
+  document.getElementById('delChatBtn').style.display = 'none';
+  document.getElementById('renameChatBtn').style.display = 'none';
+  renderChatMessages();
+  renderChatList();
+  toggleChatSidebar(false);
+  document.getElementById('aiq').focus();
+}
+
+async function renameCurrentChat() {
+  if (!currentChatId) return;
+  const cur = document.getElementById('chatTitle').textContent;
+  const t = prompt('Нова назва чату:', cur);
+  if (!t) return;
+  await dbUpdateChat(currentChatId, { title: t.trim() });
+  document.getElementById('chatTitle').textContent = t.trim();
+  renderChatList();
+}
+
+async function deleteCurrentChat() {
+  if (!currentChatId) return;
+  if (!confirm('Видалити цей чат назавжди?')) return;
+  await dbDelChat(currentChatId);
+  newChat();
+}
+
+function toggleChatSidebar(forceState) {
+  const sb = document.getElementById('chatSidebar');
+  const bd = document.getElementById('chatSidebarBackdrop');
+  if (!sb) return;
+  const willOpen = forceState !== undefined ? forceState : !sb.classList.contains('open');
+  sb.classList.toggle('open', willOpen);
+  bd.classList.toggle('open', willOpen);
+}
+
 async function sendChat() {
   const q = document.getElementById('aiq').value.trim();
   if (!q) return;
@@ -2181,14 +2378,14 @@ async function sendChat() {
   document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
 
   chatHistory.push({role:'user',content:q});
-  addMsg('user', q);
+  if (chatHistory.length === 1) renderChatMessages(); else addMsg('user', q);
 
   const stats = await dbStats();
   let statCtx = '';
   if (stats.length) {
     const last=stats[stats.length-1];
     const prev=stats.length>1?stats[stats.length-2]:null;
-    statCtx=`\n\nСТАТИСТИКА (${last.month} ${last.year}): IG:${last.ig||0} TT:${last.tt||0} Пости:${last.posts||0} Сторіс:${last.stories||0} Reels:${last.reels||0} Охоплення:${last.reach||0}${last.note?'\nНотатка: '+last.note:''}${prev?`\nПопередній (${prev.month} ${prev.year}): IG:${prev.ig||0} TT:${prev.tt||0}`:''}`;
+    statCtx=`\n\nСТАТИСТИКА (${last.month} ${last.year}): IG:${last.ig||0} TT:${last.tt||0} TG:${last.tg||0} YT:${last.yt||0} Пости:${last.posts||0} Сторіс:${last.stories||0} Reels:${last.reels||0} Охоплення:${last.reach||0}${last.note?'\nНотатка: '+last.note:''}${prev?`\nПопередній (${prev.month} ${prev.year}): IG:${prev.ig||0} TT:${prev.tt||0}`:''}`;
   }
 
   const sys = `Ти — досвідчений SMM-менеджер і блогер-наставник. Відповідай українською мовою. Будь конкретною, практичною, дружньою. До 400 слів.\n\n${USERS[CU].aiCtx}${statCtx}`;
@@ -2196,19 +2393,15 @@ async function sendChat() {
   const bubbleEl = addMsg('ai', '...');
   bubbleEl.textContent = '';
 
+  let reply = '';
   try {
     const res = await fetch('/api/chat', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:1000,
-        system:sys,
-        messages:chatHistory
-      })
+      body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1000, system:sys, messages:chatHistory })
     });
     const data = await res.json();
-    const reply = data.content?.find(b=>b.type==='text')?.text || 'Помилка отримання відповіді.';
+    reply = data.content?.find(b=>b.type==='text')?.text || 'Помилка отримання відповіді.';
     bubbleEl.textContent = reply;
     chatHistory.push({role:'assistant',content:reply});
     document.getElementById('aist').textContent = '✓';
@@ -2216,14 +2409,26 @@ async function sendChat() {
   } catch(e) {
     bubbleEl.textContent = 'Помилка з\'єднання. Перевір інтернет.';
     document.getElementById('aist').textContent = '❌';
+    return;
   }
   document.getElementById('chatw').scrollTop = 99999;
-}
 
-function clearChat() {
-  chatHistory = [];
-  const w = document.getElementById('chatw');
-  w.innerHTML = '<div class="chatm"><div class="chatav">🤖</div><div class="chatb">Чат очищено. Як можу допомогти?</div></div>';
+  // Persist to DB
+  try {
+    if (!currentChatId) {
+      const title = q.length > 60 ? q.slice(0, 58) + '…' : q;
+      const created = await dbCreateChat(title, chatHistory);
+      if (created) {
+        currentChatId = created.id;
+        document.getElementById('chatTitle').textContent = title;
+        document.getElementById('delChatBtn').style.display = '';
+        document.getElementById('renameChatBtn').style.display = '';
+      }
+    } else {
+      await dbUpdateChat(currentChatId, { messages: chatHistory });
+    }
+    renderChatList();
+  } catch (e) { console.error('chat save', e); }
 }
 
 // ══════════════════════════════════════════
