@@ -1783,8 +1783,18 @@ async function widgetAudience() {
 function widgetAiChips() {
   const u = USERS[CU];
   if (!u.chips) return '';
-  const body = `<div class="chips" style="margin-bottom:0">${u.chips.map((c,i)=>`<div class="chip" onclick="event.stopPropagation();goTab('ai');setTimeout(()=>{const el=document.getElementById('aiq');if(el)el.value=${JSON.stringify(u.chipTexts[i])}},100)">${c}</div>`).join('')}</div>`;
+  const body = `<div class="chips" style="margin-bottom:0">${u.chips.map((c,i)=>`<div class="chip" onclick="event.stopPropagation();askAiFromDash(${JSON.stringify(u.chipTexts[i])})">${c}</div>`).join('')}</div>`;
   return blk('aiChips', body);
+}
+
+function askAiFromDash(text) {
+  goTab('ai');
+  setTimeout(() => {
+    const el = document.getElementById('aiq');
+    if (!el) return;
+    el.value = text;
+    sendChat();
+  }, 150);
 }
 
 // ══════════════════════════════════════════
