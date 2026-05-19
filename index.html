@@ -315,6 +315,14 @@ label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bot
   .nlinks .nb{font-size:15px;padding:13px 14px;text-align:left;width:100%;border-radius:10px;font-weight:500;}
   .nlinks .nb.on{background:rgba(255,255,255,.12);color:white;}
   .nlinks .nb:hover{background:rgba(255,255,255,.08);}
+
+  /* classic mode: horizontal scrolling nav (no burger) */
+  body.nav-classic .burger{display:none;}
+  body.nav-classic .nav-backdrop{display:none !important;}
+  body.nav-classic .nlinks{position:static;top:auto;flex-direction:row;background:none;padding:0;gap:2px;border:none;box-shadow:none;transform:none;transition:none;z-index:auto;max-height:none;overflow-x:auto;overflow-y:hidden;pointer-events:auto;backdrop-filter:none;-webkit-backdrop-filter:none;scrollbar-width:none;}
+  body.nav-classic .nlinks::-webkit-scrollbar{display:none;}
+  body.nav-classic .nlinks .nb{font-size:12px;padding:6px 10px;width:auto;text-align:center;font-weight:500;border-radius:7px;}
+  body.nav-classic .nlinks .nb.on{background:rgba(255,255,255,.1);color:white;}
 }
 
 @media(max-width:640px){
@@ -605,7 +613,7 @@ const USERS = {
     aiCtx:'Ти консультуєш Алуну — дівчину яка веде лайфстайл-блог в Instagram і TikTok. Фокус на ЗАРАЗ: настрій, розпаковки, магазини, лайфхаки, спорт і харчування, краса. У минулому: повар, бариста, заводи в Польщі — це може бути контентом в майбутньому але не основа зараз. Основа: реальне щоденне life.'
   },
   dodo:{
-    name:'Додо',emoji:'💆',color:'#4DA6FF',role:'б\'юті майстер · брови та вії',
+    name:'Додо',emoji:'💆',color:'#4DA6FF',role:'б\'юті майстер · брови та вії',navStyle:'classic',
     heroTag:'💆 додо · план ментора',
     heroTitle:'Кожна робота —<br><span style="color:#4DA6FF">це контент.</span>',
     heroDesc:'Ти щодня перетворюєш людей. Просто почни знімати те що вже відбувається — решта прийде.',
@@ -729,6 +737,8 @@ function loginSuccess() {
   document.getElementById('nbrand').style.color = u.color;
   document.getElementById('nbemoji').textContent = u.emoji;
   document.getElementById('nbname').textContent = u.name.toLowerCase();
+  document.body.classList.toggle('nav-classic', u.navStyle === 'classic');
+  if (u.navStyle === 'classic') closeMenu();
   document.getElementById('htag').textContent = u.heroTag;
   document.getElementById('htitle').innerHTML = u.heroTitle;
   document.getElementById('hdesc').textContent = u.heroDesc;
