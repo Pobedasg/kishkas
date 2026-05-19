@@ -621,8 +621,7 @@ body.theme-modern .tab{padding-top:calc(60px + env(safe-area-inset-top,0px));}
   <div class="abg">girls</div>
   <div class="abox">
     <div class="abrand">кішкас</div>
-    <div class="asub">оберіть профіль і увійдіть</div>
-    <div class="pcards" id="pcards"></div>
+    <div class="asub">платформа для контент-творців</div>
     <div class="mtabs">
       <div class="mtab on" onclick="setMode('login',this)">Увійти</div>
       <div class="mtab" onclick="setMode('reg',this)">Реєстрація</div>
@@ -640,8 +639,10 @@ body.theme-modern .tab{padding-top:calc(60px + env(safe-area-inset-top,0px));}
       <div class="aerr" id="aerr"></div>
     </div>
     <div class="qlogins">
-      <div class="qlbl">Або швидкий вхід (локальний режим)</div>
-      <div class="qbtns" id="qbtns"></div>
+      <div class="qlbl">Або</div>
+      <div class="qbtns">
+        <button class="qbtn" onclick="enterDemo()"><span>✨</span><span>Подивитись демо без реєстрації</span></button>
+      </div>
     </div>
   </div>
 </div>
@@ -993,6 +994,40 @@ const USERS = {
     ],
     aiCtx:'Ти консультуєш Алуну — дівчину яка веде лайфстайл-блог в Instagram і TikTok. Фокус на ЗАРАЗ: настрій, розпаковки, магазини, лайфхаки, спорт і харчування, краса. У минулому: повар, бариста, заводи в Польщі — це може бути контентом в майбутньому але не основа зараз. Основа: реальне щоденне life.'
   },
+  demo:{
+    name:'Демо',brand:'кішкас · демо',design:'modern',reflectRotate:true,emoji:'✨',color:'#0066FF',role:'демо-перегляд',
+    heroTag:'✨ демо-сторінка',
+    heroTitle:'Подивись як це <span style="color:#0066FF">працює</span>',
+    heroDesc:'Це приклад заповненої сторінки — з прикладами нотаток, статистики, рефлексії. Зареєструйся щоб мати свою.',
+    pills:['нотатки','статистика','ШІ-чат','рефлексія','прогрес'],
+    chips:['📊 Аналіз статистики','💡 Ідеї контенту','📝 Написати пост','🎬 Сценарій для Reels','📈 Як рости','😶 Застрягла — що робити'],
+    chipTexts:[
+      'Проаналізуй мою статистику. Що йде добре, що погано, що треба покращити?',
+      'Запропонуй 10 конкретних ідей контенту для лайфстайл-блогера.',
+      'Допоможи написати текст підпису для поста.',
+      'Напиши сценарій для 30-секундного Reels.',
+      'Як органічно рости в Instagram?',
+      'Я застрягла — допоможи розібратись чому і що з цим робити.'
+    ],
+    aiCtx:'Ти консультуєш гостя у демо-режимі платформи. Показуй приклади відповідей, які підійшли б типовому контент-творцю — конкретно, практично, дружньо.'
+  },
+  default:{
+    name:'Користувачка',brand:'кішкас',design:'modern',reflectRotate:true,emoji:'👤',color:'#0066FF',role:'нова користувачка',
+    heroTag:'✨ ласкаво просимо',
+    heroTitle:'Твоя платформа<br>для <span style="color:#0066FF">росту</span>',
+    heroDesc:'Веди статистику, плануй контент, аналізуй з ШІ. Все що треба контент-творцеві в одному місці.',
+    pills:['нотатки','стат','ШІ-чат','рефлексія','прогрес'],
+    chips:['📊 Аналіз статистики','💡 Ідеї контенту','📝 Написати пост','🎬 Сценарій для Reels','📈 Як рости','😶 Застрягла — що робити'],
+    chipTexts:[
+      'Проаналізуй мою статистику. Що йде добре, що погано, що треба покращити?',
+      'Запропонуй 10 конкретних ідей контенту.',
+      'Допоможи написати текст підпису для поста.',
+      'Напиши сценарій для 30-секундного Reels.',
+      'Як органічно рости в Instagram?',
+      'Я застрягла — допоможи розібратись чому.'
+    ],
+    aiCtx:'Ти консультуєш контент-творця українською. Профіль ще не описано детально — питай уточнюючі питання коли потрібно, щоб давати релевантні відповіді.'
+  },
   dodo:{
     name:'Додо',emoji:'💆',color:'#4DA6FF',role:'б\'юті майстер · брови та вії',navStyle:'classic',
     heroTag:'💆 додо · план ментора',
@@ -1017,7 +1052,6 @@ const USERS = {
 // ══════════════════════════════════════════
 let CU = null; // current user key
 let sbUser = null; // supabase user
-let selProfile = null;
 let curNoteId = null;
 let charts = {};
 let chatHistory = [];
@@ -1027,9 +1061,6 @@ let authMode = 'login';
 // INIT
 // ══════════════════════════════════════════
 async function init() {
-  renderAuthProfiles();
-  renderQuickLogins();
-  // check existing supabase session
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     sbUser = session.user;
@@ -1037,26 +1068,12 @@ async function init() {
     const profileKey = meta?.profile;
     if (profileKey && USERS[profileKey]) {
       CU = profileKey;
-      loginSuccess();
-      return;
+    } else {
+      CU = 'default';
     }
+    loginSuccess();
+    return;
   }
-}
-
-function renderAuthProfiles() {
-  document.getElementById('pcards').innerHTML = Object.entries(USERS).map(([k,u]) => `
-    <div class="pcard" onclick="selProfile='${k}';document.querySelectorAll('.pcard').forEach(c=>c.classList.remove('sel'));this.classList.add('sel');document.getElementById('abtn').style.background='${u.color}'">
-      <div class="pav" style="background:${u.color}22">${u.emoji}</div>
-      <div><div class="pnm">${u.name}</div><div class="prl">${u.role}</div></div>
-    </div>`).join('');
-}
-
-function renderQuickLogins() {
-  document.getElementById('qbtns').innerHTML = Object.entries(USERS).map(([k,u]) => `
-    <button class="qbtn" onclick="quickLogin('${k}')">
-      <span>${u.emoji}</span>
-      <span>${u.name} — увійти локально (без Supabase)</span>
-    </button>`).join('');
 }
 
 function setMode(mode, el) {
@@ -1073,25 +1090,24 @@ async function doAuth() {
   const errEl = document.getElementById('aerr');
   errEl.style.display = 'none';
   if (!email || !pass) { showErr('Введи email і пароль'); return; }
-  if (!selProfile) { showErr('Оберіть профіль вище'); return; }
   const btn = document.getElementById('abtn');
   btn.textContent = '...'; btn.disabled = true;
   try {
     if (authMode === 'reg') {
-      const name = document.getElementById('aname').value || USERS[selProfile].name;
+      const name = document.getElementById('aname').value || 'Користувачка';
       const { data, error } = await sb.auth.signUp({
         email, password: pass,
-        options: { data: { profile: selProfile, name } }
+        options: { data: { profile: 'default', name } }
       });
       if (error) throw error;
-      if (data.user) { sbUser = data.user; CU = selProfile; loginSuccess(); }
+      if (data.user) { sbUser = data.user; CU = 'default'; loginSuccess(); }
       else showErr('Перевір email для підтвердження');
     } else {
       const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
       if (error) throw error;
       sbUser = data.user;
       const meta = data.user.user_metadata;
-      CU = meta?.profile || selProfile;
+      CU = (meta?.profile && USERS[meta.profile]) ? meta.profile : 'default';
       loginSuccess();
     }
   } catch(e) {
@@ -1104,8 +1120,10 @@ function showErr(msg) {
   el.textContent = msg; el.style.display = 'block';
 }
 
-function quickLogin(key) {
-  CU = key; sbUser = null;
+function enterDemo() {
+  CU = 'demo'; sbUser = null;
+  if (!localStorage.getItem(`ksk_demo_notes`)) lsave('notes', DEMO_NOTES);
+  if (!localStorage.getItem(`ksk_demo_stats`)) lsave('stats', DEMO_STATS);
   loginSuccess();
 }
 
@@ -1259,6 +1277,25 @@ async function dbDelStat(id) {
 }
 
 const MONTHS=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+
+const DEMO_NOTES = [
+  {id:'d1', title:'Ідея: ранок суботи як Reels',
+   content:'Знімати неприбраний стіл → процес прибирання → kitchen view з кавою. Гачок: «суботній ранок насправді». Тривалість 25 сек, музика повільна lo-fi.',
+   created_at:'2026-05-15T08:30:00Z'},
+  {id:'d2', title:'Що зайшло цього тижня',
+   content:'Топ пост — фото книги біля вікна (1.2k лайків). Другий — рутина перед сном (980). Висновок: повільні cozy кадри працюють краще ніж активні. Спробувати ще раз з різним освітленням.',
+   created_at:'2026-05-12T19:00:00Z'},
+  {id:'d3', title:'Питання від підписниці',
+   content:'Питання: «Як ти знаходиш час знімати + редагувати?» → готова тема для поста або карусельки. Структура: міт → реальність → 3 робочі лайфхаки → CTA.',
+   created_at:'2026-05-10T14:22:00Z'},
+];
+
+const DEMO_STATS = [
+  {id:'ds1', month:'Січень', year:2026, ig:850, tt:120, posts:6, stories:18, reels:4, reach:6200, note:'Старт ведення статистики'},
+  {id:'ds2', month:'Лютий', year:2026, ig:1100, tt:280, posts:9, stories:24, reels:8, reach:11500, note:'Reels почали стріляти'},
+  {id:'ds3', month:'Березень', year:2026, ig:1480, tt:560, posts:11, stories:31, reels:12, reach:18200, note:'+34% за місяць'},
+  {id:'ds4', month:'Квітень', year:2026, ig:1920, tt:890, posts:13, stories:38, reels:14, reach:24800, note:'Найкращий місяць'},
+];
 
 // ══════════════════════════════════════════
 // HOME
@@ -1556,9 +1593,12 @@ const REFLECT_QS = {
     {q:'Що б відрізнило мій профіль від інших б\'юті майстрів?',cat:'Ріст'},
   ]
 };
+// Demo and default users share Vika's question pool (generic enough)
+REFLECT_QS.demo = REFLECT_QS.vika;
+REFLECT_QS.default = REFLECT_QS.vika;
 
 function pickReflectSet(user, n=4) {
-  const pool = REFLECT_QS[user] || [];
+  const pool = REFLECT_QS[user] || REFLECT_QS.vika || [];
   if (pool.length <= n) return pool.map((_,i)=>i);
   const shuffled = pool.map((q,i)=>({q,i})).sort(()=>Math.random()-0.5);
   const picked = []; const usedCats = new Set();
@@ -1645,7 +1685,7 @@ async function syncReflectFromSupabase() {
 
 function renderReflect() {
   const u = USERS[CU];
-  const pool = REFLECT_QS[CU] || [];
+  const pool = REFLECT_QS[CU] || REFLECT_QS.vika || [];
   let indices;
   if (u.reflectRotate) {
     const saved = localStorage.getItem('kishkas-reflect-set-'+CU);
@@ -2194,7 +2234,33 @@ function renderMentor() {
   const el = document.getElementById('mentorcontent');
   if(CU==='vika') el.innerHTML = vikaM();
   else if(CU==='aluna') el.innerHTML = alunaM();
-  else el.innerHTML = dodoM();
+  else if(CU==='dodo') el.innerHTML = dodoM();
+  else el.innerHTML = genericM();
+}
+
+function genericM() {
+  const isDemo = CU === 'demo';
+  return `<div class="sec">
+    <div class="cncpt"><div class="cnl">🎯 ментор-план</div><p class="cnt">${isDemo
+      ? 'У реальному акаунті тут — <strong>персональний</strong> план: позиціонування, опори контенту, 12-тижнева дорога, формула 70/20/10. У демо показуємо загальну структуру.'
+      : 'Твій персональний план будемо генерувати на основі анкети. Поки що тут — загальна структура того, що буде доступно.'}</p></div>
+    <div class="slbl">Структура ментор-плану</div>
+    <div class="pillars">
+      <div class="pillar"><span class="pe">🎯</span><div class="pname">Позиціонування</div><div class="pdesc">Чим ти відрізняєшся. Що отримує підписниця коли йде до тебе.</div></div>
+      <div class="pillar"><span class="pe">🏛</span><div class="pname">3 опори</div><div class="pdesc">3 ключові теми навколо яких будується твій контент.</div></div>
+      <div class="pillar"><span class="pe">📅</span><div class="pname">12-тижнева дорога</div><div class="pdesc">Конкретний план що робити кожен тиждень — від фундаменту до системи.</div></div>
+      <div class="pillar"><span class="pe">⚖️</span><div class="pname">Формула контенту</div><div class="pdesc">Скільки % якого типу контенту робити під твою нішу.</div></div>
+    </div>
+    <div class="slbl" style="margin-top:24px">Що вже зараз доступно всім</div>
+    <div class="pillars">
+      <div class="pillar"><span class="pe">📝</span><div class="pname">Нотатки</div><div class="pdesc">Ідеї, чернетки, питання від підписниць.</div></div>
+      <div class="pillar"><span class="pe">📊</span><div class="pname">Статистика</div><div class="pdesc">Місячна динаміка з графіками росту і охоплення.</div></div>
+      <div class="pillar"><span class="pe">🤖</span><div class="pname">ШІ-чат</div><div class="pdesc">Аналіз стат, ідеї, тексти підписів, сценарії.</div></div>
+      <div class="pillar"><span class="pe">🪞</span><div class="pname">Рефлексія</div><div class="pdesc">25 питань для самоосмислення з ротацією і збереженням.</div></div>
+      <div class="pillar"><span class="pe">🔥</span><div class="pname">Стрік + цілі</div><div class="pdesc">Лічильник днів і прогрес по цілях.</div></div>
+      <div class="pillar"><span class="pe">🛠</span><div class="pname">Інструменти + практики</div><div class="pdesc">Підбірка зовнішніх застосунків + структуровані вправи.</div></div>
+    </div>
+  </div>`;
 }
 
 const sec=(h)=>`<div class="sec">${h}</div>`;
