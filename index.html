@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Geologica:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <style>
 :root{
   --ink:#111;--ink2:#333;--muted:#777;
@@ -198,7 +199,27 @@ label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bot
 .platform-chip:hover{border-color:var(--b2);}
 .platform-chip.on{background:var(--ac);border-color:var(--ac);color:#fff;}
 
-/* DASHBOARD */
+/* DASHBOARD — bento grid */
+.dash-grid{display:grid;grid-template-columns:1fr;gap:14px;}
+@media(min-width:760px){.dash-grid{grid-template-columns:repeat(2,1fr);}}
+@media(min-width:1100px){.dash-grid{grid-template-columns:repeat(3,1fr);}}
+.dash-block{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;position:relative;overflow:hidden;cursor:grab;transition:transform .2s ease,box-shadow .2s ease;user-select:none;}
+.dash-block:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.06);}
+.dash-block:active{cursor:grabbing;}
+.dash-block.size-wide{grid-column:1/-1;}
+@media(min-width:1100px){.dash-block.size-wide{grid-column:span 2;}}
+.dash-block.size-full{grid-column:1/-1;}
+.dash-accent{position:absolute;top:0;left:0;right:0;height:4px;}
+.dash-block-title{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.dash-block-action{font-size:11px;color:var(--ac);background:none;border:none;cursor:pointer;font-family:'Geologica',sans-serif;padding:4px 8px;border-radius:6px;font-weight:600;}
+.dash-block-action:hover{background:rgba(0,0,0,.04);}
+.dash-drag-ghost{opacity:.3;}
+.dash-drag-chosen{cursor:grabbing!important;box-shadow:0 16px 40px rgba(0,0,0,.18)!important;}
+body.theme-modern .dash-block{border:none;box-shadow:var(--shadow-card);}
+body.theme-modern .dash-block:hover{box-shadow:var(--shadow-card-hover);}
+body.theme-modern .dash-block-action:hover{background:var(--border);}
+
+/* Legacy widget styles kept for compatibility */
 .dash-widget{margin-bottom:24px;}
 .dash-widget:last-child{margin-bottom:8px;}
 .dash-widget-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;}
@@ -838,8 +859,9 @@ create policy if not exists "own_baseline" on baseline
       <div class="pills" id="hpills"></div>
     </div>
     <div class="sec">
-      <div id="dashboardWidgets"></div>
-      <button class="btn btn-out btn-sm" onclick="openDashSettings()" style="margin-top:12px">⚙ Налаштувати дашборд</button>
+      <div id="dashboardWidgets" class="dash-grid"></div>
+      <button class="btn btn-out btn-sm" onclick="openDashSettings()" style="margin-top:16px">⚙ Налаштувати дашборд</button>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">Перетягни блоки щоб змінити порядок — він збережеться.</div>
     </div>
   </div>
 
@@ -1465,16 +1487,28 @@ const DEMO_STATS = [
 // HOME
 // ══════════════════════════════════════════
 const DASHBOARD_WIDGETS = [
-  {id:'streak',      name:'🔥 Стрік публікацій',           default:false},
-  {id:'goals',       name:'🎯 Цілі (прогрес)',             default:false},
-  {id:'stats',       name:'📊 Статистика останнього місяця',default:true},
-  {id:'growth',      name:'📈 Графік росту IG/TT',         default:false},
-  {id:'notes',       name:'📝 Останні нотатки',            default:true},
-  {id:'reflectDay',  name:'🪞 Питання дня з рефлексії',    default:false},
-  {id:'checklist',   name:'✅ Прогрес чекліста',           default:false},
-  {id:'audience',    name:'👥 Портрет ЦА (підсумок)',       default:false},
-  {id:'aiChips',     name:'🤖 Швидкі ШІ-запити',           default:false},
+  {id:'streak',      name:'🔥 Стрік публікацій',           default:false, color:'#FF6B35', size:'small'},
+  {id:'goals',       name:'🎯 Цілі (прогрес)',             default:false, color:'#16A34A', size:'small'},
+  {id:'stats',       name:'📊 Статистика останнього місяця',default:true,  color:'#FF6B9D', size:'wide'},
+  {id:'growth',      name:'📈 Графік росту',               default:false, color:'#6C5CE7', size:'wide'},
+  {id:'notes',       name:'📝 Останні нотатки',            default:true,  color:'#3B82F6', size:'wide'},
+  {id:'reflectDay',  name:'🪞 Питання дня з рефлексії',    default:false, color:'#A855F7', size:'small'},
+  {id:'checklist',   name:'✅ Прогрес чекліста',           default:false, color:'#14B8A6', size:'small'},
+  {id:'audience',    name:'👥 Портрет ЦА (підсумок)',       default:false, color:'#0891B2', size:'wide'},
+  {id:'aiChips',     name:'🤖 Швидкі ШІ-запити',           default:false, color:'#EAB308', size:'wide'},
 ];
+
+const WIDGET_BY_ID = Object.fromEntries(DASHBOARD_WIDGETS.map(w => [w.id, w]));
+
+function blk(id, body, action) {
+  const cfg = WIDGET_BY_ID[id];
+  const actBtn = action ? `<button class="dash-block-action" onclick="${action.fn}">${action.label}</button>` : '';
+  return `<div class="dash-block size-${cfg.size}" data-widget="${id}">
+    <div class="dash-accent" style="background:${cfg.color}"></div>
+    <div class="dash-block-title"><span>${cfg.name}</span>${actBtn}</div>
+    ${body}
+  </div>`;
+}
 
 function getDashSelection() {
   const saved = localStorage.getItem('kishkas-dashboard-'+CU);
@@ -1501,15 +1535,41 @@ function saveDashSettings() {
 
 async function renderHome() {
   const selected = getDashSelection();
-  const order = DASHBOARD_WIDGETS.filter(w=>selected.includes(w.id)).map(w=>w.id);
+  const savedOrder = JSON.parse(localStorage.getItem('kishkas-dashboard-order-'+CU) || 'null');
+  let order;
+  if (Array.isArray(savedOrder)) {
+    order = [...savedOrder.filter(id => selected.includes(id)), ...selected.filter(id => !savedOrder.includes(id))];
+  } else {
+    order = DASHBOARD_WIDGETS.filter(w => selected.includes(w.id)).map(w => w.id);
+  }
   const container = document.getElementById('dashboardWidgets');
   if (!order.length) {
-    container.innerHTML = '<div style="color:var(--muted);font-size:14px;text-align:center;padding:40px 0">Дашборд пустий. Натисни «⚙ Налаштувати» щоб обрати віджети.</div>';
+    container.innerHTML = '<div style="color:var(--muted);font-size:14px;text-align:center;padding:40px 0;grid-column:1/-1">Дашборд пустий. Натисни «⚙ Налаштувати» щоб обрати віджети.</div>';
     return;
   }
   const renders = await Promise.all(order.map(id=>renderDashWidget(id)));
   container.innerHTML = renders.filter(Boolean).join('');
   if (order.includes('growth')) drawDashGrowth();
+  initDashSortable();
+}
+
+function initDashSortable() {
+  const container = document.getElementById('dashboardWidgets');
+  if (!container || !window.Sortable) return;
+  if (window._dashSortable) window._dashSortable.destroy();
+  window._dashSortable = new Sortable(container, {
+    animation: 200,
+    ghostClass: 'dash-drag-ghost',
+    chosenClass: 'dash-drag-chosen',
+    filter: 'button, a, .chip, .nitem, input, textarea, select, .goal-bar',
+    preventOnFilter: false,
+    delay: 100,
+    delayOnTouchOnly: true,
+    onEnd: function() {
+      const order = Array.from(container.querySelectorAll('.dash-block')).map(b => b.dataset.widget);
+      localStorage.setItem('kishkas-dashboard-order-'+CU, JSON.stringify(order));
+    }
+  });
 }
 
 async function renderDashWidget(id) {
@@ -1532,18 +1592,14 @@ async function widgetStreak() {
   const { current, max } = computeStreak(days);
   const today = new Date().toISOString().slice(0,10);
   const marked = days.includes(today);
-  return `<div class="dash-widget">
-    <div class="dash-widget-head"><div class="dash-widget-title">🔥 Стрік</div></div>
-    <div class="card">
-      <div class="streak-row">
-        <div><div class="sv streak-big">${current}</div><div class="sl">днів підряд</div></div>
-        <div><div class="sv streak-small">${max}</div><div class="sl">рекорд</div></div>
-      </div>
-      ${marked
-        ? '<div style="font-size:13px;color:var(--muted)">✓ Сьогодні відмічено</div>'
-        : '<button class="btn btn-ac btn-sm" onclick="markPostedToday().then(renderHome)">+ Я опублікувала сьогодні</button>'}
+  const body = `<div class="streak-row">
+      <div><div class="sv streak-big">${current}</div><div class="sl">днів підряд</div></div>
+      <div><div class="sv streak-small">${max}</div><div class="sl">рекорд</div></div>
     </div>
-  </div>`;
+    ${marked
+      ? '<div style="font-size:13px;color:var(--muted)">✓ Сьогодні відмічено</div>'
+      : '<button class="btn btn-ac btn-sm" onclick="event.stopPropagation();markPostedToday().then(renderHome)">+ Я опублікувала сьогодні</button>'}`;
+  return blk('streak', body);
 }
 
 async function widgetGoals() {
@@ -1551,71 +1607,76 @@ async function widgetGoals() {
   if (!goals.length) return '';
   const stats = await dbStats();
   const last = stats[stats.length-1] || {};
-  return `<div class="dash-widget">
-    <div class="dash-widget-head"><div class="dash-widget-title">🎯 Цілі</div><button class="dash-widget-action" onclick="goTab('stats')">Управління →</button></div>
-    <div class="card">${goals.map(g=>{
-      const cur=last[g.network]||0, pct=g.target>0?Math.min(100,Math.round(cur/g.target*100)):0;
-      return `<div class="goal-row">
-        <div class="goal-head"><strong>${g.network==='ig'?'Instagram':'TikTok'}: ${cur} / ${g.target}</strong></div>
-        <div class="goal-bar"><div class="goal-fill" style="width:${pct}%"></div></div>
-        <div class="goal-meta">${pct}%${g.deadline?` · до ${g.deadline}`:''}</div>
-      </div>`;
-    }).join('')}</div>
-  </div>`;
+  const body = goals.map(g=>{
+    const cur=last[g.network]||0, pct=g.target>0?Math.min(100,Math.round(cur/g.target*100)):0;
+    return `<div class="goal-row">
+      <div class="goal-head"><strong style="font-size:14px">${g.network==='ig'?'Instagram':g.network==='tt'?'TikTok':g.network==='tg'?'Telegram':'YouTube'}: ${cur}/${g.target}</strong></div>
+      <div class="goal-bar"><div class="goal-fill" style="width:${pct}%;background:${WIDGET_BY_ID.goals.color}"></div></div>
+      <div class="goal-meta">${pct}%${g.deadline?` · до ${g.deadline}`:''}</div>
+    </div>`;
+  }).join('');
+  return blk('goals', body, {fn:"goTab('stats')", label:'Управління →'});
 }
 
 async function widgetStats() {
   const stats = await dbStats();
-  if (!stats.length) return `<div class="dash-widget">
-    <div class="dash-widget-head"><div class="dash-widget-title">📊 Статистика</div></div>
-    <div class="card"><div style="color:var(--muted);font-size:14px">Ще немає даних. <button class="dash-widget-action" onclick="goTab('stats')">Додати →</button></div></div>
-  </div>`;
+  const platforms = getPlatforms();
+  if (!stats.length) {
+    return blk('stats', '<div style="color:var(--muted);font-size:14px">Ще немає даних. Додай перший місяць →</div>', {fn:"goTab('stats')", label:'Додати →'});
+  }
   const last=stats[stats.length-1], prev=stats.length>1?stats[stats.length-2]:null;
   const chg=(a,b,k)=>{ if(!b) return ''; const d=(a[k]||0)-(b[k]||0); return d>0?`<div class="schg cup">+${d}</div>`:d<0?`<div class="schg cdn">${d}</div>`:`<div class="schg cfl">без змін</div>`; };
-  return `<div class="dash-widget">
-    <div class="dash-widget-head"><div class="dash-widget-title">📊 ${last.month} ${last.year}</div><button class="dash-widget-action" onclick="goTab('stats')">Детальніше →</button></div>
-    <div class="scards">${[{k:'ig',l:'Instagram'},{k:'tt',l:'TikTok'},{k:'posts',l:'Постів'},{k:'stories',l:'Сторіс'},{k:'reels',l:'Reels/TT'},{k:'reach',l:'Охоплення'}].map(s=>`<div class="scard"><div class="sv">${last[s.k]||0}</div><div class="sl">${s.l}</div>${chg(last,prev,s.k)}</div>`).join('')}</div>
-  </div>`;
+  const allCards = [
+    platforms.includes('ig') && {k:'ig',l:'Instagram'},
+    platforms.includes('tt') && {k:'tt',l:'TikTok'},
+    platforms.includes('tg') && {k:'tg',l:'Telegram'},
+    platforms.includes('yt') && {k:'yt',l:'YouTube'},
+    platforms.includes('ig') && {k:'posts',l:'Постів IG'},
+    platforms.includes('ig') && {k:'reach',l:'Охоплення'},
+  ].filter(Boolean);
+  const body = `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${last.month} ${last.year}</div>
+    <div class="scards">${allCards.map(s=>`<div class="scard"><div class="sv">${last[s.k]||0}</div><div class="sl">${s.l}</div>${chg(last,prev,s.k)}</div>`).join('')}</div>`;
+  return blk('stats', body, {fn:"goTab('stats')", label:'Детальніше →'});
 }
 
 async function widgetGrowth() {
   const stats = await dbStats();
   if (stats.length < 2) return '';
-  return `<div class="dash-widget">
-    <div class="dash-widget-head"><div class="dash-widget-title">📈 Підписники</div><button class="dash-widget-action" onclick="goTab('stats')">Більше →</button></div>
-    <div class="card"><canvas id="dashGrowthCanvas" height="90"></canvas></div>
-  </div>`;
+  return blk('growth', '<canvas id="dashGrowthCanvas" height="80"></canvas>', {fn:"goTab('stats')", label:'Графіки →'});
 }
 
 async function drawDashGrowth() {
   const canvas = document.getElementById('dashGrowthCanvas');
   if (!canvas) return;
   const stats = await dbStats();
+  const platforms = getPlatforms();
   if (charts['dashGrowth']) charts['dashGrowth'].destroy();
+  const PLAT_COLORS = {ig:'#FF6B9D', tt:'#003a80', tg:'#0088CC', yt:'#FF0000'};
+  const PLAT_NAMES = {ig:'IG', tt:'TT', tg:'TG', yt:'YT'};
   charts['dashGrowth'] = new Chart(canvas.getContext('2d'), {
     type:'line',
-    data:{labels:stats.map(m=>m.month.substring(0,3)),datasets:[
-      {label:'IG',data:stats.map(m=>m.ig||0),borderColor:'#FF6B9D',backgroundColor:'rgba(255,107,157,.08)',tension:.4,fill:true},
-      {label:'TT',data:stats.map(m=>m.tt||0),borderColor:'#003a80',backgroundColor:'rgba(0,58,128,.08)',tension:.4,fill:true},
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,display:false},x:{display:true}}}
+    data:{labels:stats.map(m=>m.month.substring(0,3)),datasets: platforms.map(p => ({
+      label: PLAT_NAMES[p],
+      data: stats.map(m => m[p] || 0),
+      borderColor: PLAT_COLORS[p],
+      backgroundColor: PLAT_COLORS[p] + '14',
+      tension: .4, fill: true,
+    }))},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,display:false},x:{display:true,ticks:{font:{size:10}}}}}
   });
 }
 
 async function widgetNotes() {
   const notes = await dbNotes();
-  if (!notes.length) return `<div class="dash-widget">
-    <div class="dash-widget-head"><div class="dash-widget-title">📝 Нотатки</div></div>
-    <div class="card"><div style="color:var(--muted);font-size:14px">Нотаток ще немає. <button class="dash-widget-action" onclick="goTab('notes')">Створити →</button></div></div>
-  </div>`;
-  return `<div class="dash-widget">
-    <div class="dash-widget-head"><div class="dash-widget-title">📝 Останні нотатки</div><button class="dash-widget-action" onclick="goTab('notes')">Всі →</button></div>
-    ${notes.slice(0,3).map(n=>`<div class="nitem" onclick="goTab('notes')" style="margin-bottom:8px">
-      <div class="ndt">${n.created_at?new Date(n.created_at).toLocaleDateString('uk-UA'):(n.date||'')}</div>
-      <div class="nttl">${n.title||'Без назви'}</div>
-      <div class="nprv">${n.content||n.text||''}</div>
-    </div>`).join('')}
-  </div>`;
+  if (!notes.length) {
+    return blk('notes', '<div style="color:var(--muted);font-size:14px">Нотаток ще немає.</div>', {fn:"goTab('notes')", label:'Створити →'});
+  }
+  const body = notes.slice(0,3).map(n=>`<div class="nitem" onclick="event.stopPropagation();goTab('notes')" style="margin-bottom:8px">
+    <div class="ndt">${n.created_at?new Date(n.created_at).toLocaleDateString('uk-UA'):(n.date||'')}</div>
+    <div class="nttl">${n.title||'Без назви'}</div>
+    <div class="nprv">${n.content||n.text||''}</div>
+  </div>`).join('');
+  return blk('notes', body, {fn:"goTab('notes')", label:'Всі →'});
 }
 
 function widgetReflectDay() {
@@ -1623,42 +1684,35 @@ function widgetReflectDay() {
   if (!pool.length) return '';
   const dayIdx = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0).getTime()) / 86400000);
   const q = pool[dayIdx % pool.length];
-  return `<div class="dash-widget">
-    <div class="dash-widget-head"><div class="dash-widget-title">🪞 Питання дня</div><button class="dash-widget-action" onclick="goTab('reflect')">Всі →</button></div>
-    <div class="card">
-      <div class="rqcat">${q.cat}</div>
-      <div class="rqtxt">${q.q}</div>
-    </div>
-  </div>`;
+  const body = `<div class="rqcat" style="color:${WIDGET_BY_ID.reflectDay.color}">${q.cat}</div>
+    <div class="rqtxt" style="font-size:15px">${q.q}</div>`;
+  return blk('reflectDay', body, {fn:"goTab('reflect')", label:'Всі →'});
 }
 
 function widgetChecklist() {
   const state = lload('checklist-state', {});
   const done = Object.values(state).filter(Boolean).length;
   const total = CHECKLIST_ITEMS.length;
-  return `<div class="dash-widget">
-    <div class="dash-widget-head"><div class="dash-widget-title">✅ Чекліст: ${done}/${total}</div><button class="dash-widget-action" onclick="goTab('stats')">Повний →</button></div>
-    <div class="card"><div class="goal-bar"><div class="goal-fill" style="width:${(done/total)*100}%"></div></div></div>
-  </div>`;
+  const pct = total>0 ? (done/total)*100 : 0;
+  const body = `<div style="font-size:36px;font-weight:700;line-height:1;margin-bottom:6px;color:${WIDGET_BY_ID.checklist.color}">${done}<span style="font-size:18px;opacity:.5">/${total}</span></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">пунктів готово</div>
+    <div class="goal-bar"><div class="goal-fill" style="width:${pct}%;background:${WIDGET_BY_ID.checklist.color}"></div></div>`;
+  return blk('checklist', body, {fn:"goTab('stats')", label:'Повний →'});
 }
 
 async function widgetAudience() {
   const a = await dbAudience();
   if (!a || !a.ai_result) return '';
-  const preview = a.ai_result.slice(0,260) + (a.ai_result.length > 260 ? '...' : '');
-  return `<div class="dash-widget">
-    <div class="dash-widget-head"><div class="dash-widget-title">👥 Портрет ЦА</div><button class="dash-widget-action" onclick="goTab('stats')">Повний →</button></div>
-    <div class="card"><div style="font-size:13px;color:var(--ink2);line-height:1.6;white-space:pre-wrap">${preview}</div></div>
-  </div>`;
+  const preview = a.ai_result.slice(0,280) + (a.ai_result.length > 280 ? '...' : '');
+  const body = `<div style="font-size:13px;color:var(--ink2);line-height:1.6;white-space:pre-wrap">${preview}</div>`;
+  return blk('audience', body, {fn:"goTab('stats')", label:'Повний →'});
 }
 
 function widgetAiChips() {
   const u = USERS[CU];
   if (!u.chips) return '';
-  return `<div class="dash-widget">
-    <div class="dash-widget-head"><div class="dash-widget-title">🤖 Швидкі ШІ-запити</div></div>
-    <div class="chips" style="margin-bottom:0">${u.chips.map((c,i)=>`<div class="chip" onclick="goTab('ai');setTimeout(()=>{const el=document.getElementById('aiq');if(el)el.value=${JSON.stringify(u.chipTexts[i])}},100)">${c}</div>`).join('')}</div>
-  </div>`;
+  const body = `<div class="chips" style="margin-bottom:0">${u.chips.map((c,i)=>`<div class="chip" onclick="event.stopPropagation();goTab('ai');setTimeout(()=>{const el=document.getElementById('aiq');if(el)el.value=${JSON.stringify(u.chipTexts[i])}},100)">${c}</div>`).join('')}</div>`;
+  return blk('aiChips', body);
 }
 
 // ══════════════════════════════════════════
