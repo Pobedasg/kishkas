@@ -22,7 +22,7 @@ export default async function handler(req, res) {
   try {
     const { model, max_tokens, system, messages } = req.body;
 
-    const response = await fetch('/api/chat', {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
