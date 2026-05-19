@@ -224,15 +224,16 @@ body.theme-modern .chat-list-item:hover{background:var(--border);}
 .platform-chip:hover{border-color:var(--b2);}
 .platform-chip.on{background:var(--ac);border-color:var(--ac);color:#fff;}
 
-/* DASHBOARD — free-resize bento */
-.dash-grid{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;}
-.dash-block{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;position:relative;overflow:auto;resize:both;width:300px;height:240px;min-width:240px;min-height:140px;max-width:100%;transition:box-shadow .2s ease;display:flex;flex-direction:column;}
+/* DASHBOARD — content-sized bento */
+.dash-grid{display:grid;gap:14px;grid-template-columns:1fr;align-items:start;}
+@media(min-width:760px){.dash-grid{grid-template-columns:repeat(2,1fr);}}
+@media(min-width:1100px){.dash-grid{grid-template-columns:repeat(3,1fr);}}
+.dash-block{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;position:relative;overflow:hidden;transition:box-shadow .2s ease;display:flex;flex-direction:column;min-width:0;}
 .dash-block:hover{box-shadow:0 8px 24px rgba(0,0,0,.06);}
 .dash-block-title{cursor:grab;}
 .dash-block-title:active{cursor:grabbing;}
-@media(max-width:759px){
-  .dash-block{width:100%!important;resize:vertical;}
-}
+.dash-block.size-wide{grid-column:1/-1;}
+@media(min-width:1100px){.dash-block.size-wide{grid-column:span 2;}}
 .dash-drag-ghost{opacity:.3;}
 .dash-drag-chosen{box-shadow:0 16px 40px rgba(0,0,0,.18)!important;}
 .dash-accent{position:absolute;top:0;left:0;right:0;height:4px;}
@@ -553,6 +554,12 @@ body.theme-modern .nav-icon-btn:hover{background:var(--border);}
 .m-chip{font-size:12px;padding:6px 12px;border-radius:100px;border:1.5px solid var(--border);background:transparent;color:var(--ink2);cursor:pointer;font-family:'Geologica',sans-serif;transition:all .15s;}
 .m-chip:hover{border-color:var(--b2);}
 .m-chip.on{background:var(--ac);border-color:var(--ac);color:#fff;}
+
+/* Toast notification */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 22px;border-radius:12px;font-size:14px;font-weight:500;z-index:9999;box-shadow:0 12px 36px rgba(0,0,0,.2);animation:toastIn .25s ease;max-width:90%;text-align:center;}
+.toast.error{background:#dc4444;color:#fff;}
+.toast.success{background:#16a34a;color:#fff;}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,20px);}to{opacity:1;transform:translate(-50%,0);}}
 
 /* Profile nudge banner */
 .profile-nudge{display:none;align-items:center;gap:12px;padding:14px 18px;border-radius:14px;margin-bottom:18px;flex-wrap:wrap;color:#fff;background:linear-gradient(135deg,var(--ac) 0%,#7C3AED 100%);box-shadow:0 8px 24px rgba(0,0,0,.08);}
@@ -1662,133 +1669,18 @@ const DASHBOARD_WIDGETS = [
 
 const WIDGET_BY_ID = Object.fromEntries(DASHBOARD_WIDGETS.map(w => [w.id, w]));
 
-function getBlockDims(id) {
-  try {
-    const key = 'kishkas-dashboard-dims-'+CU;
-    const raw = localStorage.getItem(key);
-    const dims = JSON.parse(raw || '{}');
-    return dims[id] || null;
-  } catch (e) { return null; }
-}
-
-function saveBlockDims(id, w, h) {
-  try {
-    const key = 'kishkas-dashboard-dims-'+CU;
-    const dims = JSON.parse(localStorage.getItem(key) || '{}');
-    dims[id] = { w, h };
-    localStorage.setItem(key, JSON.stringify(dims));
-    console.log('[dashboard] saved size for', id, '→', w+'x'+h, '| CU:', CU, '| key:', key);
-  } catch (e) { console.warn('saveBlockDims failed', e); }
-}
-
 function blk(id, body, action) {
   const cfg = WIDGET_BY_ID[id];
-  const dims = getBlockDims(id);
-  const sizeStyle = dims ? `style="width:${dims.w}px;height:${dims.h}px"` : '';
+  const sizeClass = cfg.size === 'wide' ? ' size-wide' : '';
   const actBtn = action ? `<button class="dash-block-action" onclick="${action.fn}">${action.label}</button>` : '';
-  return `<div class="dash-block" data-widget="${id}" ${sizeStyle}>
+  return `<div class="dash-block${sizeClass}" data-widget="${id}">
     <div class="dash-accent" style="background:${cfg.color}"></div>
     <div class="dash-block-title"><span>${cfg.name}</span>${actBtn}</div>
     ${body}
   </div>`;
 }
 
-const SNAP_GRID = 40;
-const SNAP_MAGNET = 30;
-const AXIS_THRESHOLD = 5;
-
-function snapBlockSize(el, opts = {}) {
-  const id = el.dataset.widget;
-  if (!id) return;
-  const { snapW = true, snapH = true } = opts;
-
-  let w = el.offsetWidth;
-  let h = el.offsetHeight;
-
-  if (snapW) w = Math.round(w / SNAP_GRID) * SNAP_GRID;
-  if (snapH) h = Math.round(h / SNAP_GRID) * SNAP_GRID;
-
-  const myTop = el.getBoundingClientRect().top;
-  const siblings = Array.from(el.parentElement.children).filter(c => c !== el && c.classList.contains('dash-block'));
-  const sameRow = siblings.filter(s => Math.abs(s.getBoundingClientRect().top - myTop) < 20);
-  if (sameRow.length) {
-    if (snapH) {
-      const closestH = sameRow.map(s => s.offsetHeight).reduce((best, hh) => Math.abs(h - hh) < Math.abs(h - best) ? hh : best, sameRow[0].offsetHeight);
-      if (Math.abs(h - closestH) <= SNAP_MAGNET) h = closestH;
-    }
-    if (snapW) {
-      const closestW = sameRow.map(s => s.offsetWidth).reduce((best, ww) => Math.abs(w - ww) < Math.abs(w - best) ? ww : best, sameRow[0].offsetWidth);
-      if (Math.abs(w - closestW) <= SNAP_MAGNET) w = closestW;
-    }
-  }
-
-  if (window.innerWidth <= 759) w = el.offsetWidth;
-
-  el.style.width = w + 'px';
-  el.style.height = h + 'px';
-  saveBlockDims(id, w, h);
-  if (id === 'growth') drawDashGrowth();
-}
-
-const RENDER_SETTLE_MS = 250;
-
-function flushPendingResizes() {
-  document.querySelectorAll('.dash-block').forEach(el => {
-    if (!el._saveTimer) return;
-    clearTimeout(el._saveTimer);
-    el._saveTimer = null;
-    const dW = Math.abs(el.offsetWidth - (el._startW || 0));
-    const dH = Math.abs(el.offsetHeight - (el._startH || 0));
-    if (dW > AXIS_THRESHOLD || dH > AXIS_THRESHOLD) {
-      snapBlockSize(el, { snapW: dW > AXIS_THRESHOLD, snapH: dH > AXIS_THRESHOLD });
-    }
-  });
-}
-
-function observeBlockResize() {
-  if (!window.ResizeObserver) return;
-  if (window._blockRO) window._blockRO.disconnect();
-  const renderTime = Date.now();
-  window._blockRenderTime = renderTime;
-  window._blockRO = new ResizeObserver(entries => {
-    for (const entry of entries) {
-      const el = entry.target;
-      if (!el.dataset.widget) continue;
-      const curW = el.offsetWidth;
-      const curH = el.offsetHeight;
-      if (!el._sizeReady) {
-        el._sizeReady = true;
-        el._startW = curW;
-        el._startH = curH;
-        el._lastW = curW;
-        el._lastH = curH;
-        continue;
-      }
-      // Skip events during the first ~600ms after render — layout still settling
-      if (Date.now() - window._blockRenderTime < RENDER_SETTLE_MS) {
-        el._lastW = curW;
-        el._lastH = curH;
-        continue;
-      }
-      if (!el._saveTimer) {
-        el._startW = el._lastW;
-        el._startH = el._lastH;
-      }
-      el._lastW = curW;
-      el._lastH = curH;
-      clearTimeout(el._saveTimer);
-      el._saveTimer = setTimeout(() => {
-        const dW = Math.abs(el.offsetWidth - el._startW);
-        const dH = Math.abs(el.offsetHeight - el._startH);
-        el._saveTimer = null;
-        console.log('[dashboard] resize end', el.dataset.widget, 'dW:', dW, 'dH:', dH);
-        if (dW < 1 && dH < 1) return; // truly nothing
-        snapBlockSize(el, { snapW: dW > AXIS_THRESHOLD, snapH: dH > AXIS_THRESHOLD });
-      }, 300);
-    }
-  });
-  document.querySelectorAll('.dash-block').forEach(b => window._blockRO.observe(b));
-}
+// Resize handling removed — blocks now auto-size to content. Only drag-to-reorder remains.
 
 function getDashSelection() {
   const saved = localStorage.getItem('kishkas-dashboard-'+CU);
@@ -1989,28 +1881,44 @@ async function openProfileModal() {
   document.getElementById('profile-modal').classList.add('on');
 }
 
+function showToast(msg, kind) {
+  const el = document.createElement('div');
+  el.className = 'toast' + (kind ? ' ' + kind : '');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 250); }, 2400);
+}
+
 async function saveProfile() {
-  const get = id => document.getElementById(id)?.value || '';
-  const multi = name => Array.from(document.querySelectorAll(`.multi-chips[data-name="${name}"] .m-chip.on`)).map(c => c.dataset.value);
-  const data = {
-    gender: get('p-gender'),
-    profession: get('p-profession'),
-    field_experience: get('p-fieldexp'),
-    has_blog: get('p-hasblog'),
-    blog_type: get('p-blogtype'),
-    blog_topic: get('p-blogtopic'),
-    blog_experience: get('p-blogexp'),
-    hours_per_week: get('p-hours'),
-    blockers: multi('blockers'),
-    needs: multi('needs'),
-    monetization: get('p-monetization'),
-    goals: get('p-goals'),
-  };
-  const result = await dbSaveProfile(data);
-  document.getElementById('profile-modal').classList.remove('on');
-  checkProfileNudge();
-  if (!result.ok) {
-    alert('⚠ Зберегла локально, але не в хмарі.\n\nПомилка: ' + (result.error || 'невідома') + '\n\nНайімовірніше треба виконати SQL для таблиці user_questionnaire — є в setup-modal або скопіюй з останнього коміту.');
+  try {
+    const get = id => document.getElementById(id)?.value || '';
+    const multi = name => Array.from(document.querySelectorAll(`.multi-chips[data-name="${name}"] .m-chip.on`)).map(c => c.dataset.value);
+    const data = {
+      gender: get('p-gender'),
+      profession: get('p-profession'),
+      field_experience: get('p-fieldexp'),
+      has_blog: get('p-hasblog'),
+      blog_type: get('p-blogtype'),
+      blog_topic: get('p-blogtopic'),
+      blog_experience: get('p-blogexp'),
+      hours_per_week: get('p-hours'),
+      blockers: multi('blockers'),
+      needs: multi('needs'),
+      monetization: get('p-monetization'),
+      goals: get('p-goals'),
+    };
+    const result = await dbSaveProfile(data);
+    document.getElementById('profile-modal').classList.remove('on');
+    checkProfileNudge();
+    if (result.ok) {
+      showToast('✓ Профіль збережено', 'success');
+    } else {
+      showToast('⚠ Збережено локально. Виконай SQL для user_questionnaire щоб синхронізувалось у хмару.', 'error');
+      console.warn('profile save error', result.error);
+    }
+  } catch (e) {
+    console.error('saveProfile crash', e);
+    showToast('Помилка: ' + e.message, 'error');
   }
 }
 
@@ -2060,7 +1968,6 @@ async function getProfileContext() {
 }
 
 async function renderHome() {
-  flushPendingResizes();
   checkProfileNudge();
   const selected = getDashSelection();
   let savedOrder = null;
@@ -2080,7 +1987,6 @@ async function renderHome() {
   container.innerHTML = renders.filter(Boolean).join('');
   if (order.includes('growth')) drawDashGrowth();
   initDashSortable();
-  observeBlockResize();
 }
 
 function initDashSortable() {
