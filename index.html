@@ -712,12 +712,26 @@ create table if not exists audience_portrait (
   updated_at timestamptz default now(),
   unique (user_id)
 );
+create table if not exists baseline (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users,
+  ig_followers int default 0,
+  tt_followers int default 0,
+  total_posts int default 0,
+  total_stories int default 0,
+  total_reels int default 0,
+  set_at date,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique (user_id)
+);
 alter table notes enable row level security;
 alter table stats enable row level security;
 alter table reflections enable row level security;
 alter table streak_days enable row level security;
 alter table goals enable row level security;
 alter table audience_portrait enable row level security;
+alter table baseline enable row level security;
 create policy if not exists "own_notes" on notes
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
 create policy if not exists "own_stats" on stats
@@ -729,6 +743,8 @@ create policy if not exists "own_streak" on streak_days
 create policy if not exists "own_goals" on goals
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
 create policy if not exists "own_audience" on audience_portrait
+  using (auth.uid()=user_id) with check (auth.uid()=user_id);
+create policy if not exists "own_baseline" on baseline
   using (auth.uid()=user_id) with check (auth.uid()=user_id);</pre>
     <button class="btn btn-ink" onclick="document.getElementById('setup-modal').classList.remove('on')">Зрозуміло</button>
   </div>
@@ -816,6 +832,26 @@ create policy if not exists "own_audience" on audience_portrait
       <div class="cl cl-dk">Все що допомагає бачити рух — стрік, цілі, графіки, портрет аудиторії. Вводь місячні дані раз на місяць (2 хв).</div>
 
       <div class="card">
+        <div class="ctitle">📍 Початкова точка</div>
+        <div id="baselineDisplay"></div>
+        <div id="baselineForm" style="display:none;background:var(--bg);border-radius:11px;padding:16px;margin-top:12px">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Скільки публікацій і підписників було ДО того як почала вести статистику тут. Заповнюєш один раз — після можна редагувати.</p>
+          <div class="fgrid">
+            <div class="fg"><label>IG підписники</label><input type="number" id="bIg" placeholder="0"></div>
+            <div class="fg"><label>TikTok підписники</label><input type="number" id="bTt" placeholder="0"></div>
+            <div class="fg"><label>Постів IG (всього)</label><input type="number" id="bPosts" placeholder="0"></div>
+            <div class="fg"><label>Сторіс (всього)</label><input type="number" id="bStories" placeholder="0"></div>
+            <div class="fg"><label>Reels / TikTok (всього)</label><input type="number" id="bReels" placeholder="0"></div>
+            <div class="fg"><label>Дата відліку</label><input type="date" id="bDate"></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-ac btn-sm" onclick="saveBaseline()">Зберегти</button>
+            <button class="btn btn-out btn-sm" onclick="hideBaselineForm()">Скасувати</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="ctitle">🔥 Стрік публікацій</div>
         <div class="streak-row">
           <div><div class="sv streak-big" id="streakCurrent">0</div><div class="sl">днів підряд</div></div>
@@ -856,12 +892,12 @@ create policy if not exists "own_audience" on audience_portrait
           <div class="fg"><label>Місяць</label>
             <select id="stmo"><option>Січень</option><option>Лютий</option><option>Березень</option><option>Квітень</option><option>Травень</option><option>Червень</option><option>Липень</option><option>Серпень</option><option>Вересень</option><option>Жовтень</option><option>Листопад</option><option>Грудень</option></select></div>
           <div class="fg"><label>Рік</label><input type="number" id="styr" value="2025"></div>
-          <div class="fg"><label>IG підписники</label><input type="number" id="stig" placeholder="0"></div>
-          <div class="fg"><label>TikTok</label><input type="number" id="sttt" placeholder="0"></div>
-          <div class="fg"><label>Постів IG</label><input type="number" id="stp" placeholder="0"></div>
-          <div class="fg"><label>Сторіс</label><input type="number" id="sts" placeholder="0"></div>
-          <div class="fg"><label>Reels/TikTok відео</label><input type="number" id="str" placeholder="0"></div>
-          <div class="fg"><label>Охоплення (ср.)</label><input type="number" id="streach" placeholder="0"></div>
+          <div class="fg"><label>IG підписники (всього на кінець)</label><input type="number" id="stig" placeholder="0"></div>
+          <div class="fg"><label>TikTok (всього на кінець)</label><input type="number" id="sttt" placeholder="0"></div>
+          <div class="fg"><label>Постів IG за місяць</label><input type="number" id="stp" placeholder="0"></div>
+          <div class="fg"><label>Сторіс за місяць</label><input type="number" id="sts" placeholder="0"></div>
+          <div class="fg"><label>Reels / TikTok за місяць</label><input type="number" id="str" placeholder="0"></div>
+          <div class="fg"><label>Охоплення (середнє)</label><input type="number" id="streach" placeholder="0"></div>
         </div>
         <div class="fg" style="margin:10px 0"><label>Нотатка до місяця</label><textarea id="stnote" placeholder="Що важливого цього місяця?"></textarea></div>
         <button class="btn btn-ac" id="statsavebtn" onclick="addMonth()">Зберегти</button>
@@ -1951,7 +1987,82 @@ async function generateAudiencePortrait() {
   }
 }
 
+async function dbBaseline() {
+  if (!sbUser) return lload('baseline', null);
+  const { data } = await sb.from('baseline').select('*').eq('user_id', sbUser.id);
+  return (data && data[0]) || null;
+}
+
+async function dbSaveBaseline(b) {
+  if (!sbUser) { lsave('baseline', b); return; }
+  const { data: existing } = await sb.from('baseline').select('id').eq('user_id', sbUser.id);
+  if (existing && existing.length) {
+    await sb.from('baseline').update({
+      ig_followers: b.ig_followers, tt_followers: b.tt_followers,
+      total_posts: b.total_posts, total_stories: b.total_stories,
+      total_reels: b.total_reels, set_at: b.set_at,
+      updated_at: new Date().toISOString()
+    }).eq('id', existing[0].id);
+  } else {
+    await sb.from('baseline').insert({user_id:sbUser.id, ...b});
+  }
+}
+
+function showBaselineForm(){ document.getElementById('baselineForm').style.display='block'; }
+function hideBaselineForm(){ document.getElementById('baselineForm').style.display='none'; }
+
+async function prepBaselineForm() {
+  const b = await dbBaseline();
+  document.getElementById('bIg').value = b?.ig_followers || '';
+  document.getElementById('bTt').value = b?.tt_followers || '';
+  document.getElementById('bPosts').value = b?.total_posts || '';
+  document.getElementById('bStories').value = b?.total_stories || '';
+  document.getElementById('bReels').value = b?.total_reels || '';
+  document.getElementById('bDate').value = b?.set_at || '';
+}
+
+async function saveBaseline() {
+  const b = {
+    ig_followers: parseInt(document.getElementById('bIg').value) || 0,
+    tt_followers: parseInt(document.getElementById('bTt').value) || 0,
+    total_posts: parseInt(document.getElementById('bPosts').value) || 0,
+    total_stories: parseInt(document.getElementById('bStories').value) || 0,
+    total_reels: parseInt(document.getElementById('bReels').value) || 0,
+    set_at: document.getElementById('bDate').value || new Date().toISOString().slice(0,10)
+  };
+  await dbSaveBaseline(b);
+  hideBaselineForm();
+  renderBaseline();
+}
+
+async function renderBaseline() {
+  const b = await dbBaseline();
+  const el = document.getElementById('baselineDisplay');
+  if (!el) return;
+  const empty = !b || (!b.ig_followers && !b.tt_followers && !b.total_posts && !b.total_stories && !b.total_reels);
+  if (empty) {
+    el.innerHTML = `<p style="font-size:13px;color:var(--muted);margin:8px 0 12px">Необов'язково. Це допомагає бачити загальний результат разом з тим що відстежуєш тут.</p>
+      <button class="btn btn-out btn-sm" onclick="prepBaselineForm().then(()=>showBaselineForm())">+ Задати початкову точку</button>`;
+  } else {
+    const date = b.set_at ? new Date(b.set_at).toLocaleDateString('uk-UA') : '';
+    const cards = [
+      b.ig_followers && {v:b.ig_followers, l:'IG підписники'},
+      b.tt_followers && {v:b.tt_followers, l:'TikTok'},
+      b.total_posts && {v:b.total_posts, l:'Постів IG'},
+      b.total_stories && {v:b.total_stories, l:'Сторіс'},
+      b.total_reels && {v:b.total_reels, l:'Reels/TT'},
+    ].filter(Boolean);
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:12px 0">
+        ${cards.map(c=>`<div><div class="sv" style="font-size:22px">${c.v}</div><div class="sl">${c.l}</div></div>`).join('')}
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Станом на ${date}</div>
+      <button class="btn btn-out btn-sm" onclick="prepBaselineForm().then(()=>showBaselineForm())">Редагувати</button>`;
+  }
+}
+
 async function renderProgress() {
+  renderBaseline();
   const days = await dbStreakDays();
   const { current, max } = computeStreak(days);
   document.getElementById('streakCurrent').textContent = current;
