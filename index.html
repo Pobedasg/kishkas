@@ -503,6 +503,36 @@ body.theme-modern .pwkh{background:transparent;border-bottom:1px solid var(--bor
 body.theme-modern .wkn{background:var(--ink)!important;}
 body.theme-modern.dark .wkn{background:var(--card)!important;border-right:1px solid var(--border);}
 
+/* Dark-mode polish — fix unreadable text */
+body.theme-modern .ttxt strong{color:var(--ink);}
+body.theme-modern .ptag{background:var(--border);color:var(--muted);}
+body.theme-modern .mbadge{background:var(--border);color:var(--muted);}
+
+/* Pastel chips → neutral tags */
+body.theme-modern .wt-c,
+body.theme-modern .wt-r,
+body.theme-modern .wt-p,
+body.theme-modern .ig,
+body.theme-modern .tt,
+body.theme-modern .plt{background:var(--border)!important;color:var(--ink2)!important;}
+
+/* Safe boxes (mentor) → card style with semantic border-left */
+body.theme-modern .safeno,
+body.theme-modern .safeyes{background:var(--card);border:none;box-shadow:var(--shadow-card);border-radius:var(--radius);}
+body.theme-modern .safeno{border-left:3px solid #ef4444;}
+body.theme-modern .safeyes{border-left:3px solid #16a34a;}
+body.theme-modern .safeno .safet{color:#ef4444;}
+body.theme-modern .safeyes .safet{color:#16a34a;}
+body.theme-modern .safeno .safei,
+body.theme-modern .safeyes .safei{color:var(--ink2);border-bottom-color:var(--border);}
+
+/* Icon containers with inline pastel bg — tame in dark mode */
+body.theme-modern.dark .ticon,
+body.theme-modern.dark .bki{background:var(--border)!important;}
+
+/* Mentor concept inner highlights — keep accent color */
+body.theme-modern .cncpt strong{color:var(--ac);}
+
 /* Tab content */
 body.theme-modern .tab{padding-top:calc(60px + env(safe-area-inset-top,0px));}
 
