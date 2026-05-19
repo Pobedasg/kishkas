@@ -1119,9 +1119,6 @@ create policy if not exists "own_baseline" on baseline
             <button class="btn btn-out btn-sm" onclick="renameCurrentChat()" id="renameChatBtn" style="display:none" title="Перейменувати">✎</button>
             <button class="btn btn-red btn-sm" onclick="deleteCurrentChat()" id="delChatBtn" style="display:none" title="Видалити">✕</button>
           </div>
-          <div class="cl cl-p" id="chatIntro">Питай що завгодно: аналіз статистики, ідеї постів, сценарії. ШІ знає твій профіль і статистику.</div>
-          <div class="slbl">Швидкі запити</div>
-          <div class="chips" id="aichips"></div>
           <div class="chatw" id="chatw">
             <div class="chatm"><div class="chatav">🤖</div><div class="chatb">Привіт! Я твій ШІ-помічник. Чим допомогти?</div></div>
           </div>
@@ -1131,6 +1128,10 @@ create policy if not exists "own_baseline" on baseline
           </div>
           <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <span id="aist" style="font-size:12px;color:var(--muted)"></span>
+          </div>
+          <div class="chat-quick" id="chatQuick">
+            <div class="slbl" style="margin:18px 0 8px">Швидкі запити</div>
+            <div class="chips" id="aichips"></div>
           </div>
         </div>
       </div>
