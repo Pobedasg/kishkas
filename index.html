@@ -1830,24 +1830,44 @@ const PROFILE_NEEDS = [
 ];
 
 async function dbProfile() {
-  if (!sbUser) return lload('profile', null);
+  // Always read local first as fallback
+  const local = lload('profile', null);
+  if (!sbUser) return local;
   try {
-    const { data } = await sb.from('user_questionnaire').select('*').eq('user_id', sbUser.id);
-    return (data && data[0]) || null;
-  } catch(e) { return lload('profile', null); }
+    const { data, error } = await sb.from('user_questionnaire').select('*').eq('user_id', sbUser.id);
+    if (error) { console.warn('profile load:', error); return local; }
+    return (data && data[0]) || local;
+  } catch(e) { console.warn('profile load exception:', e); return local; }
 }
 
 async function dbSaveProfile(p) {
-  if (!sbUser) { lsave('profile', p); return; }
+  // Always persist locally as a safety net
+  try { lsave('profile', p); } catch(e) {}
+  if (!sbUser) return { ok: true, local: true };
   try {
-    const { data: existing } = await sb.from('user_questionnaire').select('user_id').eq('user_id', sbUser.id);
-    const payload = { ...p, updated_at: new Date().toISOString() };
-    if (existing && existing.length) {
-      await sb.from('user_questionnaire').update(payload).eq('user_id', sbUser.id);
-    } else {
-      await sb.from('user_questionnaire').insert({ user_id: sbUser.id, ...payload });
+    const { data: existing, error: selErr } = await sb.from('user_questionnaire').select('user_id').eq('user_id', sbUser.id);
+    if (selErr) {
+      console.warn('profile select:', selErr);
+      return { ok: false, error: selErr.message || JSON.stringify(selErr), local: true };
     }
-  } catch(e) { console.warn('profile save', e); lsave('profile', p); }
+    const payload = { ...p, updated_at: new Date().toISOString() };
+    let writeErr;
+    if (existing && existing.length) {
+      const { error } = await sb.from('user_questionnaire').update(payload).eq('user_id', sbUser.id);
+      writeErr = error;
+    } else {
+      const { error } = await sb.from('user_questionnaire').insert({ user_id: sbUser.id, ...payload });
+      writeErr = error;
+    }
+    if (writeErr) {
+      console.warn('profile write:', writeErr);
+      return { ok: false, error: writeErr.message || JSON.stringify(writeErr), local: true };
+    }
+    return { ok: true };
+  } catch(e) {
+    console.warn('profile save exception:', e);
+    return { ok: false, error: e.message, local: true };
+  }
 }
 
 function profileFormHTML(p) {
@@ -1951,9 +1971,12 @@ async function saveProfile() {
     monetization: get('p-monetization'),
     goals: get('p-goals'),
   };
-  await dbSaveProfile(data);
+  const result = await dbSaveProfile(data);
   document.getElementById('profile-modal').classList.remove('on');
   checkProfileNudge();
+  if (!result.ok) {
+    alert('⚠ Зберегла локально, але не в хмарі.\n\nПомилка: ' + (result.error || 'невідома') + '\n\nНайімовірніше треба виконати SQL для таблиці user_questionnaire — є в setup-modal або скопіюй з останнього коміту.');
+  }
 }
 
 function dismissProfileNudge() {
