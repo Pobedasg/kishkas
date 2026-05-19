@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>кішкас · платформа</title>
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Geologica:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Geologica:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -338,6 +338,179 @@ label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bot
   .nbemoji{font-size:16px;}
   .nusr{font-size:11px;padding:7px 11px;}
 }
+
+/* ═══════════════════════════════════════════
+   MODERN THEME — per-user opt-in (Vika)
+   ═══════════════════════════════════════════ */
+body.theme-modern{
+  --bg:#FAF7F1;--card:#FFFFFF;
+  --ink:#0E0E10;--ink2:#3A3A42;--muted:#76767E;
+  --border:rgba(14,14,16,.06);--b2:rgba(14,14,16,.12);
+  --shadow-card:0 1px 2px rgba(14,14,16,.04),0 8px 28px rgba(14,14,16,.04);
+  --shadow-card-hover:0 2px 4px rgba(14,14,16,.06),0 14px 36px rgba(14,14,16,.08);
+  --radius-sm:8px;--radius:14px;--radius-lg:22px;
+  font-size:16px;letter-spacing:-.005em;
+}
+body.theme-modern.dark{
+  --bg:#0B0B0D;--card:#16161A;
+  --ink:#F3F0EA;--ink2:#C5C5C8;--muted:#86868E;
+  --border:rgba(255,255,255,.08);--b2:rgba(255,255,255,.16);
+  --shadow-card:0 1px 2px rgba(0,0,0,.4),0 8px 28px rgba(0,0,0,.35);
+  --shadow-card-hover:0 2px 4px rgba(0,0,0,.5),0 14px 36px rgba(0,0,0,.55);
+}
+body.theme-modern{background:var(--bg);color:var(--ink);transition:background .25s ease,color .25s ease;}
+
+/* Typography scale */
+body.theme-modern .sec{padding:64px 28px;max-width:1100px;}
+body.theme-modern .stitle{font-size:clamp(30px,5vw,56px);margin-bottom:32px;letter-spacing:-.025em;line-height:1.05;}
+body.theme-modern .slbl{font-size:11px;letter-spacing:.18em;color:var(--muted);margin-bottom:16px;font-weight:600;}
+body.theme-modern .htag{color:var(--muted)!important;font-weight:500;letter-spacing:.05em;}
+body.theme-modern .htitle{color:var(--ink);font-size:clamp(46px,9.5vw,118px);line-height:.98;letter-spacing:-.045em;font-weight:900;margin-bottom:22px;}
+body.theme-modern .htitle span{color:var(--ac);}
+body.theme-modern .hdesc{color:var(--muted);font-size:17px;max-width:560px;line-height:1.6;}
+
+/* Nav */
+body.theme-modern nav{background:rgba(250,247,241,.82);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--border);}
+body.theme-modern.dark nav{background:rgba(11,11,13,.82);}
+body.theme-modern .nbrand{color:var(--ink);}
+body.theme-modern .nbrand:hover{background:var(--border);}
+body.theme-modern .nb{color:var(--muted);font-size:13px;}
+body.theme-modern .nb:hover{color:var(--ink);background:transparent;}
+body.theme-modern .nb.on{color:var(--ink);background:transparent;position:relative;}
+body.theme-modern .nb.on::after{content:'';position:absolute;left:10px;right:10px;bottom:-12px;height:2px;background:var(--ac);border-radius:2px;}
+body.theme-modern .nusr{background:var(--ink);color:var(--bg);border-radius:9px;font-weight:500;}
+body.theme-modern .nusr:hover{opacity:.85;background:var(--ink);}
+body.theme-modern .burger{color:var(--ink);}
+body.theme-modern .burger:hover,body.theme-modern .burger.on{background:var(--border);}
+body.theme-modern .nlinks .nb.on::after{display:none;}
+
+/* Theme toggle */
+.theme-toggle{display:none;background:none;border:none;cursor:pointer;width:38px;height:38px;border-radius:9px;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;padding:0;}
+.theme-toggle svg{width:18px;height:18px;}
+body.theme-modern .theme-toggle{display:inline-flex;color:var(--ink);}
+body.theme-modern .theme-toggle:hover{background:var(--border);}
+body.theme-modern .theme-toggle .icon-sun{display:none;}
+body.theme-modern.dark .theme-toggle .icon-sun{display:block;}
+body.theme-modern.dark .theme-toggle .icon-moon{display:none;}
+
+/* Cards — shadow over border */
+body.theme-modern .card,
+body.theme-modern .cb,
+body.theme-modern .pillar,
+body.theme-modern .tcard,
+body.theme-modern .blk,
+body.theme-modern .toolc,
+body.theme-modern .refc,
+body.theme-modern .pcard2,
+body.theme-modern .wkcard,
+body.theme-modern .pwk,
+body.theme-modern .bstage,
+body.theme-modern .faqitem,
+body.theme-modern .rqbox,
+body.theme-modern .nitem,
+body.theme-modern .ned,
+body.theme-modern .scard,
+body.theme-modern .mrow{background:var(--card);border:none;box-shadow:var(--shadow-card);border-radius:var(--radius);transition:box-shadow .2s ease,transform .2s ease;}
+body.theme-modern .card{padding:24px;}
+body.theme-modern .pillar:hover,body.theme-modern .toolc:hover,body.theme-modern .pcard2:hover,body.theme-modern .nitem:hover{box-shadow:var(--shadow-card-hover);transform:translateY(-2px);}
+body.theme-modern .nitem.on{box-shadow:var(--shadow-card-hover);outline:2px solid var(--ac);outline-offset:-2px;border:none;}
+body.theme-modern .stritem,body.theme-modern .titem,body.theme-modern .uitem{background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;box-shadow:none;}
+
+/* Colored cards neutralized */
+body.theme-modern .cl-dk,
+body.theme-modern .cl-g,
+body.theme-modern .cl-p,
+body.theme-modern .cl-y,
+body.theme-modern .cl-r,
+body.theme-modern .cl-b{background:var(--card);color:var(--ink2);border:none;border-left:3px solid var(--ac);box-shadow:var(--shadow-card);border-radius:var(--radius);padding:18px 22px;}
+
+/* Stats — mono digits */
+body.theme-modern .sv{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:32px;font-weight:600;letter-spacing:-.02em;color:var(--ink);}
+body.theme-modern .sl{color:var(--muted);font-size:11px;}
+body.theme-modern .fpct{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:34px;}
+
+/* Hero — light, big, no noise */
+body.theme-modern .hero{background:var(--bg);min-height:auto;padding:120px 28px 70px;max-width:1100px;margin:0 auto;}
+body.theme-modern .hg,body.theme-modern .hbg{display:none;}
+body.theme-modern .pill{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:13px;padding:6px 14px;}
+body.theme-modern .pill.ac{background:var(--ac);border-color:var(--ac);color:#fff;}
+
+/* Buttons */
+body.theme-modern .btn{font-size:14px;padding:10px 18px;border-radius:10px;transition:transform .15s,opacity .15s,background .15s;font-weight:600;}
+body.theme-modern .btn:hover{transform:translateY(-1px);}
+body.theme-modern .btn-ac{background:var(--ac);color:#fff;}
+body.theme-modern .btn-ink{background:var(--ink);color:var(--bg);}
+body.theme-modern .btn-out{background:transparent;border:1.5px solid var(--b2);color:var(--ink);}
+body.theme-modern .btn-out:hover{border-color:var(--ink);background:transparent;}
+body.theme-modern .btn-sm{padding:6px 12px;font-size:12px;}
+
+/* Inputs */
+body.theme-modern input,body.theme-modern textarea,body.theme-modern select{background:var(--card);border:1.5px solid var(--border);color:var(--ink);padding:12px 14px;font-size:15px;border-radius:10px;transition:border-color .15s,box-shadow .15s;}
+body.theme-modern input:focus,body.theme-modern textarea:focus,body.theme-modern select:focus{border-color:var(--ac);box-shadow:0 0 0 4px color-mix(in srgb,var(--ac) 14%,transparent);}
+body.theme-modern label{color:var(--muted);font-size:11px;}
+
+/* Chat */
+body.theme-modern .chatb{background:var(--card);border:none;box-shadow:var(--shadow-card);border-radius:16px;padding:14px 18px;font-size:15px;color:var(--ink2);}
+body.theme-modern .chatm.u .chatb{background:var(--ink);color:var(--bg);}
+body.theme-modern .chatav{background:var(--card);border:none;box-shadow:var(--shadow-card);}
+body.theme-modern .chatm.u .chatav{background:var(--ac);}
+body.theme-modern .chip{background:var(--card);border:1.5px solid var(--border);color:var(--ink2);padding:8px 14px;border-radius:100px;font-size:13px;}
+body.theme-modern .chip:hover{border-color:var(--ink);}
+body.theme-modern .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+
+/* Hardcoded grey colours → muted */
+body.theme-modern .nprv,
+body.theme-modern .pdesc,
+body.theme-modern .toold,
+body.theme-modern .bsdesc,
+body.theme-modern .pcd,
+body.theme-modern .pdayc,
+body.theme-modern .modal p,
+body.theme-modern .wki li,
+body.theme-modern .ndt,
+body.theme-modern .mm,
+body.theme-modern .tsub,
+body.theme-modern .bks,
+body.theme-modern .ppct,
+body.theme-modern .pwks{color:var(--muted);}
+body.theme-modern .ttxt,body.theme-modern .stxt,body.theme-modern .utxt,body.theme-modern .ext,body.theme-modern .pdayc,body.theme-modern .safei{color:var(--ink2);}
+body.theme-modern .ttl2,body.theme-modern .ctitle,body.theme-modern .bkt,body.theme-modern .tooln,body.theme-modern .pname,body.theme-modern .pct,body.theme-modern .pwkt,body.theme-modern .bsttl,body.theme-modern .nttl,body.theme-modern .rqtxt,body.theme-modern .mn,body.theme-modern .wkf,body.theme-modern .faqq{color:var(--ink);}
+
+/* Reflect answer bg */
+body.theme-modern .rans{background:var(--border);color:var(--ink2);border-radius:10px;}
+
+/* Concept boxes — keep dark for contrast */
+body.theme-modern .cncpt{background:var(--ink);color:var(--bg);border-radius:var(--radius-lg);padding:38px;}
+body.theme-modern .cnt{font-size:18px;line-height:1.55;font-weight:300;color:rgba(245,243,238,.92);}
+body.theme-modern.dark .cncpt{background:var(--card);border:1px solid var(--border);}
+body.theme-modern .fmlbox{background:var(--ink);border-radius:var(--radius-lg);padding:32px;}
+body.theme-modern.dark .fmlbox{background:var(--card);border:1px solid var(--border);}
+body.theme-modern .flbl{color:rgba(245,243,238,.55);}
+body.theme-modern.dark .flbl{color:var(--muted);}
+
+/* Modal */
+body.theme-modern .modal{background:var(--card);color:var(--ink);box-shadow:var(--shadow-card-hover);border-radius:var(--radius-lg);}
+body.theme-modern .modal h2{color:var(--ink);}
+
+/* Dividers */
+body.theme-modern .divider{background:var(--border);height:1px;margin:48px 0;}
+
+/* Hover for cards w/ click */
+body.theme-modern .thead:hover,body.theme-modern .bkh:hover,body.theme-modern .pwkh:hover,body.theme-modern .faqq:hover{background:var(--border);}
+body.theme-modern .pwkh{background:transparent;border-bottom:1px solid var(--border);}
+
+/* Mentor weeks accent backgrounds */
+body.theme-modern .wkn{background:var(--ink)!important;}
+body.theme-modern.dark .wkn{background:var(--card)!important;border-right:1px solid var(--border);}
+
+/* Tab content */
+body.theme-modern .tab{padding-top:calc(60px + env(safe-area-inset-top,0px));}
+
+@media(max-width:640px){
+  body.theme-modern .sec{padding:36px 18px;}
+  body.theme-modern .hero{padding:90px 18px 50px;}
+  body.theme-modern .card{padding:20px;}
+}
 </style>
 </head>
 <body>
@@ -421,6 +594,10 @@ create policy if not exists "own_stats" on stats
       <button class="nb" onclick="goTab('theory')">Теорія</button>
       <button class="nb" onclick="goTab('tools')">Інструменти</button>
     </div>
+    <button class="theme-toggle" id="themetoggle" onclick="toggleTheme()" aria-label="Перемкнути тему">
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    </button>
     <button class="nusr" id="nusr" onclick="doLogout()">вийти</button>
   </nav>
   <div class="nav-backdrop" id="navbackdrop" onclick="closeMenu()"></div>
@@ -579,7 +756,7 @@ const sb = supabase.createClient(SB_URL, SB_KEY);
 // ══════════════════════════════════════════
 const USERS = {
   vika:{
-    name:'Віка',emoji:'🐱',color:'#FF6B9D',role:'кішкас · лайфстайл',
+    name:'Віка',brand:'кішкас',design:'modern',emoji:'🐱',color:'#FF6B9D',role:'кішкас · лайфстайл',
     heroTag:'🐱 кішкас · план ментора',
     heroTitle:'Від блокеру<br>до <span style="color:#FF6B9D">публікації</span>',
     heroDesc:'Ти не починаєш з нуля. Ти продовжуєш — але тепер із системою і розумінням навіщо це тобі.',
@@ -736,8 +913,15 @@ function loginSuccess() {
   document.getElementById('nusr').textContent = 'вийти';
   document.getElementById('nbrand').style.color = u.color;
   document.getElementById('nbemoji').textContent = u.emoji;
-  document.getElementById('nbname').textContent = u.name.toLowerCase();
+  document.getElementById('nbname').textContent = (u.brand || u.name).toLowerCase();
   document.body.classList.toggle('nav-classic', u.navStyle === 'classic');
+  document.body.classList.toggle('theme-modern', u.design === 'modern');
+  if (u.design === 'modern') {
+    const savedMode = localStorage.getItem('kishkas-theme-mode') || 'light';
+    document.body.classList.toggle('dark', savedMode === 'dark');
+  } else {
+    document.body.classList.remove('dark');
+  }
   if (u.navStyle === 'classic') closeMenu();
   document.getElementById('htag').textContent = u.heroTag;
   document.getElementById('htitle').innerHTML = u.heroTitle;
@@ -769,6 +953,7 @@ async function doLogout() {
   document.getElementById('app').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'flex';
   document.documentElement.style.setProperty('--ac','#FF6B9D');
+  document.body.classList.remove('theme-modern','dark','nav-classic');
   document.querySelectorAll('.pcard').forEach(c=>c.classList.remove('sel'));
   goTab('home');
 }
@@ -805,6 +990,11 @@ function closeMenu(){
 }
 
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();});
+
+function toggleTheme(){
+  const isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('kishkas-theme-mode', isDark ? 'dark' : 'light');
+}
 
 // ══════════════════════════════════════════
 // STORAGE — Supabase + localStorage fallback
