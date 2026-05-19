@@ -1002,7 +1002,7 @@ async function sendChat() {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-6',
         max_tokens:1000,
         system:sys,
         messages:chatHistory
@@ -1083,7 +1083,7 @@ async function analyzeReflect(i) {
     const res = await fetch('/api/chat',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',max_tokens:600,
+        model:'claude-sonnet-4-6',max_tokens:600,
         system:`Ти підтримуючий коуч для блогера. ${USERS[CU].aiCtx}\nДай коротку (3-5 речень) чесну і підтримуючу відповідь на рефлексію. Українська мова. Будь конкретною і практичною.`,
         messages:[{role:'user',content:`Питання: "${q}"\n\nМоя відповідь: "${ans}"\n\nДай зворотній зв'язок.`}]
       })
