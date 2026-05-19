@@ -20,7 +20,14 @@ export default async function handler(req, res) {
   }
 
   try {
+    if (!req.body || typeof req.body !== 'object') {
+      return res.status(400).json({ error: 'Missing or invalid JSON body' });
+    }
+
     const { model, max_tokens, system, messages } = req.body;
+    if (!model || !messages) {
+      return res.status(400).json({ error: 'model and messages are required' });
+    }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -33,9 +40,13 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+    if (!response.ok) {
+      console.error('Anthropic API error', response.status, data);
+    }
     return res.status(response.status).json(data);
 
   } catch (error) {
+    console.error('Handler error', error);
     return res.status(500).json({ error: 'Server error', details: error.message });
   }
 }
