@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>кішкас · платформа</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Geologica:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --ink:#111;--ink2:#333;--muted:#777;
+  --bg:#F5F3EE;--card:#fff;
+  --border:rgba(0,0,0,.08);--b2:rgba(0,0,0,.14);
+  --ga:#F0FFF4;--gb:#B6F0C6;
+  --pa:#F3F0FF;--pb:#C9BEFF;--pv:#6C5CE7;
+  --ya:#FFFBEA;--yb:#FFE88A;
+  --ra:#FFF0F0;--rb:#FFCACA;
+  --ba:#EFF6FF;--bb:#BFDBFE;
+  --ac:#FF6B9D;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Geologica',sans-serif;background:var(--bg);color:var(--ink);line-height:1.7;overflow-x:hidden}
+
+/* AUTH */
+#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#111;position:relative;overflow:hidden;}
+.ag{position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");pointer-events:none;}
+.abg{position:absolute;bottom:-40px;right:-10px;font-family:'Unbounded',sans-serif;font-size:clamp(80px,17vw,200px);font-weight:900;color:rgba(255,255,255,.025);letter-spacing:-6px;pointer-events:none;}
+.abox{position:relative;z-index:1;width:100%;max-width:400px;padding:24px;}
+.abrand{font-family:'Unbounded',sans-serif;font-size:24px;font-weight:900;color:var(--ac);margin-bottom:5px;}
+.asub{font-size:13px;color:rgba(255,255,255,.35);margin-bottom:26px;}
+.pcards{display:flex;flex-direction:column;gap:9px;margin-bottom:20px;}
+.pcard{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:13px;padding:14px 16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px;}
+.pcard:hover,.pcard.sel{background:rgba(255,255,255,.1);transform:translateY(-1px);}
+.pcard.sel{border-color:var(--ac);}
+.pav{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+.pnm{font-size:14px;font-weight:600;color:white;margin-bottom:1px;}
+.prl{font-size:11px;color:rgba(255,255,255,.35);}
+.mtabs{display:flex;gap:4px;margin-bottom:16px;}
+.mtab{flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Geologica',sans-serif;transition:all .2s;text-align:center;}
+.mtab.on{background:var(--ac);color:white;}
+.mtab:not(.on){background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);}
+.ainp{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:11px 14px;font-size:14px;color:white;font-family:'Geologica',sans-serif;outline:none;transition:border-color .2s;margin-bottom:9px;}
+.ainp:focus{border-color:var(--ac);}
+.ainp::placeholder{color:rgba(255,255,255,.25);}
+.albl{font-size:11px;font-weight:600;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;display:block;}
+.abtn{width:100%;padding:12px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:none;font-family:'Geologica',sans-serif;background:var(--ac);color:white;margin-top:4px;transition:opacity .2s;}
+.abtn:hover{opacity:.88;}
+.aerr{font-size:12px;color:#ff8a8a;margin-top:6px;display:none;}
+.qlogins{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);}
+.qlbl{font-size:10px;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;}
+.qbtns{display:flex;flex-direction:column;gap:6px;}
+.qbtn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:9px 13px;font-size:13px;font-weight:500;color:rgba(255,255,255,.6);cursor:pointer;font-family:'Geologica',sans-serif;text-align:left;transition:all .2s;display:flex;align-items:center;gap:10px;}
+.qbtn:hover{background:rgba(255,255,255,.1);}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9000;align-items:center;justify-content:center;}
+.modal-bg.on{display:flex;}
+.modal{background:white;border-radius:18px;padding:26px;max-width:500px;width:92%;max-height:85vh;overflow-y:auto;}
+.modal h2{font-family:'Unbounded',sans-serif;font-size:16px;margin-bottom:14px;}
+.modal p{font-size:13px;line-height:1.7;color:#333;margin-bottom:10px;}
+.modal pre{background:#1a1a1a;color:#C8F564;padding:12px;border-radius:9px;font-size:11px;overflow-x:auto;margin-bottom:11px;white-space:pre-wrap;word-break:break-all;}
+
+/* NAV */
+#app{display:none;}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(17,17,17,.97);backdrop-filter:blur(12px);display:flex;align-items:center;padding:0 16px;height:52px;border-bottom:1px solid rgba(255,255,255,.06);}
+.nbrand{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:900;color:var(--ac);margin-right:10px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.nlinks{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;}
+.nlinks::-webkit-scrollbar{display:none;}
+.nb{font-size:11px;font-weight:500;color:rgba(255,255,255,.4);padding:5px 9px;border-radius:6px;transition:all .2s;white-space:nowrap;cursor:pointer;background:none;border:none;font-family:'Geologica',sans-serif;}
+.nb:hover,.nb.on{color:white;background:rgba(255,255,255,.08);}
+.nusr{margin-left:5px;font-size:11px;font-weight:600;white-space:nowrap;cursor:pointer;padding:5px 9px;background:rgba(255,255,255,.07);border-radius:7px;border:none;font-family:'Geologica',sans-serif;color:white;flex-shrink:0;}
+.nusr:hover{background:rgba(255,255,255,.12);}
+
+/* TABS */
+.tab{display:none;padding-top:52px;}
+.tab.on{display:block;}
+
+/* COMMON */
+.sec{padding:40px 22px;max-width:960px;margin:0 auto;}
+.slbl{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.stitle{font-family:'Unbounded',sans-serif;font-size:clamp(18px,3.5vw,30px);font-weight:700;color:var(--ink);line-height:1.15;letter-spacing:-1px;margin-bottom:20px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:18px;margin-bottom:11px;}
+.cl{border-radius:11px;padding:14px 17px;margin-bottom:14px;border-left:4px solid;font-size:14px;line-height:1.7;}
+.cl-dk{background:#111;color:rgba(255,255,255,.85);border-color:var(--ac);}
+.cl-g{background:var(--ga);border-color:var(--gb);color:#1a4d2e;}
+.cl-p{background:var(--pa);border-color:var(--pb);color:#3a2d8a;}
+.cl-y{background:var(--ya);border-color:var(--yb);color:#5a4800;}
+.cl-r{background:var(--ra);border-color:var(--rb);color:#6a1a1a;}
+.cl-b{background:var(--ba);border-color:var(--bb);color:#1e3a6e;}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 16px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:'Geologica',sans-serif;transition:all .2s;}
+.btn-ac{color:#111;}.btn-ac:hover{opacity:.87;}
+.btn-ink{background:#111;color:white;}.btn-ink:hover{background:#333;}
+.btn-out{background:transparent;color:var(--ink);border:1.5px solid var(--b2);}.btn-out:hover{border-color:var(--ink);}
+.btn-sm{padding:5px 11px;font-size:12px;}
+.btn-red{background:#fee2e2;color:#dc2626;}.btn-red:hover{background:#fecaca;}
+input,textarea,select{width:100%;background:var(--bg);border:1.5px solid var(--b2);border-radius:9px;padding:9px 12px;font-size:14px;color:var(--ink);font-family:'Geologica',sans-serif;outline:none;transition:border-color .2s;}
+input:focus,textarea:focus,select:focus{border-color:var(--ink);}
+textarea{resize:vertical;min-height:74px;}
+label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;}
+.divider{height:1px;background:linear-gradient(to right,transparent,var(--b2),transparent);margin:32px 0;}
+.gf{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px;}
+
+/* HERO */
+.hero{background:#111;min-height:60vh;display:flex;flex-direction:column;justify-content:flex-end;padding:74px 22px 40px;position:relative;overflow:hidden;}
+.hg{position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");pointer-events:none;}
+.hbg{position:absolute;bottom:-44px;right:-8px;font-family:'Unbounded',sans-serif;font-size:clamp(84px,15vw,190px);font-weight:900;color:rgba(255,255,255,.025);letter-spacing:-6px;pointer-events:none;user-select:none;}
+.htag{font-size:10px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;margin-bottom:14px;}
+.htitle{font-family:'Unbounded',sans-serif;font-size:clamp(24px,5vw,58px);font-weight:900;color:white;line-height:1.05;letter-spacing:-2px;margin-bottom:16px;}
+.hdesc{font-size:14px;color:rgba(255,255,255,.42);max-width:440px;line-height:1.7;margin-bottom:22px;}
+.pills{display:flex;flex-wrap:wrap;gap:7px;}
+.pill{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:100px;padding:5px 12px;font-size:12px;color:rgba(255,255,255,.55);}
+.pill.ac{border-color:transparent;color:#111;font-weight:600;}
+
+/* NOTES */
+.nwrap{display:grid;grid-template-columns:1fr 265px;gap:14px;align-items:start;}
+.nlist{display:flex;flex-direction:column;gap:7px;}
+.nitem{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:14px 15px;cursor:pointer;transition:all .2s;position:relative;}
+.nitem:hover{border-color:var(--b2);}
+.nitem.on{border-color:#111;}
+.ndt{font-size:11px;color:var(--muted);margin-bottom:4px;}
+.nttl{font-size:14px;font-weight:600;margin-bottom:3px;}
+.nprv{font-size:13px;color:#666;line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.ndel{position:absolute;top:9px;right:9px;opacity:0;background:#fee2e2;border:none;border-radius:5px;padding:2px 7px;font-size:11px;color:#dc2626;cursor:pointer;}
+.nitem:hover .ndel{opacity:1;}
+.ned{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:15px;position:sticky;top:60px;}
+.ned input{margin-bottom:7px;}
+.ned textarea{min-height:160px;margin-bottom:8px;}
+
+/* STATS */
+.scards{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin-bottom:18px;}
+.scard{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:14px 15px;}
+.sv{font-family:'Unbounded',sans-serif;font-size:22px;font-weight:700;line-height:1;margin-bottom:4px;}
+.sl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
+.schg{font-size:12px;margin-top:3px;font-weight:500;}
+.cup{color:#16a34a;}.cdn{color:#dc2626;}.cfl{color:var(--muted);}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:8px;margin-bottom:12px;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.cb{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:18px;margin-bottom:13px;}
+.ctitle{font-size:13px;font-weight:700;margin-bottom:11px;}
+.mlist{display:flex;flex-direction:column;gap:7px;}
+.mrow{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.mn{font-size:14px;font-weight:600;}
+.mm{font-size:11px;color:var(--muted);margin-top:2px;}
+.mbadges{display:flex;gap:5px;flex-wrap:wrap;}
+.mbadge{font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--bg);color:var(--muted);}
+
+/* AI CHAT */
+.chatw{display:flex;flex-direction:column;gap:9px;margin-bottom:14px;max-height:450px;overflow-y:auto;padding:3px 0;}
+.chatm{display:flex;gap:9px;align-items:flex-start;}
+.chatm.u{flex-direction:row-reverse;}
+.chatb{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:12px 15px;font-size:14px;line-height:1.7;max-width:84%;white-space:pre-wrap;}
+.chatm.u .chatb{background:#111;color:white;border-color:#111;}
+.chatav{width:29px;height:29px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:2px;background:var(--bg);border:1px solid var(--border);}
+.chatm.u .chatav{background:var(--ac);border-color:var(--ac);}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px;}
+.chip{background:var(--bg);border:1.5px solid var(--b2);border-radius:100px;padding:5px 11px;font-size:12px;cursor:pointer;transition:all .15s;font-family:'Geologica',sans-serif;}
+.chip:hover{border-color:#111;}
+.chip.on{background:#111;color:white;border-color:#111;}
+.ciw{display:flex;gap:7px;align-items:flex-end;}
+.ciw textarea{min-height:50px;max-height:110px;}
+
+/* REFLECT */
+.rqbox{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:15px 17px;margin-bottom:9px;}
+.rqtxt{font-size:14px;font-weight:600;margin-bottom:9px;line-height:1.5;}
+.rans{background:var(--bg);border-radius:9px;padding:13px 15px;font-size:13px;line-height:1.65;color:var(--ink2);margin-top:8px;display:none;white-space:pre-wrap;}
+.rans.on{display:block;}
+
+/* THEORY */
+.tcard{background:var(--card);border:1px solid var(--border);border-radius:13px;overflow:hidden;margin-bottom:9px;}
+.thead{padding:15px 17px;cursor:pointer;display:flex;align-items:center;gap:10px;user-select:none;transition:background .15s;}
+.thead:hover{background:#fafafa;}
+.ticon{width:35px;height:35px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.ttl2{font-size:14px;font-weight:700;}
+.tsub{font-size:11px;color:var(--muted);margin-top:1px;}
+.tarr{margin-left:auto;font-size:14px;color:var(--muted);transition:transform .2s;}
+.tcard.on .tarr{transform:rotate(180deg);}
+.tbody{display:none;border-top:1px solid var(--border);padding:14px 17px;}
+.tcard.on .tbody{display:block;}
+.titem{display:flex;gap:9px;padding:6px 0;border-bottom:1px solid var(--border);align-items:flex-start;}
+.titem:last-child{border-bottom:none;}
+.tdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:7px;}
+.ttxt{font-size:13px;line-height:1.6;color:var(--ink2);}
+.ttxt strong{color:#111;font-weight:700;}
+
+/* TOOLS */
+.tsec{margin-bottom:22px;}
+.tsect{font-size:14px;font-weight:700;margin-bottom:11px;}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(225px,1fr));gap:8px;}
+.toolc{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:15px;}
+.toole{font-size:20px;margin-bottom:7px;display:block;}
+.tooln{font-size:13px;font-weight:700;margin-bottom:3px;}
+.toold{font-size:13px;color:#555;line-height:1.6;}
+.tooltag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--bg);color:var(--muted);margin-top:6px;}
+
+/* MENTOR */
+.cncpt{background:#111;border-radius:16px;padding:28px;color:white;position:relative;overflow:hidden;margin-bottom:24px;}
+.cnl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;margin-bottom:10px;font-weight:600;}
+.cnt{font-size:clamp(13px,2.1vw,18px);line-height:1.55;font-weight:300;color:rgba(255,255,255,.9);}
+.cnt strong{font-weight:600;}
+.pillars{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:24px;}
+.pillar{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:18px;transition:all .2s;}
+.pillar:hover{border-color:var(--b2);transform:translateY(-2px);box-shadow:0 6px 22px rgba(0,0,0,.06);}
+.pe{font-size:22px;margin-bottom:8px;display:block;}
+.pname{font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;margin-bottom:3px;letter-spacing:-.2px;}
+.ppct{font-size:11px;color:var(--muted);margin-bottom:5px;}
+.pdesc{font-size:13px;color:#555;line-height:1.6;}
+.ptags{display:flex;flex-wrap:wrap;gap:4px;margin-top:9px;padding-top:9px;border-top:1px solid var(--border);}
+.ptag{font-size:11px;background:var(--bg);border-radius:100px;padding:2px 8px;color:#555;}
+.strlist{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-bottom:22px;}
+.stritem{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;gap:8px;}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:8px;}
+.stxt{font-size:13px;line-height:1.6;color:var(--ink2);}
+.blk{background:var(--card);border:1px solid var(--border);border-radius:13px;overflow:hidden;margin-bottom:8px;}
+.bkh{padding:14px 17px;cursor:pointer;display:flex;align-items:center;gap:10px;user-select:none;transition:background .15s;}
+.bkh:hover{background:#fafafa;}
+.bki{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.bkt{font-size:14px;font-weight:600;margin-bottom:1px;}
+.bks{font-size:11px;color:var(--muted);}
+.bkarr{margin-left:auto;font-size:13px;color:var(--muted);transition:transform .2s;}
+.blk.on .bkarr{transform:rotate(180deg);}
+.bkb{display:none;padding:0 17px 14px;border-top:1px solid var(--border);}
+.blk.on .bkb{display:block;padding-top:13px;}
+.exc{background:var(--bg);border-radius:8px;padding:12px 14px;margin-top:10px;}
+.exl{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--pv);margin-bottom:5px;}
+.ext{font-size:13px;line-height:1.65;color:var(--ink2);}
+.wkcard{background:var(--card);border:1px solid var(--border);border-radius:13px;overflow:hidden;margin-bottom:8px;}
+.wkg{display:grid;grid-template-columns:108px 1fr;}
+.wkn{padding:16px 13px;display:flex;flex-direction:column;justify-content:center;}
+.wknum{font-family:'Unbounded',sans-serif;font-size:10px;font-weight:700;margin-bottom:4px;letter-spacing:.1em;}
+.wkname{font-family:'Unbounded',sans-serif;font-size:11px;font-weight:700;color:white;line-height:1.3;}
+.wkc{padding:16px 17px;border-left:1px solid var(--border);}
+.wkf{font-size:13px;font-weight:600;margin-bottom:8px;padding-bottom:7px;border-bottom:1px solid var(--border);}
+.wki{list-style:none;}
+.wki li{font-size:13px;color:#444;line-height:1.55;padding:4px 0 4px 12px;position:relative;border-bottom:1px solid rgba(0,0,0,.04);}
+.wki li:last-child{border-bottom:none;}
+.wki li::before{content:'·';position:absolute;left:2px;font-weight:700;font-size:13px;line-height:1.3;}
+.wtag{display:inline-block;font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;margin-right:3px;vertical-align:middle;}
+.wt-c{background:#e8f5ff;color:#005f8a;}.wt-r{background:var(--pa);color:#5c44cc;}.wt-p{background:var(--ga);color:#1a5c2a;}
+.fmlbox{background:#111;border-radius:15px;padding:24px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+.fpct{font-family:'Unbounded',sans-serif;font-size:28px;font-weight:900;line-height:1;margin-bottom:4px;}
+.flbl{font-size:12px;color:rgba(255,255,255,.5);line-height:1.5;}
+.qlist{list-style:none;}
+.qlist li{font-size:14px;line-height:1.6;padding:6px 0 6px 14px;border-bottom:1px solid var(--border);position:relative;color:var(--ink2);}
+.qlist li:last-child{border-bottom:none;}
+.qlist li::before{content:'?';position:absolute;left:0;color:var(--pv);font-weight:700;}
+.refg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:24px;}
+.refc{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:18px;}
+.refct{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.pwk{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px;}
+.pwkh{background:var(--bg);padding:10px 15px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-bottom:1px solid var(--border);user-select:none;}
+.pwkt{font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;letter-spacing:-.2px;}
+.pwks{font-size:11px;color:var(--muted);}
+.pwkarr{font-size:14px;color:var(--muted);transition:transform .2s;}
+.pwk.on .pwkarr{transform:rotate(180deg);}
+.pwkb{display:none;}
+.pwk.on .pwkb{display:block;}
+.pday{display:grid;grid-template-columns:58px 1fr;gap:10px;padding:9px 15px;border-bottom:1px solid var(--border);font-size:13px;align-items:start;}
+.pday:last-child{border-bottom:none;}
+.pdayn{font-weight:700;color:var(--muted);font-size:11px;padding-top:2px;}
+.pdayc{color:var(--ink2);line-height:1.55;}
+.plt{display:inline-block;font-size:10px;font-weight:700;padding:1px 5px;border-radius:6px;margin-right:3px;vertical-align:middle;}
+.ig{background:#ffe0f0;color:#a0005a;}.tt{background:#e0f0ff;color:#003a80;}
+.safeg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px;}
+.safeno{background:var(--ra);border:1px solid var(--rb);border-radius:10px;padding:14px;}
+.safeyes{background:var(--ga);border:1px solid var(--gb);border-radius:10px;padding:14px;}
+.safet{font-size:11px;font-weight:700;margin-bottom:8px;}
+.safeno .safet{color:#7a1a1a;}.safeyes .safet{color:#1a5c2a;}
+.safei{font-size:13px;line-height:1.5;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.05);}
+.safei:last-child{border-bottom:none;}
+.safeno .safei{color:#6a1a1a;}.safeyes .safei{color:#1a4d2e;}
+.bstages{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:8px;margin-bottom:18px;}
+.bstage{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px;}
+.bsnum{font-family:'Unbounded',sans-serif;font-size:10px;font-weight:700;margin-bottom:5px;letter-spacing:.1em;}
+.bsttl{font-size:13px;font-weight:700;margin-bottom:4px;}
+.bsdesc{font-size:13px;color:#555;line-height:1.65;}
+.ugrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px;margin-top:10px;}
+.uitem{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:10px 12px;display:flex;gap:7px;}
+.uem{font-size:15px;flex-shrink:0;}.utxt{font-size:13px;line-height:1.5;color:var(--ink2);}
+.faqitem{background:var(--card);border:1px solid var(--border);border-radius:11px;overflow:hidden;margin-bottom:7px;}
+.faqq{padding:13px 15px;cursor:pointer;font-size:14px;font-weight:600;display:flex;justify-content:space-between;align-items:center;user-select:none;}
+.faqq:hover{background:#fafafa;}
+.faqarr{font-size:13px;color:var(--muted);transition:transform .2s;}
+.faqitem.on .faqarr{transform:rotate(180deg);}
+.faqa{display:none;padding:0 15px 13px;font-size:14px;line-height:1.7;color:var(--ink2);border-top:1px solid var(--border);}
+.faqitem.on .faqa{display:block;padding-top:11px;}
+.pcards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(225px,1fr));gap:10px;}
+.pcard2{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:17px;}
+.pce{font-size:22px;margin-bottom:8px;display:block;}
+.pct{font-size:14px;font-weight:700;margin-bottom:5px;}
+.pcd{font-size:13px;color:#555;line-height:1.65;}
+
+@media(max-width:640px){
+  .nwrap{grid-template-columns:1fr;}
+  .ned{position:static;}
+  .wkg{grid-template-columns:1fr;}
+  .safeg{grid-template-columns:1fr;}
+  .fmlbox{grid-template-columns:1fr;}
+  .sec{padding:24px 14px;}
+  nav{padding:0 10px;}
+  .pday{grid-template-columns:50px 1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <div class="ag"></div>
+  <div class="abg">girls</div>
+  <div class="abox">
+    <div class="abrand">кішкас</div>
+    <div class="asub">оберіть профіль і увійдіть</div>
+    <div class="pcards" id="pcards"></div>
+    <div class="mtabs">
+      <div class="mtab on" onclick="setMode('login',this)">Увійти</div>
+      <div class="mtab" onclick="setMode('reg',this)">Реєстрація</div>
+    </div>
+    <div>
+      <div class="albl">Email</div>
+      <input type="email" class="ainp" id="aemail" placeholder="your@email.com" onkeydown="if(event.key==='Enter')doAuth()">
+      <div class="albl">Пароль</div>
+      <input type="password" class="ainp" id="apass" placeholder="••••••" onkeydown="if(event.key==='Enter')doAuth()">
+      <div id="aname-wrap" style="display:none">
+        <div class="albl">Ваше ім'я</div>
+        <input type="text" class="ainp" id="aname" placeholder="Наприклад: Віка">
+      </div>
+      <button class="abtn" id="abtn" onclick="doAuth()">Увійти →</button>
+      <div class="aerr" id="aerr"></div>
+    </div>
+    <div class="qlogins">
+      <div class="qlbl">Або швидкий вхід (локальний режим)</div>
+      <div class="qbtns" id="qbtns"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SETUP MODAL -->
+<div class="modal-bg" id="setup-modal">
+  <div class="modal">
+    <h2>SQL для Supabase</h2>
+    <p>Зайди в <strong>SQL Editor</strong> і виконай цей запит:</p>
+    <pre>create table if not exists notes (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users,
+  title text, content text,
+  created_at timestamptz default now()
+);
+create table if not exists stats (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users,
+  month text, year int,
+  ig int default 0, tt int default 0,
+  posts int default 0, stories int default 0,
+  reels int default 0, reach int default 0,
+  note text, created_at timestamptz default now()
+);
+alter table notes enable row level security;
+alter table stats enable row level security;
+create policy if not exists "own_notes" on notes
+  using (auth.uid()=user_id) with check (auth.uid()=user_id);
+create policy if not exists "own_stats" on stats
+  using (auth.uid()=user_id) with check (auth.uid()=user_id);</pre>
+    <button class="btn btn-ink" onclick="document.getElementById('setup-modal').classList.remove('on')">Зрозуміло</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <nav>
+    <span class="nbrand" id="nbrand" onclick="goTab('home')">кішкас</span>
+    <div class="nlinks">
+      <button class="nb on" onclick="goTab('home')">Головна</button>
+      <button class="nb" onclick="goTab('notes')">Нотатки</button>
+      <button class="nb" onclick="goTab('stats')">Статистика</button>
+      <button class="nb" onclick="goTab('ai')">ШІ-чат</button>
+      <button class="nb" onclick="goTab('reflect')">Рефлексія</button>
+      <button class="nb" onclick="goTab('mentor')">Ментор</button>
+      <button class="nb" onclick="goTab('theory')">Теорія</button>
+      <button class="nb" onclick="goTab('tools')">Інструменти</button>
+    </div>
+    <button class="nusr" id="nusr" onclick="doLogout()">вийти</button>
+  </nav>
+
+  <!-- HOME -->
+  <div id="tab-home" class="tab on">
+    <div class="hero">
+      <div class="hg"></div>
+      <div class="hbg" id="hbg">кішкас</div>
+      <div class="htag" id="htag" style="color:var(--ac)">🐱 план ментора</div>
+      <h1 class="htitle" id="htitle">Від блокеру<br>до <span id="hspan" style="color:var(--ac)">публікації</span></h1>
+      <p class="hdesc" id="hdesc">Ти не починаєш з нуля. Ти продовжуєш — але тепер із системою.</p>
+      <div class="pills" id="hpills"></div>
+    </div>
+    <div class="sec">
+      <div class="slbl">Останні нотатки</div>
+      <div id="homenotes"></div>
+      <button class="btn btn-out" onclick="goTab('notes')" style="margin-top:10px">Всі нотатки →</button>
+      <div class="divider"></div>
+      <div class="slbl">Статистика — останній місяць</div>
+      <div class="scards" id="homestats"></div>
+      <button class="btn btn-out" onclick="goTab('stats')" style="margin-top:10px">Детальніше →</button>
+    </div>
+  </div>
+
+  <!-- NOTES -->
+  <div id="tab-notes" class="tab">
+    <div class="sec">
+      <div class="stitle">Нотатки</div>
+      <button class="btn btn-ac" id="newnotebtn" onclick="newNote()" style="margin-bottom:14px">+ Нова нотатка</button>
+      <div class="nwrap">
+        <div class="nlist" id="nlist"></div>
+        <div>
+          <div class="ned" id="ned" style="display:none">
+            <label>Заголовок</label><input id="nttl" placeholder="Тема...">
+            <label style="margin-top:7px">Текст</label>
+            <textarea id="ntxt" placeholder="Пиши тут..."></textarea>
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              <button class="btn btn-ink btn-sm" onclick="saveNote()">Зберегти</button>
+              <button class="btn btn-red btn-sm" onclick="delNote()">Видалити</button>
+              <button class="btn btn-out btn-sm" onclick="closeNote()">✕</button>
+            </div>
+          </div>
+          <div id="nph" style="background:var(--card);border:1px solid var(--border);border-radius:11px;padding:24px;text-align:center;color:var(--muted);font-size:14px;">Обери або створи нотатку</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div id="tab-stats" class="tab">
+    <div class="sec">
+      <div class="stitle">Статистика</div>
+      <div class="cl cl-dk">Вводь дані раз на місяць — займає 2 хвилини. Зберігається в хмарі через Supabase.</div>
+      <div class="card">
+        <div style="font-size:14px;font-weight:700;margin-bottom:14px">+ Новий місяць</div>
+        <div class="fgrid">
+          <div class="fg"><label>Місяць</label>
+            <select id="stmo"><option>Січень</option><option>Лютий</option><option>Березень</option><option>Квітень</option><option>Травень</option><option>Червень</option><option>Липень</option><option>Серпень</option><option>Вересень</option><option>Жовтень</option><option>Листопад</option><option>Грудень</option></select></div>
+          <div class="fg"><label>Рік</label><input type="number" id="styr" value="2025"></div>
+          <div class="fg"><label>IG підписники</label><input type="number" id="stig" placeholder="0"></div>
+          <div class="fg"><label>TikTok</label><input type="number" id="sttt" placeholder="0"></div>
+          <div class="fg"><label>Постів IG</label><input type="number" id="stp" placeholder="0"></div>
+          <div class="fg"><label>Сторіс</label><input type="number" id="sts" placeholder="0"></div>
+          <div class="fg"><label>Reels/TikTok відео</label><input type="number" id="str" placeholder="0"></div>
+          <div class="fg"><label>Охоплення (ср.)</label><input type="number" id="streach" placeholder="0"></div>
+        </div>
+        <div class="fg" style="margin:10px 0"><label>Нотатка до місяця</label><textarea id="stnote" placeholder="Що важливого цього місяця?"></textarea></div>
+        <button class="btn btn-ac" id="statsavebtn" onclick="addMonth()">Зберегти</button>
+      </div>
+      <div id="chartsec" style="display:none">
+        <div class="cb"><div class="ctitle">Підписники</div><canvas id="chfol" height="160"></canvas></div>
+        <div class="cb"><div class="ctitle">Публікації</div><canvas id="chposts" height="160"></canvas></div>
+      </div>
+      <div class="slbl" style="margin-top:24px">Всі місяці</div>
+      <div class="mlist" id="mlist"></div>
+    </div>
+  </div>
+
+  <!-- AI CHAT -->
+  <div id="tab-ai" class="tab">
+    <div class="sec">
+      <div class="stitle">ШІ-чат</div>
+      <div class="cl cl-p">Питай що завгодно: аналіз статистики, ідеї постів, написати сценарій, текст для підпису, стратегія. ШІ знає твій профіль і статистику.</div>
+      <div class="slbl">Швидкі запити</div>
+      <div class="chips" id="aichips"></div>
+      <div class="chatw" id="chatw">
+        <div class="chatm"><div class="chatav">🤖</div><div class="chatb">Привіт! Я твій ШІ-помічник. Можу допомогти з аналізом статистики, ідеями постів, написати підпис або сценарій для Reels. Що хочеш?</div></div>
+      </div>
+      <div class="ciw">
+        <textarea id="aiq" placeholder="Запитай або опиши ідею..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+        <button class="btn btn-ac btn-sm" id="aisend" onclick="sendChat()" style="height:52px;white-space:nowrap;flex-shrink:0">→</button>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-out btn-sm" onclick="clearChat()">Очистити чат</button>
+        <span id="aist" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- REFLECT -->
+  <div id="tab-reflect" class="tab">
+    <div class="sec">
+      <div class="stitle">Рефлексія</div>
+      <div class="cl cl-g">Відповідай чесно — ШІ проаналізує відповідь і дасть зворотній зв'язок. Повертайся раз на тиждень.</div>
+      <div id="reflectqs"></div>
+    </div>
+  </div>
+
+  <!-- MENTOR -->
+  <div id="tab-mentor" class="tab">
+    <div class="hero" style="min-height:46vh">
+      <div class="hg"></div>
+      <div class="hbg" id="mbg">план</div>
+      <div class="htag" id="mtag" style="color:var(--ac)">📋 менторський план</div>
+      <h1 class="htitle" id="mtitle">Хто ти і що ти <span style="color:var(--ac)">даєш</span></h1>
+    </div>
+    <div id="mentorcontent"></div>
+  </div>
+
+  <!-- THEORY -->
+  <div id="tab-theory" class="tab">
+    <div class="sec">
+      <div class="stitle">Теорія</div>
+      <div class="cl cl-b">Як реально працює Instagram 2025, психологія аудиторії і блогера.</div>
+      <div class="slbl">Алгоритм Instagram 2025</div>
+      <div id="algocards" style="margin-bottom:28px"></div>
+      <div class="slbl">Психологія аудиторії</div>
+      <div class="cl cl-y" style="margin-bottom:14px">Чому люди підписуються і залишаються.</div>
+      <div class="pcards2" style="margin-bottom:28px" id="psychcards"></div>
+      <div class="slbl">Психологія блогера</div>
+      <div class="pcards2" id="blogercards"></div>
+    </div>
+  </div>
+
+  <!-- TOOLS -->
+  <div id="tab-tools" class="tab">
+    <div class="sec">
+      <div class="stitle">Інструменти</div>
+      <div class="cl cl-dk">Перевірені застосунки для монтажу, дизайну і аналітики.</div>
+      <div id="toolscontent"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// SUPABASE CONFIG
+// ══════════════════════════════════════════
+const SB_URL = 'https://lrronntdfuyrzmkdeusa.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxycm9ubnRkZnV5cnpta2RldXNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzUwOTYsImV4cCI6MjA5NDc1MTA5Nn0.XVZJ3L7MvIzkdYCTfqx9SZxDDtk0Ym37jg0y_HxS7FE';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+// ══════════════════════════════════════════
+// USER PROFILES
+// ══════════════════════════════════════════
+const USERS = {
+  vika:{
+    name:'Віка',emoji:'🐱',color:'#FF6B9D',role:'кішкас · лайфстайл',
+    heroTag:'🐱 кішкас · план ментора',
+    heroTitle:'Від блокеру<br>до <span style="color:#FF6B9D">публікації</span>',
+    heroDesc:'Ти не починаєш з нуля. Ти продовжуєш — але тепер із системою і розумінням навіщо це тобі.',
+    pills:['організація','краса','лайф','продуктивність','покупки'],
+    chips:['📊 Аналіз статистики','💡 Ідеї контенту','📝 Написати пост','🎬 Сценарій для Reels','📈 Як рости','😶 Застрягла — що робити'],
+    chipTexts:[
+      'Проаналізуй мою статистику. Що йде добре, що погано, що треба покращити?',
+      'Запропонуй 10 конкретних ідей контенту для мого профілю на наступний тиждень.',
+      'Допоможи написати текст підпису для поста про організацію простору або прибирання.',
+      'Напиши сценарій для 30-секундного Reels — clean with me або GRWM.',
+      'Як органічно рости в Instagram? Конкретні поради для мого профілю.',
+      'Я застрягла і не можу регулярно постити. Допоможи розібратись чому і що з цим робити.'
+    ],
+    aiCtx:'Ти консультуєш Віку — дівчину яка веде лайфстайл-блог в Instagram і TikTok. Профіль: організація простору, прибирання, краса, макіяж, кулінарія, секонд-хенд, розпаковки, читання, мозаїка, спорт, рибалка, природа, продуктивність, ШІ-інструменти. Розробниця та студентка КНУ.'
+  },
+  aluna:{
+    name:'Алуна',emoji:'🎧',color:'#FF4444',role:'лайфстайл · music vibes',
+    heroTag:'🎧 алуна · план ментора',
+    heroTitle:'Живи зараз.<br><span style="color:#FF4444">Знімай завжди.</span>',
+    heroDesc:'Твій контент — це те що відбувається прямо зараз. Настрій, розпаковки, спорт, магазини, моменти.',
+    pills:['настрій','розпаковки','спорт','харчування','лайф'],
+    chips:['📊 Аналіз статистики','💡 Ідеї контенту','📝 Написати пост','🎬 Сценарій для Reels','🛍 Контент з шопінгу','💪 Фітнес контент'],
+    chipTexts:[
+      'Проаналізуй мою статистику. Що йде добре, що погано, що треба покращити?',
+      'Запропонуй 10 конкретних ідей контенту для мого профілю — настрій, розпаковки, спорт, life.',
+      'Допоможи написати короткий текст підпису для поста про покупку або розпаковку.',
+      'Напиши сценарій для Reels на тему "мій день" або "що купила сьогодні".',
+      'Як знімати контент після шопінгу щоб він набирав охоплення?',
+      'Як поєднати фітнес рутину і харчування в цікавий контент?'
+    ],
+    aiCtx:'Ти консультуєш Алуну — дівчину яка веде лайфстайл-блог в Instagram і TikTok. Фокус на ЗАРАЗ: настрій, розпаковки, магазини, лайфхаки, спорт і харчування, краса. У минулому: повар, бариста, заводи в Польщі — це може бути контентом в майбутньому але не основа зараз. Основа: реальне щоденне life.'
+  },
+  dodo:{
+    name:'Додо',emoji:'💆',color:'#4DA6FF',role:'б\'юті майстер · брови та вії',
+    heroTag:'💆 додо · план ментора',
+    heroTitle:'Кожна робота —<br><span style="color:#4DA6FF">це контент.</span>',
+    heroDesc:'Ти щодня перетворюєш людей. Просто почни знімати те що вже відбувається — решта прийде.',
+    pills:['брови','вії','б\'юті','спорт','лайф'],
+    chips:['📊 Аналіз статистики','👁 Ідеї для б\'юті','📝 Підпис до роботи','🎬 Сценарій процесу','❓ FAQ пост','🧘 Подолання сорому'],
+    chipTexts:[
+      'Проаналізуй мою статистику. Що йде добре, що погано, що треба покращити?',
+      'Запропонуй 10 ідей контенту для б\'юті майстра — роботи, процес, особисте.',
+      'Допоможи написати підпис до фото результату — брови або вії.',
+      'Напиши сценарій для 30-секундного відео процесу нарощування вій або корекції брів.',
+      'Напиши пост-FAQ для клієнтів: що треба знати перед нарощуванням вій.',
+      'Я соромлюсь виставляти свої роботи. Допоможи з цим розібратись і зробити перший крок.'
+    ],
+    aiCtx:'Ти консультуєш Додо — майстра з брів та нарощування вій яка працює в салоні краси. Профіль: б\'юті роботи (брови 40-50%, вії), процес, до/після, спортзал, харчування, кулінарія, розпаковки, лайф. Блокери: сором, думає що люди осудять, перфекціонізм. Ціль: залучати нових клієнтів через Instagram + особистий контент.'
+  }
+};
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let CU = null; // current user key
+let sbUser = null; // supabase user
+let selProfile = null;
+let curNoteId = null;
+let charts = {};
+let chatHistory = [];
+let authMode = 'login';
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+async function init() {
+  renderAuthProfiles();
+  renderQuickLogins();
+  // check existing supabase session
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    sbUser = session.user;
+    const meta = session.user.user_metadata;
+    const profileKey = meta?.profile;
+    if (profileKey && USERS[profileKey]) {
+      CU = profileKey;
+      loginSuccess();
+      return;
+    }
+  }
+}
+
+function renderAuthProfiles() {
+  document.getElementById('pcards').innerHTML = Object.entries(USERS).map(([k,u]) => `
+    <div class="pcard" onclick="selProfile='${k}';document.querySelectorAll('.pcard').forEach(c=>c.classList.remove('sel'));this.classList.add('sel');document.getElementById('abtn').style.background='${u.color}'">
+      <div class="pav" style="background:${u.color}22">${u.emoji}</div>
+      <div><div class="pnm">${u.name}</div><div class="prl">${u.role}</div></div>
+    </div>`).join('');
+}
+
+function renderQuickLogins() {
+  document.getElementById('qbtns').innerHTML = Object.entries(USERS).map(([k,u]) => `
+    <button class="qbtn" onclick="quickLogin('${k}')">
+      <span>${u.emoji}</span>
+      <span>${u.name} — увійти локально (без Supabase)</span>
+    </button>`).join('');
+}
+
+function setMode(mode, el) {
+  authMode = mode;
+  document.querySelectorAll('.mtab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('aname-wrap').style.display = mode === 'reg' ? 'block' : 'none';
+  document.getElementById('abtn').textContent = mode === 'reg' ? 'Зареєструватись →' : 'Увійти →';
+}
+
+async function doAuth() {
+  const email = document.getElementById('aemail').value.trim();
+  const pass = document.getElementById('apass').value;
+  const errEl = document.getElementById('aerr');
+  errEl.style.display = 'none';
+  if (!email || !pass) { showErr('Введи email і пароль'); return; }
+  if (!selProfile) { showErr('Оберіть профіль вище'); return; }
+  const btn = document.getElementById('abtn');
+  btn.textContent = '...'; btn.disabled = true;
+  try {
+    if (authMode === 'reg') {
+      const name = document.getElementById('aname').value || USERS[selProfile].name;
+      const { data, error } = await sb.auth.signUp({
+        email, password: pass,
+        options: { data: { profile: selProfile, name } }
+      });
+      if (error) throw error;
+      if (data.user) { sbUser = data.user; CU = selProfile; loginSuccess(); }
+      else showErr('Перевір email для підтвердження');
+    } else {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+      if (error) throw error;
+      sbUser = data.user;
+      const meta = data.user.user_metadata;
+      CU = meta?.profile || selProfile;
+      loginSuccess();
+    }
+  } catch(e) {
+    showErr(e.message === 'Invalid login credentials' ? 'Невірний email або пароль' : e.message);
+  } finally { btn.disabled = false; btn.textContent = authMode === 'reg' ? 'Зареєструватись →' : 'Увійти →'; }
+}
+
+function showErr(msg) {
+  const el = document.getElementById('aerr');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+function quickLogin(key) {
+  CU = key; sbUser = null;
+  loginSuccess();
+}
+
+function loginSuccess() {
+  const u = USERS[CU];
+  document.documentElement.style.setProperty('--ac', u.color);
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('nusr').textContent = u.emoji + ' ' + u.name + ' · вийти';
+  document.getElementById('nbrand').style.color = u.color;
+  document.getElementById('htag').textContent = u.heroTag;
+  document.getElementById('htitle').innerHTML = u.heroTitle;
+  document.getElementById('hdesc').textContent = u.heroDesc;
+  document.getElementById('hbg').textContent = u.name.toLowerCase();
+  document.getElementById('hpills').innerHTML = u.pills.map((p,i)=>`<span class="pill${i===0?' ac':''}">${p}</span>`).join('');
+  document.getElementById('aichips').innerHTML = u.chips.map((c,i)=>`<div class="chip" onclick="setChip(this,'${u.chipTexts[i].replace(/'/g,"\\'")}')">${c}</div>`).join('');
+  document.getElementById('newnotebtn').style.background = u.color;
+  document.getElementById('statsavebtn').style.background = u.color;
+  document.getElementById('aisend').style.background = u.color;
+  renderMentor();
+  renderTheory();
+  renderTools();
+  renderReflect();
+  loadNotes();
+  loadStats();
+  renderHome();
+  const mos=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+  document.getElementById('stmo').value = mos[new Date().getMonth()];
+  document.getElementById('styr').value = new Date().getFullYear();
+}
+
+async function doLogout() {
+  if (!confirm('Вийти?')) return;
+  if (sbUser) await sb.auth.signOut();
+  CU = null; sbUser = null; curNoteId = null; chatHistory = [];
+  Object.values(charts).forEach(c => c && c.destroy && c.destroy());
+  charts = {};
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.documentElement.style.setProperty('--ac','#FF6B9D');
+  document.querySelectorAll('.pcard').forEach(c=>c.classList.remove('sel'));
+  goTab('home');
+}
+
+// ══════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════
+function goTab(name) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tab-'+name).classList.add('on');
+  document.querySelectorAll('.nb').forEach(b=>{
+    if((b.getAttribute('onclick')||'').includes("'"+name+"'")) b.classList.add('on');
+  });
+  if(name==='stats') renderCharts();
+  if(name==='home') renderHome();
+}
+
+// ══════════════════════════════════════════
+// STORAGE — Supabase + localStorage fallback
+// ══════════════════════════════════════════
+const LK = k => `ksk_${CU}_${k}`;
+const lsave = (k,v) => localStorage.setItem(LK(k), JSON.stringify(v));
+const lload = (k,d) => { try { const v=localStorage.getItem(LK(k)); return v?JSON.parse(v):d; } catch{return d;} };
+
+async function dbNotes() {
+  if (!sbUser) return lload('notes',[]);
+  const { data } = await sb.from('notes').select('*').eq('user_id',sbUser.id).order('created_at',{ascending:false});
+  return data || [];
+}
+
+async function dbSaveNote(note) {
+  if (!sbUser) { const ns=lload('notes',[]); const i=ns.findIndex(n=>n.id===note.id); if(i>=0)ns[i]=note; else ns.unshift(note); lsave('notes',ns); return; }
+  if (note._new) {
+    delete note._new;
+    await sb.from('notes').insert({user_id:sbUser.id,title:note.title,content:note.content});
+  } else {
+    await sb.from('notes').update({title:note.title,content:note.content}).eq('id',note.id);
+  }
+}
+
+async function dbDelNote(id) {
+  if (!sbUser) { lsave('notes',lload('notes',[]).filter(n=>n.id!==id)); return; }
+  await sb.from('notes').delete().eq('id',id);
+}
+
+async function dbStats() {
+  if (!sbUser) return lload('stats',[]);
+  const { data } = await sb.from('stats').select('*').eq('user_id',sbUser.id).order('year').order('month');
+  return data || [];
+}
+
+async function dbSaveStat(entry) {
+  if (!sbUser) {
+    const ss=lload('stats',[]);
+    const i=ss.findIndex(s=>s.month===entry.month&&s.year===entry.year);
+    if(i>=0)ss[i]=entry; else ss.push(entry);
+    ss.sort((a,b)=>a.year!==b.year?a.year-b.year:MONTHS.indexOf(a.month)-MONTHS.indexOf(b.month));
+    lsave('stats',ss); return;
+  }
+  const { data } = await sb.from('stats').select('id').eq('user_id',sbUser.id).eq('month',entry.month).eq('year',entry.year);
+  if (data && data.length) {
+    await sb.from('stats').update({ig:entry.ig,tt:entry.tt,posts:entry.posts,stories:entry.stories,reels:entry.reels,reach:entry.reach,note:entry.note}).eq('id',data[0].id);
+  } else {
+    await sb.from('stats').insert({user_id:sbUser.id,...entry});
+  }
+}
+
+async function dbDelStat(id) {
+  if (!sbUser) { lsave('stats',lload('stats',[]).filter(s=>s.id!==id)); return; }
+  await sb.from('stats').delete().eq('id',id);
+}
+
+const MONTHS=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+
+// ══════════════════════════════════════════
+// HOME
+// ══════════════════════════════════════════
+async function renderHome() {
+  const notes = await dbNotes();
+  const el = document.getElementById('homenotes');
+  el.innerHTML = !notes.length
+    ? '<div style="color:var(--muted);font-size:14px">Нотаток ще немає</div>'
+    : notes.slice(0,3).map(n=>`<div class="nitem" onclick="goTab('notes')" style="margin-bottom:8px">
+        <div class="ndt">${n.created_at ? new Date(n.created_at).toLocaleDateString('uk-UA') : (n.date||'')}</div>
+        <div class="nttl">${n.title||'Без назви'}</div>
+        <div class="nprv">${(n.content||n.text||'')}</div></div>`).join('');
+
+  const stats = await dbStats();
+  const sel = document.getElementById('homestats');
+  if (!stats.length) { sel.innerHTML='<div style="color:var(--muted);font-size:14px;grid-column:1/-1">Статистика ще не додана</div>'; return; }
+  const last=stats[stats.length-1], prev=stats.length>1?stats[stats.length-2]:null;
+  const chg=(a,b,k)=>{ if(!b) return ''; const d=(a[k]||0)-(b[k]||0); return d>0?`<div class="schg cup">+${d}</div>`:d<0?`<div class="schg cdn">${d}</div>`:`<div class="schg cfl">без змін</div>`; };
+  sel.innerHTML=[{k:'ig',l:'Instagram'},{k:'tt',l:'TikTok'},{k:'posts',l:'Постів'},{k:'stories',l:'Сторіс'},{k:'reels',l:'Reels/TT'},{k:'reach',l:'Охоплення'}]
+    .map(s=>`<div class="scard"><div class="sv">${last[s.k]||0}</div><div class="sl">${s.l}</div>${chg(last,prev,s.k)}</div>`).join('');
+}
+
+// ══════════════════════════════════════════
+// NOTES
+// ══════════════════════════════════════════
+async function loadNotes() {
+  const notes = await dbNotes();
+  const list = document.getElementById('nlist');
+  list.innerHTML = !notes.length
+    ? '<div style="color:var(--muted);font-size:14px">Нотаток ще немає</div>'
+    : notes.map(n=>`<div class="nitem${curNoteId===n.id?' on':''}" onclick="openNote('${n.id}')">
+        <button class="ndel" onclick="event.stopPropagation();delNoteById('${n.id}')">✕</button>
+        <div class="ndt">${n.created_at ? new Date(n.created_at).toLocaleDateString('uk-UA') : (n.date||'')}</div>
+        <div class="nttl">${n.title||'Без назви'}</div>
+        <div class="nprv">${(n.content||n.text||'')}</div></div>`).join('');
+}
+
+function newNote() {
+  curNoteId = '__new__';
+  document.getElementById('nttl').value='';
+  document.getElementById('ntxt').value='';
+  document.getElementById('ned').style.display='block';
+  document.getElementById('nph').style.display='none';
+  document.getElementById('nttl').focus();
+}
+
+async function openNote(id) {
+  const notes = await dbNotes();
+  const n = notes.find(x=>x.id===id);
+  if (!n) return;
+  curNoteId = id;
+  document.getElementById('nttl').value = n.title||'';
+  document.getElementById('ntxt').value = n.content||n.text||'';
+  document.getElementById('ned').style.display='block';
+  document.getElementById('nph').style.display='none';
+  await loadNotes();
+}
+
+async function saveNote() {
+  const title = document.getElementById('nttl').value || 'Без назви';
+  const content = document.getElementById('ntxt').value;
+  if (!content.trim()) return;
+  const note = curNoteId === '__new__'
+    ? { id: Date.now().toString(), title, content, date: new Date().toLocaleDateString('uk-UA'), _new: true }
+    : { id: curNoteId, title, content };
+  await dbSaveNote(note);
+  if (curNoteId === '__new__') curNoteId = note.id;
+  await loadNotes();
+  renderHome();
+  alert('Збережено ✓');
+}
+
+async function delNote() {
+  if (!curNoteId || !confirm('Видалити?')) return;
+  await delNoteById(curNoteId);
+}
+
+async function delNoteById(id) {
+  await dbDelNote(id);
+  if (curNoteId === id) closeNote();
+  await loadNotes();
+  renderHome();
+}
+
+function closeNote() {
+  curNoteId = null;
+  document.getElementById('ned').style.display='none';
+  document.getElementById('nph').style.display='block';
+  loadNotes();
+}
+
+// ══════════════════════════════════════════
+// STATS
+// ══════════════════════════════════════════
+async function loadStats() {
+  const stats = await dbStats();
+  document.getElementById('chartsec').style.display = stats.length ? 'block' : 'none';
+  document.getElementById('mlist').innerHTML = !stats.length
+    ? '<div style="color:var(--muted);font-size:14px">Місяців ще немає</div>'
+    : [...stats].reverse().map(m=>`<div class="mrow">
+        <div><div class="mn">${m.month} ${m.year}</div>${m.note?`<div class="mm">${m.note.substring(0,60)}${m.note.length>60?'...':''}</div>`:''}</div>
+        <div class="mbadges">
+          <span class="mbadge">IG ${m.ig||0}</span>
+          <span class="mbadge">TT ${m.tt||0}</span>
+          <button class="btn btn-red btn-sm" onclick="delMonthById('${m.id}')">✕</button>
+        </div></div>`).join('');
+}
+
+async function addMonth() {
+  const entry = {
+    id: Date.now().toString(),
+    month: document.getElementById('stmo').value,
+    year: parseInt(document.getElementById('styr').value),
+    ig: parseInt(document.getElementById('stig').value)||0,
+    tt: parseInt(document.getElementById('sttt').value)||0,
+    posts: parseInt(document.getElementById('stp').value)||0,
+    stories: parseInt(document.getElementById('sts').value)||0,
+    reels: parseInt(document.getElementById('str').value)||0,
+    reach: parseInt(document.getElementById('streach').value)||0,
+    note: document.getElementById('stnote').value,
+  };
+  await dbSaveStat(entry);
+  await loadStats();
+  renderCharts();
+  renderHome();
+  alert('Збережено ✓');
+}
+
+async function delMonthById(id) {
+  if (!confirm('Видалити місяць?')) return;
+  await dbDelStat(id);
+  await loadStats();
+  renderCharts();
+  renderHome();
+}
+
+async function renderCharts() {
+  const stats = await dbStats();
+  if (!stats.length) return;
+  const labels = stats.map(m=>m.month.substring(0,3)+' '+m.year);
+  ['chfol','chposts'].forEach(id=>{ if(charts[id]) charts[id].destroy(); });
+  charts['chfol']=new Chart(document.getElementById('chfol').getContext('2d'),{
+    type:'line',data:{labels,datasets:[
+      {label:'Instagram',data:stats.map(m=>m.ig||0),borderColor:'#FF6B9D',backgroundColor:'rgba(255,107,157,.08)',tension:0.4,fill:true},
+      {label:'TikTok',data:stats.map(m=>m.tt||0),borderColor:'#003a80',backgroundColor:'rgba(0,58,128,.08)',tension:0.4,fill:true},
+    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}
+  });
+  charts['chposts']=new Chart(document.getElementById('chposts').getContext('2d'),{
+    type:'bar',data:{labels,datasets:[
+      {label:'Пости',data:stats.map(m=>m.posts||0),backgroundColor:'rgba(255,107,157,.7)'},
+      {label:'Сторіс',data:stats.map(m=>m.stories||0),backgroundColor:'rgba(255,160,190,.7)'},
+      {label:'Reels/TT',data:stats.map(m=>m.reels||0),backgroundColor:'rgba(0,58,128,.7)'},
+    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}
+  });
+}
+
+// ══════════════════════════════════════════
+// AI CHAT
+// ══════════════════════════════════════════
+function setChip(el, text) {
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('aiq').value = text;
+}
+
+function addMsg(role, text) {
+  const u = USERS[CU];
+  const wrap = document.getElementById('chatw');
+  const div = document.createElement('div');
+  div.className = 'chatm' + (role==='user'?' u':'');
+  div.innerHTML = `<div class="chatav">${role==='user'?u.emoji:'🤖'}</div><div class="chatb">${text}</div>`;
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+  return div.querySelector('.chatb');
+}
+
+async function sendChat() {
+  const q = document.getElementById('aiq').value.trim();
+  if (!q) return;
+  document.getElementById('aiq').value = '';
+  document.getElementById('aist').textContent = '⏳';
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+
+  chatHistory.push({role:'user',content:q});
+  addMsg('user', q);
+
+  const stats = await dbStats();
+  let statCtx = '';
+  if (stats.length) {
+    const last=stats[stats.length-1];
+    const prev=stats.length>1?stats[stats.length-2]:null;
+    statCtx=`\n\nСТАТИСТИКА (${last.month} ${last.year}): IG:${last.ig||0} TT:${last.tt||0} Пости:${last.posts||0} Сторіс:${last.stories||0} Reels:${last.reels||0} Охоплення:${last.reach||0}${last.note?'\nНотатка: '+last.note:''}${prev?`\nПопередній (${prev.month} ${prev.year}): IG:${prev.ig||0} TT:${prev.tt||0}`:''}`;
+  }
+
+  const sys = `Ти — досвідчений SMM-менеджер і блогер-наставник. Відповідай українською мовою. Будь конкретною, практичною, дружньою. До 400 слів.\n\n${USERS[CU].aiCtx}${statCtx}`;
+
+  const bubbleEl = addMsg('ai', '...');
+  bubbleEl.textContent = '';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:sys,
+        messages:chatHistory
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.find(b=>b.type==='text')?.text || 'Помилка отримання відповіді.';
+    bubbleEl.textContent = reply;
+    chatHistory.push({role:'assistant',content:reply});
+    document.getElementById('aist').textContent = '✓';
+    setTimeout(()=>document.getElementById('aist').textContent='',2000);
+  } catch(e) {
+    bubbleEl.textContent = 'Помилка з\'єднання. Перевір інтернет.';
+    document.getElementById('aist').textContent = '❌';
+  }
+  document.getElementById('chatw').scrollTop = 99999;
+}
+
+function clearChat() {
+  chatHistory = [];
+  const w = document.getElementById('chatw');
+  w.innerHTML = '<div class="chatm"><div class="chatav">🤖</div><div class="chatb">Чат очищено. Як можу допомогти?</div></div>';
+}
+
+// ══════════════════════════════════════════
+// REFLECTION
+// ══════════════════════════════════════════
+const REFLECT_QS = {
+  vika:[
+    {q:'Що зняла цього тижня і навіть не думала що це може бути контент?',cat:'Контент'},
+    {q:'Який пост або сторіс мені самій найбільше сподобались — і чому?',cat:'Контент'},
+    {q:'Блокери ще є — але чи такі ж гучні як на початку?',cat:'Голова'},
+    {q:'Коли мені найлегше знімати, а коли найважче? Що впливає?',cat:'Голова'},
+    {q:'Що зайшло краще в статистиці цього тижня — і що це означає?',cat:'Ріст'},
+    {q:'Що б я сказала собі місяць тому?',cat:'Ріст'},
+  ],
+  aluna:[
+    {q:'Що цікавого відбулось цього тижня що я ще не показала?',cat:'Контент'},
+    {q:'Який момент сьогоднішнього дня я б хотіла зняти — але не зняла?',cat:'Контент'},
+    {q:'Що мене зупиняє від регулярного постингу прямо зараз?',cat:'Голова'},
+    {q:'Який з минулих досвідів (кухня, бариста, Польща) я хотіла б показати в майбутньому?',cat:'Майбутнє'},
+    {q:'Що зайшло людям найкраще цього тижня — і що це говорить про мою аудиторію?',cat:'Ріст'},
+    {q:'Якби я знімала тільки для однієї людини — хто вона і що їй цікаво?',cat:'Ріст'},
+  ],
+  dodo:[
+    {q:'Скільки робіт цього тижня я зробила і не виклала — і чому?',cat:'Робота'},
+    {q:'Яке питання клієнтки я чую найчастіше — це вже готова тема для поста?',cat:'Робота'},
+    {q:'Сором ще є — або вже трохи легше? Що змінилось?',cat:'Голова'},
+    {q:'Що в моїй роботі я вважаю звичайним але інші кажуть "вау"?',cat:'Голова'},
+    {q:'Скільки потенційних клієнтів не побачили мої роботи цього тижня?',cat:'Ріст'},
+    {q:'Що б відрізнило мій профіль від інших б\'юті майстрів?',cat:'Ріст'},
+  ]
+};
+
+function renderReflect() {
+  const qs = REFLECT_QS[CU] || [];
+  document.getElementById('reflectqs').innerHTML = qs.map((q,i)=>`
+    <div class="rqbox">
+      <div class="rqtxt">${q.q}</div>
+      <label style="margin-bottom:5px;font-size:10px">Твоя відповідь</label>
+      <textarea id="rq${i}" placeholder="Пиши чесно — для себе..."></textarea>
+      <div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn btn-ac btn-sm" style="background:${USERS[CU].color}" onclick="analyzeReflect(${i})">Проаналізувати →</button>
+        <span id="rst${i}" style="font-size:12px;color:var(--muted);align-self:center"></span>
+      </div>
+      <div class="rans" id="rans${i}"></div>
+    </div>`).join('');
+}
+
+async function analyzeReflect(i) {
+  const ans = document.getElementById('rq'+i).value.trim();
+  if (!ans) return;
+  const st = document.getElementById('rst'+i);
+  const out = document.getElementById('rans'+i);
+  st.textContent = '⏳'; out.classList.remove('on');
+  const q = REFLECT_QS[CU][i].q;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',max_tokens:600,
+        system:`Ти підтримуючий коуч для блогера. ${USERS[CU].aiCtx}\nДай коротку (3-5 речень) чесну і підтримуючу відповідь на рефлексію. Українська мова. Будь конкретною і практичною.`,
+        messages:[{role:'user',content:`Питання: "${q}"\n\nМоя відповідь: "${ans}"\n\nДай зворотній зв'язок.`}]
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.find(b=>b.type==='text')?.text || 'Помилка.';
+    out.textContent = reply; out.classList.add('on');
+    st.textContent = '✓'; setTimeout(()=>st.textContent='',2000);
+  } catch { out.textContent='Помилка з\'єднання.'; out.classList.add('on'); st.textContent='❌'; }
+}
+
+// ══════════════════════════════════════════
+// THEORY
+// ══════════════════════════════════════════
+function renderTheory() {
+  const algos = [
+    {icon:'🎬',bg:'#ffe0f0',title:'Reels — як отримати охоплення',sub:'Найпотужніший формат для нових підписників',items:[
+      {dot:'#a0005a',txt:'<strong>Перші 3 секунди — все.</strong> Починай з гачка — питання, wow-момент або текст на екрані. Алгоритм дивиться чи залишаються люди.'},
+      {dot:'#a0005a',txt:'<strong>Watch time важливіший за лайки.</strong> 60-секундний Reel з 70% перегляду обіграє 10-секундний з 50%.'},
+      {dot:'#a0005a',txt:'<strong>Відправки в DM = золото.</strong> Instagram зважує відправки в 3–5 разів більше ніж лайки. Роби контент який хочеться переслати.'},
+      {dot:'#a0005a',txt:'<strong>Алгоритм тестує малими порціями.</strong> Спочатку 100–500 людей, 1-2 год. Якщо реакція хороша — розширює. Перші години критичні.'},
+      {dot:'#a0005a',txt:'<strong>Субтитри дають +30% переглядів.</strong> Багато дивляться без звуку. В CapCut: Text → Auto Captions.'},
+      {dot:'#a0005a',txt:'<strong>Watermark з TikTok знижує охоплення.</strong> Завантажуй оригінальні відео без логотипів.'},
+    ]},
+    {icon:'📱',bg:'#e8f5ff',title:'Сторіс і Каруселі',sub:'Глибина зв\'язку з аудиторією',items:[
+      {dot:'#003a80',txt:'<strong>Сторіс = зв\'язок з тими хто є.</strong> Не ростять підписників але будують лояльність. Регулярні сторіс = алгоритм показує тебе частіше.'},
+      {dot:'#003a80',txt:'<strong>Інтерактивність підвищує охоплення.</strong> Опитування, слайдери, питання — алгоритм бачить взаємодію.'},
+      {dot:'#003a80',txt:'<strong>Каруселі зберігають найбільше.</strong> «Збереження» — найсильніший сигнал для стрічки. Роби каруселі корисними.'},
+      {dot:'#003a80',txt:'<strong>Перша сторінка каруселі</strong> вирішує чи будуть свайпати. Зроби її як обкладинку — цікава і з гачком.'},
+    ]},
+    {icon:'🔍',bg:'#f3f0ff',title:'SEO і пошук',sub:'Як тебе знаходять нові люди',items:[
+      {dot:'#6C5CE7',txt:'<strong>Ключові слова важливіші за хештеги.</strong> Instagram читає текст підпису. Пиши природньо — "прибираю кухню", "корекція брів".'},
+      {dot:'#6C5CE7',txt:'<strong>Хештеги — 5–10, конкретні.</strong> Не #love — а #майстербровакиїв #нарощуваннявій. Специфічні = правильна аудиторія.'},
+      {dot:'#6C5CE7',txt:'<strong>Біо профілю</strong> індексується в пошуку. Додай ключові слова своєї ніші.'},
+      {dot:'#6C5CE7',txt:'<strong>Трендова музика</strong> збільшує шанс потрапити на Explore.'},
+    ]},
+    {icon:'📊',bg:'#f0fff4',title:'Метрики які важливі',sub:'На що дивитись в статистиці',items:[
+      {dot:'#16a34a',txt:'<strong>Збереження</strong> — найкращий показник корисного контенту.'},
+      {dot:'#16a34a',txt:'<strong>Відправки (sends)</strong> — показник вірусного потенціалу.'},
+      {dot:'#16a34a',txt:'<strong>Completion rate Reels</strong> — ціль мінімум 50%.'},
+      {dot:'#16a34a',txt:'<strong>Лайки — найменш важливі</strong> для алгоритму. Але важливі психологічно.'},
+    ]},
+    {icon:'⏰',bg:'#fffbea',title:'Коли і як часто',sub:'Системність без вигорання',items:[
+      {dot:'#856600',txt:'<strong>3x на тиждень стабільно</strong> кращe ніж 10x за перший тиждень і мовчання.'},
+      {dot:'#856600',txt:'<strong>Найкращий час</strong> — коли аудиторія онлайн. Перевіряй в Insights → Аудиторія. Зазвичай 18:00–22:00.'},
+      {dot:'#856600',txt:'<strong>Знімай пачками.</strong> 2 години = 3–5 матеріалів на тиждень.'},
+      {dot:'#856600',txt:'<strong>Відповідай на коментарі</strong> в першу годину після публікації — буст охоплення.'},
+    ]},
+  ];
+  document.getElementById('algocards').innerHTML = algos.map(a=>`
+    <div class="tcard" onclick="this.classList.toggle('on')">
+      <div class="thead"><div class="ticon" style="background:${a.bg}">${a.icon}</div>
+        <div><div class="ttl2">${a.title}</div><div class="tsub">${a.sub}</div></div>
+        <div class="tarr">↓</div></div>
+      <div class="tbody">${a.items.map(it=>`<div class="titem"><div class="tdot" style="background:${it.dot}"></div><div class="ttxt">${it.txt}</div></div>`).join('')}</div>
+    </div>`).join('');
+
+  document.getElementById('psychcards').innerHTML = [
+    {e:'🪞',t:'Ефект «це про мене»',d:'Люди підписуються коли бачать себе в тобі. Чим більше ти є собою — тим більше людей впізнають себе.'},
+    {e:'🤝',t:'Парасоціальний зв\'язок',d:'Аудиторія відчуває дружбу з блогером якого регулярно бачить. Сторіс, голос, реальні моменти — будують лояльність.'},
+    {e:'💡',t:'Цінність і корисність',d:'Люди зберігають корисний контент і повертаються. «Лайфхак», «спробую» — це збереження і повернення.'},
+    {e:'🎭',t:'Автентичність виграє',d:'Ідеальний контент відштовхує. Реальний притягує. Помилки, чесні думки — аудиторія довіряє.'},
+    {e:'📣',t:'FOMO і серіальність',d:'Серії і рубрики змушують повертатись. «Продовження завтра» — людина підписується щоб не пропустити.'},
+    {e:'❤️',t:'Емоційний відгук',d:'Контент який викликає сміх, ностальгію або «впізнавання» — пересилають друзям. Так ростуть органічно.'},
+  ].map(p=>`<div class="pcard2"><span class="pce">${p.e}</span><div class="pct">${p.t}</div><div class="pcd">${p.d}</div></div>`).join('');
+
+  document.getElementById('blogercards').innerHTML = [
+    {e:'🧠',t:'Синдром самозванця',d:'«Хто я така щоб вчити». Факт: ти не вчиш — ти ділишся досвідом. Твій досвід унікальний для тих хто його не має.'},
+    {e:'👁',t:'Страх оцінки',d:'Мозок еволюційно боїться бути відкинутим. Але аудиторія в Instagram — незнайомці без влади над твоїм реальним life.'},
+    {e:'⚡',t:'Перфекціонізм = прокрастинація',d:'Ідеальний пост який не виклала = 0 охоплень. Звичайний який виклала = шанс. Дій, покращуй в процесі.'},
+    {e:'🔄',t:'Порівняння з іншими',d:'Ти бачиш чужий результат але не бачиш їхній шлях. Порівнюй себе тільки з собою вчорашньою.'},
+  ].map(p=>`<div class="pcard2"><span class="pce">${p.e}</span><div class="pct">${p.t}</div><div class="pcd">${p.d}</div></div>`).join('');
+}
+
+// ══════════════════════════════════════════
+// TOOLS
+// ══════════════════════════════════════════
+function renderTools() {
+  const sections = [
+    {title:'✂️ Монтаж відео',tools:[
+      {e:'📱',n:'CapCut',d:'Найкращий для Reels і TikTok. Автосубтитри, шаблони, beat sync, AI фон. Безкоштовно.',tag:'iOS + Android · Безкоштовно'},
+      {e:'🎬',n:'InShot',d:'Простий і швидкий. Кадрування під всі формати, музика, текст. Ідеально для старту.',tag:'iOS + Android · Безкоштовно+'},
+      {e:'⚡',n:'Splice',d:'Потужний timeline-монтаж на телефоні. Для більшого контролю над кліпами.',tag:'iOS · Безкоштовно+'},
+    ]},
+    {title:'🎨 Дизайн і графіка',tools:[
+      {e:'🖌',n:'Canva',d:'Шаблони для сторіс, каруселей, обкладинок. Брендові кольори і шрифти.',tag:'Всі платформи · Безкоштовно+'},
+      {e:'📐',n:'Adobe Express',d:'Потужніший Canva. Remove background, анімації. Безкоштовна версія щедра.',tag:'Всі платформи · Безкоштовно+'},
+      {e:'✨',n:'Unfold',d:'Красиві мінімалістичні шаблони для сторіс. Естетика яку любить IG аудиторія.',tag:'iOS + Android · Безкоштовно+'},
+    ]},
+    {title:'📸 Фото і обробка',tools:[
+      {e:'🌈',n:'Lightroom Mobile',d:'Пресети для єдиної естетики стрічки. Один клік — консистентний вигляд.',tag:'iOS + Android · Безкоштовно+'},
+      {e:'💎',n:'VSCO',d:'Фільтри і пресети. Тепла або мінімалістична естетика.',tag:'iOS + Android · Безкоштовно+'},
+      {e:'🪄',n:'Facetune',d:'Ретуш, вирівнювання фону. Для б\'юті контенту незамінне.',tag:'iOS + Android · Платно'},
+    ]},
+    {title:'📅 Планування і аналітика',tools:[
+      {e:'🗓',n:'Later',d:'Планування постів наперед, drag-and-drop календар, аналітика.',tag:'Всі платформи · Безкоштовно+'},
+      {e:'📊',n:'Instagram Insights',d:'Вбудована аналітика. Охоплення, збереження, аудиторія, час — безкоштовно.',tag:'В додатку · Безкоштовно'},
+      {e:'🎵',n:'TrendTok',d:'Трендові звуки для TikTok і Reels. Вчасно ловити тренд = більше охоплення.',tag:'Веб · Безкоштовно'},
+    ]},
+  ];
+  const capcut = [
+    {title:'⚙️ Базові налаштування',items:[
+      '<strong>Формат 9:16 відразу</strong> — Canvas → Ratio → 9:16. Встанови до початку монтажу.',
+      '<strong>Авто-субтитри</strong> — Text → Auto Captions. Обов\'язково для кожного Reels.',
+      '<strong>Експорт 1080p, 30fps</strong> — достатньо для Instagram і TikTok.',
+    ]},
+    {title:'🎬 Ефекти що дають результат',items:[
+      '<strong>Speed Ramp</strong> — сповільнення в момент переходу. Робить звичайне відео кінематографічним.',
+      '<strong>Beat Sync</strong> — автосинхронізація кліпів з ритмом. Effects → Beat Sync.',
+      '<strong>AI Background Remove</strong> — прибирає фон одним кліком. Ідеально для б\'юті.',
+      '<strong>Максимум 1–2 переходи.</strong> Багато ефектів = аматорський вигляд.',
+    ]},
+    {title:'🎨 Естетика і кольори',items:[
+      '<strong>LUTs</strong> — Filters → LUTs. Один LUT на всі відео = єдина естетика стрічки.',
+      '<strong>Збережи як пресет</strong> — після налаштування кольорів → зберегти. Наступного разу один клік.',
+      '<strong>Текст</strong> — жирний + тінь. Білий на темному або чорний на світлому. Анімуй важливі слова.',
+    ]},
+  ];
+  const stories = [
+    {e:'🎨',n:'Єдиний стиль шрифту',d:'1–2 шрифти завжди. Це вже брендинг без логотипу.'},
+    {e:'🌅',n:'Фото на градієнт',d:'В IG: стискай фото, довго тримай → розмий фон. Виглядає професійно.'},
+    {e:'📍',n:'Геолокація і теги',d:'Теги місць збільшують охоплення сторіс. 1–2 теги — достатньо.'},
+    {e:'⏱',n:'Серії 3–5 сторіс',d:'Перша = гачок («покажу щось»), остання = CTA. Тримають людину довше.'},
+    {e:'🎵',n:'Трендова музика',d:'IG показує в пошуку по музиці. Використовуй популярні треки.'},
+    {e:'🔗',n:'Посилай на Reels',d:'«Дивись Reel» в сторіс → крос-промо. Сторіс приводять глядачів на Reels.'},
+  ];
+  document.getElementById('toolscontent').innerHTML =
+    sections.map(s=>`<div class="tsec"><div class="tsect">${s.title}</div><div class="tgrid">${s.tools.map(t=>`<div class="toolc"><span class="toole">${t.e}</span><div class="tooln">${t.n}</div><div class="toold">${t.d}</div><span class="tooltag">${t.tag}</span></div>`).join('')}</div></div>`).join('') +
+    '<div class="divider"></div><div class="slbl">Лайфхаки CapCut</div><div class="cl cl-dk" style="margin-bottom:14px">Найпопулярніший редактор. Ось що реально варто знати.</div>' +
+    capcut.map(s=>`<div class="tcard" onclick="this.classList.toggle(\'on\')" style="margin-bottom:9px"><div class="thead"><div class="ticon" style="background:#fff8e0">💡</div><div><div class="ttl2">${s.title}</div></div><div class="tarr">↓</div></div><div class="tbody">${s.items.map(it=>`<div class="titem"><div class="tdot" style="background:var(--ac)"></div><div class="ttxt">${it}</div></div>`).join('')}</div></div>`).join('') +
+    '<div class="divider"></div><div class="slbl">Лайфхаки для сторіс</div><div class="tgrid" style="margin-bottom:28px">' +
+    stories.map(s=>`<div class="toolc"><span class="toole">${s.e}</span><div class="tooln">${s.n}</div><div class="toold">${s.d}</div></div>`).join('') + '</div>';
+}
+
+// ══════════════════════════════════════════
+// MENTOR CONTENT
+// ══════════════════════════════════════════
+function renderMentor() {
+  document.getElementById('mbg').textContent = USERS[CU].name.toLowerCase();
+  document.getElementById('mtag').textContent = USERS[CU].heroTag;
+  document.getElementById('mtitle').innerHTML = 'Хто ти і що ти <span style="color:'+USERS[CU].color+'">даєш</span>';
+  const el = document.getElementById('mentorcontent');
+  if(CU==='vika') el.innerHTML = vikaM();
+  else if(CU==='aluna') el.innerHTML = alunaM();
+  else el.innerHTML = dodoM();
+}
+
+const sec=(h)=>`<div class="sec">${h}</div>`;
+const lbl=(t)=>`<div class="slbl">${t}</div>`;
+const cncpt=(l,t,c)=>`<div class="cncpt"><div class="cnl" style="color:${c}">${l}</div><p class="cnt">${t}</p></div>`;
+const pill2=(e,n,p,d,tags)=>`<div class="pillar"><span class="pe">${e}</span><div class="pname">${n}</div><div class="ppct">${p}</div><div class="pdesc">${d}</div><div class="ptags">${tags.map(t=>`<span class="ptag">${t}</span>`).join('')}</div></div>`;
+const str2=(t,c)=>`<div class="stritem"><div class="sdot" style="background:${c}"></div><div class="stxt">${t}</div></div>`;
+const blk2=(icon,bg,ttl,sub,body)=>`<div class="blk" onclick="this.classList.toggle('on')"><div class="bkh"><div class="bki" style="background:${bg}">${icon}</div><div><div class="bkt">${ttl}</div><div class="bks">${sub}</div></div><div class="bkarr">↓</div></div><div class="bkb">${body}</div></div>`;
+const exc2=(l,t)=>`<div class="exc"><div class="exl">${l}</div><div class="ext">${t}</div></div>`;
+const wk2=(num,name,ac,focus,items)=>`<div class="wkcard"><div class="wkg"><div class="wkn" style="background:#111"><div class="wknum" style="color:${ac}">${num}</div><div class="wkname">${name}</div></div><div class="wkc"><div class="wkf">${focus}</div><ul class="wki">${items.map(i=>`<li>${i}</li>`).join('')}</ul></div></div></div>`;
+const pwk2=(ttl,sub,days)=>`<div class="pwk" onclick="this.classList.toggle('on')"><div class="pwkh"><div><div class="pwkt">${ttl}</div><div class="pwks">${sub}</div></div><div class="pwkarr">↓</div></div><div class="pwkb">${days.map(d=>`<div class="pday"><div class="pdayn">${d[0]}</div><div class="pdayc">${d[1]}</div></div>`).join('')}</div></div>`;
+const ig=t=>`<span class="plt ig">${t}</span>`;
+const tt=t=>`<span class="plt tt">${t}</span>`;
+const wt=(t,c)=>`<span class="wtag wt-${c}">${t}</span>`;
+const div2=()=>`<div class="divider"></div>`;
+const refcard=(t,qs)=>`<div class="refc"><div class="refct">${t}</div><ul class="qlist">${qs.map(q=>`<li>${q}</li>`).join('')}</ul></div>`;
+const faq=(q,a)=>`<div class="faqitem" onclick="this.classList.toggle('on')"><div class="faqq">${q}<span class="faqarr">↓</span></div><div class="faqa">${a}</div></div>`;
+
+function vikaM(){return sec(`
+  ${lbl('Концепція')}
+  ${cncpt('кішкас · позиціонування','«Дівчина яка любить <strong style="color:#FF6B9D">коли все на своєму місці</strong> — і при цьому <strong style="color:#FF6B9D">повністю живе</strong>.» Організація, краса, їжа, природа, думки — все це одна людина.','#FF6B9D')}
+  ${lbl('Сильні сторони')}
+  <div class="strlist" style="margin-bottom:24px">${['Реальне різностороннє life — уні, робота, хобі, природа одночасно','Розробниця яка при цьому живе повно — рибалка, мозаїка, секонд','Знаєш як організувати простір, час і голову — рідко в одній людині','ШІ-досвід поданий як частина продуктивного life, а не "айті"','Широкий спектр для брендів: дім, косметика, їжа, одяг, техніка'].map(s=>str2(s,'#FF6B9D')).join('')}</div>
+  ${lbl('5 контентних стовпів')}
+  <div class="pillars" style="margin-bottom:24px">
+    ${pill2('🧹','Простір і порядок','25%','Clean with me, організація, розхламлення, лайфхаки побуту',['TikTok','Reels'])}
+    ${pill2('💄','Краса і догляд','20%','GRWM, зубна рутина, розпаковки косметики, макіяж',['Reels','TikTok'])}
+    ${pill2('☀️','Лайф і відпочинок','25%','Кафе, природа, рибалка, пікнік, фільми, книги',['Сторіс','Reels'])}
+    ${pill2('🧠','Продуктивність','20%','Як все встигати, ШІ-інструменти, сон, харчування',['Карусель','TikTok'])}
+    ${pill2('🛍','Покупки і знахідки','10%','Секонд, розпаковки, дрібниці, мініатюри',['Reels','TikTok'])}
+  </div>
+  ${div2()}${lbl('Блокери')}
+  ${blk2('😶','#fff8e0','«Не цікаво іншим людям»','Недовіра до власного досвіду',
+    `<div class="cl cl-y">За 10 хвилин ти назвала 40+ тем. Це не нестача матеріалу — це недовіра до свого досвіду.</div>${exc2('Вправа «Список 20»','Напиши 20 речей де ти краща за більшість. Не скромно — чесно. Це і є твій контент.')}`)}
+  ${blk2('😬','#ffe0e0','«Хтось буде сміятись»','Страх знайомих',
+    `<div class="cl cl-r">Знайомі дивляться тиждень потім звикають. Незнайомці підписуються саме за те що ти є.</div>${exc2('Технічно','Instagram → Налаштування → Приватність → приховати конкретних людей від постів без блокування.')}`)}
+  ${blk2('🛡','#e0f5e0','Безпека','Зрілий підхід',
+    `<div class="safeg"><div class="safeno"><div class="safet">❌ Краще не показувати</div>${['Точна адреса','Постійний розклад','Геолокація в реалтаймі','Номер авто, документи'].map(i=>`<div class="safei">${i}</div>`).join('')}</div><div class="safeyes"><div class="safet">✅ Безпечно</div>${['Інтер\'єр без прив\'язки','Хобі, думки, покупки','Геолокація після відходу','Обличчя і голос — ок'].map(i=>`<div class="safei">${i}</div>`).join('')}</div></div>`)}
+  ${div2()}${lbl('8 тижнів')}
+  ${wk2('ТИЖ 1–2','Перший крок','#FF6B9D','🎯 Зламати блок і повернутись природньо',[`${wt('контент','c')} 1 сторіс — будь-що з сьогоднішнього дня`,`${wt('контент','c')} 1 пост — думка або момент`,`${wt('рефлексія','r')} Список 20 речей де ти краща за більшість`,`${wt('практика','p')} Вправа «найгірший сценарій»`])}
+  ${wk2('ТИЖ 3–4','Ритм і рубрики','#FF6B9D','🎯 Знайти природній ритм',[`${wt('контент','c')} Перший Reels або TikTok — тема з побуту`,`${wt('контент','c')} Перша постійна рубрика`,`${wt('рефлексія','r')} Який контент роблю коли не думаю що це контент?`,`${wt('практика','p')} Нотатка «ідеї» в телефоні`])}
+  ${wk2('ТИЖ 5–6','Корисний контент','#FF6B9D','🎯 Додати контент який зберігають',[`${wt('контент','c')} Один «корисний» пост — комуналка або тканини`,`${wt('контент','c')} GRWM або clean with me`,`${wt('рефлексія','r')} Що зайшло краще в статистиці?`,`${wt('практика','p')} «Пачка» — 2 год = 3–4 матеріали`])}
+  ${wk2('ТИЖ 7–8','Система і вперед','#FF6B9D','🎯 Закріпити і зрозуміти куди далі',[`${wt('контент','c')} Підсумок місяця`,`${wt('рефлексія','r')} Блокери ще є — але чи такі ж гучні?`,`${wt('практика','p')} Список з 30 ідей — без фільтрів`])}
+  ${div2()}${lbl('Контент-план · Місяць 1')}
+  ${pwk2('Тиждень 1','Просто живеш і знімаєш',[['Пн/Вт',`${ig('Сторіс')} Будь-що з дня`],['Ср/Чт',`${ig('Reels')} Clean with me або організація`],['Пт',`${tt('TikTok')} Той самий контент`],['Вхідний',`${ig('Пост')} Фото тижня — 5–7 кадрів`]])}
+  ${pwk2('Тиждень 2','Перший корисний пост',[['Пн',`${ig('Сторіс')} GRWM`],['Ср',`${ig('Карусель')} Корисний гайд`],['Пт',`${tt('TikTok')}${ig('Reels')} Розпаковка`],['Сб',`${ig('Пост')} Фото тижня`]])}
+  ${div2()}${lbl('Рефлексія')}
+  <div class="refg">
+    ${refcard('Контент і цінність',['Що зняла і не думала що це контент?','Який пост мені самій найбільше сподобався?','Що люди зберігають — що це означає?'])}
+    ${refcard('Страхи і голова',['Блокери ще є — але чи такі ж гучні?','Коли легко знімати, а коли важко?','Чий голос я чую коли думаю «це нецікаво»?'])}
+    ${refcard('Ріст і напрям',['Що змінилось?','Якби блог був успішним — що це значить?','Що б я сказала собі місяць тому?'])}
+  </div>
+  ${lbl('Формула контенту')}
+  <div class="fmlbox" style="margin-bottom:18px">
+    <div><div class="fpct" style="color:#FF6B9D">70%</div><div class="flbl">Звичайне life — те що і так робиш</div></div>
+    <div><div class="fpct" style="color:#FF6B9D">20%</div><div class="flbl">Реакція і думки — огляди, «я спробувала»</div></div>
+    <div><div class="fpct" style="color:#FF6B9D">10%</div><div class="flbl">Серійний — рубрики, корисні гайди</div></div>
+  </div>
+  <div class="cl cl-dk">Головне: ти вже це вміла. Просто продовжуй — але з розумінням навіщо і куди. 🐱</div>
+`);}
+
+function alunaM(){const ac='#FF4444'; return sec(`
+  ${lbl('Концепція')}
+  ${cncpt('алуна · позиціонування','«Живу <strong style="color:${ac}">зараз</strong> — і показую це.» Настрій, розпаковки, магазини, спорт, харчування, краса. Реальний щоденний life без фільтрів.',ac)}
+  ${lbl('Сильні сторони')}
+  <div class="strlist" style="margin-bottom:24px">${['Автентичне щоденне life — без прикрас і постановки','Різносторонній досвід: повар, бариста, Польща — унікальний бекграунд','Реальна рутина — спортзал, їжа, покупки — те з чим ідентифікуються','Природність і щирість — рідко в блогерів'].map(s=>str2(s,ac)).join('')}</div>
+  ${lbl('5 контентних стовпів')}
+  <div class="pillars" style="margin-bottom:24px">
+    ${pill2('✨','Настрій і моменти','30%','Що зараз відчуваю, музика, кафе, прогулянки, день',['Сторіс','Reels'])}
+    ${pill2('🛍','Розпаковки і шопінг','25%','Що купила, де знайшла, перша реакція',['TikTok','Reels'])}
+    ${pill2('💪','Спорт і харчування','20%','Зал, їжа, рутина — реально, не ідеально',['Сторіс','TikTok'])}
+    ${pill2('💄','Краса і догляд','15%','Косметика, рутина, розпаковки б\'юті',['Reels','TikTok'])}
+    ${pill2('💬','Лайфхаки і думки','10%','Що дізналась, лайфхак дня, спостереження',['Пост','Карусель'])}
+  </div>
+  <div class="cl cl-y">Польща, завод, кухня, бариста — це цікавий контент для майбутнього але не основа зараз. Основа: те що відбувається сьогодні.</div>
+  ${div2()}${lbl('8 тижнів')}
+  ${wk2('ТИЖ 1–2','Хто ти зараз',ac,'🎯 Показати себе через реальний day-in-life',[`${wt('контент','c')} Сторіс — день без задуму, просто знімаєш`,`${wt('контент','c')} Перший Reels — розпаковка або шопінг`,`${wt('рефлексія','r')} Що я роблю кожен день і ніколи не думаю що це цікаво?`,`${wt('практика','p')} Правило: телефон завжди під рукою`])}
+  ${wk2('ТИЖ 3–4','Ритм контенту',ac,'🎯 Знайти що заходить найкраще',[`${wt('контент','c')} Серія «що купила цього тижня»`,`${wt('контент','c')} Контент зі спортзалу або після тренування`,`${wt('рефлексія','r')} Що зайшло людям краще — і чому?`,`${wt('практика','p')} «Пачка» — 2 год = 3–4 матеріали`])}
+  ${wk2('ТИЖ 5–6','Регулярність',ac,'🎯 3+ пости на тиждень стабільно',[`${wt('контент','c')} GRWM або ранкова рутина`,`${wt('контент','c')} Лайфхак або спостереження тижня`,`${wt('рефлексія','r')} Що мене зупиняє від регулярного постингу?`,`${wt('практика','p')} Планую 3 пости наперед`])}
+  ${wk2('ТИЖ 7–8','Своя ніша',ac,'🎯 Зрозуміти що є "моїм"',[`${wt('контент','c')} Підсумок місяця — що змінилось`,`${wt('рефлексія','r')} Що я показую і чого ще не показую?`,`${wt('практика','p')} Список 30 ідей — без фільтрів`])}
+  ${div2()}${lbl('Контент-план · Місяць 1')}
+  ${pwk2('Тиждень 1','Знайомство',[['Пн',`${ig('Сторіс')} День без задуму — 4-5 кадрів`],['Ср',`${tt('TikTok')}${ig('Reels')} Розпаковка або покупка`],['Пт',`${ig('Сторіс')} Вечір або настрій`],['Нд',`${ig('Пост')} Фото тижня`]])}
+  ${pwk2('Тиждень 2','Спорт і їжа',[['Вт',`${tt('TikTok')} Що їм або що приготувала`],['Чт',`${ig('Сторіс')} До або після залу`],['Сб',`${ig('Reels')} Шопінг або розпаковка`],['Нд',`${ig('Пост')} Настрій тижня`]])}
+  ${div2()}${lbl('Рефлексія')}
+  <div class="refg">
+    ${refcard('Про контент',['Що сьогодні відбулось що я б хотіла показати?','Який момент тижня найбільш «впізнаваний» для інших?','Що я знімаю природньо і без задуму?'])}
+    ${refcard('Про life',['Що зараз займає більшість мого часу і думок?','Що мені подобається в своєму щоденному житті?','Який досвід (Польща/кухня/бариста) я б хотіла показати колись?'])}
+  </div>
+  <div class="cl cl-dk">Твій контент — це те що відбувається прямо зараз. Просто підніми телефон. 🎧</div>
+`);}
+
+function dodoM(){const ac='#4DA6FF'; return sec(`
+  ${lbl('Пам\'ятка')}
+  ${cncpt('додо · б\'юті майстер','Ти щодня <strong style="color:${ac}">перетворюєш людей</strong>. Кожна клієнтка виходить від тебе іншою. Це вже контент — просто треба починати знімати те що вже відбувається.',ac)}
+  ${lbl('Сильні сторони')}
+  <div class="strlist" style="margin-bottom:24px">${['Майстер з реальним результатом — кожна робота це доказ твого вміння','До/після клієнтів — найпотужніший формат у б\'юті ніші','Гарна зовнішність — ти сама є рекламою свого мистецтва','Поєднання роботи і life — близькість і довіра аудиторії','Щоденна рутина в салоні — безмежний матеріал для контенту'].map(s=>str2(s,ac)).join('')}</div>
+  ${lbl('5 контентних стовпів')}
+  <div class="pillars" style="margin-bottom:24px">
+    ${pill2('👁','Брови і вії','40–50%','До/після, процес, FAQ, типи форм, догляд',['Reels','TikTok','Карусель'])}
+    ${pill2('💆','Б\'юті і догляд','20%','Засоби, рутина, розпаковки косметики',['Сторіс','Reels'])}
+    ${pill2('💪','Спорт і харчування','15%','Зал, їжа, рутина — реально',['Сторіс','TikTok'])}
+    ${pill2('🍳','Кулінарія і life','10%','Що готую, кафе, моменти дня',['Сторіс','Пост'])}
+    ${pill2('💬','Думки про б\'юті','5%','Про індустрію, тренди, спостереження',['Пост'])}
+  </div>
+  ${div2()}${lbl('Твої блокери — і що з ними')}
+  ${blk2('😳',`${ac}33`,'«Соромно і страшно що скажуть»','Найпоширеніший блокер у б\'юті ніші',
+    `<div class="cl cl-p">Ті хто «скажуть щось» — це не твоя аудиторія. Твоя аудиторія — дівчата які хочуть гарні брови і вії і шукають майстра якому можна довіряти.</div>${exc2('Факт','Б\'юті майстри — одні з найуспішніших ніш в Instagram. Клієнти вибирають майстра через блог. Показуючи роботу ти знаходиш клієнтів.')}`)}
+  ${blk2('🤔',`${ac}33`,'«Занадто довго думаю перед публікацією»','Перфекціонізм паралізує',
+    `<div class="cl cl-y">Ідеальне фото яке ти не виклала — не існує. Середнє яке виклала — працює.</div>${exc2('Правило 2 хвилин','Якщо фото зроблено і ти думаєш чи постити — постиш. Без додаткових роздумів.')}${exc2('Статистика','Кожна незнята робота = потенційна клієнтка яка її не побачила.')}`)}
+  ${blk2('📷',`${ac}33`,'«Не знаю як знімати роботи»','Технічний блокер',
+    `<div class="cl cl-b">Не треба кільцеву лампу і монтаж. Потрібен телефон і природнє освітлення.</div>${exc2('Проста формула','До → процес → після. Телефон горизонтально. Хороше освітлення. Клієнт дає дозвіл. Готово.')}`)}
+  ${div2()}${lbl('FAQ від клієнтів — готові теми для постів')}
+  <div class="cl cl-b" style="margin-bottom:14px">Найчастіші питання клієнтів = найкращий контент. Люди шукають ці відповіді в Google і Instagram.</div>
+  ${[['Чи боляче нарощувати вії?','Процедура майже безболісна — ти лежиш із заплющеними очима поки майстер працює. Невеликий дискомфорт можливий якщо довго лежати нерухомо, але більшість клієнток засинають. 😴'],
+    ['Скільки тримаються нарощені вії?','В середньому 3–4 тижні до корекції. Залежить від догляду: не терти очі, уникати жирних засобів навколо очей, спати на спині.'],
+    ['Як доглядати за нарощеними віями?','Перші 24 год не мочити. Потім — спеціальна щіточка, безмасляний засіб для зняття макіяжу, сушити феном на холодному режимі.'],
+    ['Яка форма брів підійде моєму типу обличчя?','Кругле — прямі або з легким підйомом. Квадратне — плавна дуга. Овальне — будь-яка форма. Серцеподібне — м\'яка дуга. На консультації підбираємо індивідуально.'],
+    ['Що таке ламінування вій і чим відрізняється від нарощування?','Ламінування — обробка власних вій щоб надати їм завиток і темніший колір. Нарощування — додавання штучних волосків. Ламінування виглядає натуральніше, тримається до 6 тижнів.'],
+    ['Чи можна нарощувати вії якщо ношу лінзи?','Так, але лінзи треба зняти на час процедури. Після — можна одразу вдягати.'],
+    ['Скільки коштує корекція і коли її треба робити?','Корекція через 3–4 тижні. Ціна нижча ніж повне нарощування — доповнюємо тільки відрослі та випавші вії.'],
+    ['Чи пошкоджує нарощування власні вії?','При правильній техніці — ні. Важливо обирати досвідченого майстра і дотримуватись рекомендацій по догляду.'],
+  ].map(([q,a])=>faq(q,a)).join('')}
+  ${div2()}${lbl('Що знімати сьогодні')}
+  <div class="ugrid" style="margin-bottom:24px">${[
+    ['👁','До/після брів — одна пара = 3–4 пости'],
+    ['✨','Процес нарощування вій — 15 сек тайм-лапс'],
+    ['❓','Відповідь на питання клієнтки — «чи боляче?»'],
+    ['📋','Типи форм брів — яка кому пасує (карусель)'],
+    ['💬','Відгук клієнтки + результат'],
+    ['🔧','Чим я працюю — огляд матеріалів'],
+    ['💪','Ранок перед роботою — зал або кава'],
+    ['🛍','Розпаковка косметики або догляду'],
+  ].map(([e,t])=>`<div class="uitem"><span class="ue">${e}</span><span class="utxt">${t}</span></div>`).join('')}</div>
+  ${div2()}${lbl('4 тижні · старт')}
+  ${wk2('ТИЖ 1','Перший крок',ac,'🎯 Одна публікація роботи — без думок про ідеальність',[`${wt('контент','c')} Фото результату — брови або вії`,`${wt('контент','c')} Сторіс з дня в салоні`,`${wt('рефлексія','r')} Скільки робіт за місяць я не виклала — і чому?`,`${wt('практика','p')} Правило: після кожної роботи — знімаю. Завжди.`])}
+  ${wk2('ТИЖ 2','Перший процес',ac,'🎯 Показати як ти робиш',[`${wt('контент','c')} Відео процесу — 15–30 секунд`,`${wt('рефлексія','r')} Що мені найбільше подобається в своїй роботі?`,`${wt('практика','p')} Попроси 3 клієнтки дати дозвіл на публікацію`])}
+  ${wk2('ТИЖ 3','Особистий контент',ac,'🎯 Показати себе поза роботою',[`${wt('контент','c')} Ранок або вечір — зал або готуєш їжу`,`${wt('контент','c')} Розпаковка косметики`,`${wt('рефлексія','r')} Що зайшло краще — роботи чи особисте?`])}
+  ${wk2('ТИЖ 4','Перший FAQ',ac,'🎯 Стати «експертом» у своїй ніші',[`${wt('контент','c')} Відповідь на питання яке чую найчастіше`,`${wt('контент','c')} Карусель «Як вибрати форму брів»`,`${wt('практика','p')} Мета: 12+ публікацій за місяць`])}
+  ${div2()}${lbl('Контент-план · Місяць 1')}
+  ${pwk2('Тиждень 1','Перша публікація роботи',[['Пн',`${ig('IG')} Фото результату — брови або вії`],['Ср',`${ig('Сторіс')} 4–5 кадрів дня в салоні`],['Пт',`${ig('IG')} Ще одна робота — до/після`],['Нд',`${ig('Пост')} Коротко про себе і свою роботу`]])}
+  ${pwk2('Тиждень 2','Процес і особисте',[['Вт',`${tt('TikTok')}${ig('Reels')} Відео процесу — 15–30 сек`],['Чт',`${ig('Пост')} Думка або спостереження з салону`],['Сб',`${ig('Сторіс')} Особисте — ранок, зал або їжа`],['Нд',`${ig('IG')} Найкраща робота тижня`]])}
+  ${pwk2('Тиждень 3','Експертний контент',[['Пн',`${ig('Карусель')} Типи форм брів — яка кому пасує`],['Ср',`${ig('Пост')} FAQ: найчастіше питання`],['Пт',`${ig('Reels')} Розпаковка або огляд матеріалів`],['Нд',`${ig('Сторіс')} Кінець тижня — як пройшов`]])}
+  ${pwk2('Тиждень 4','Системно',[['Вт',`${tt('TikTok')}${ig('IG')} До/після з реакцією клієнтки`],['Чт',`${ig('Пост')} Особисте — що робила у вихідний`],['Сб',`${ig('Reels')} «Місяць блогу — що змінилось»`],['Нд','📊 Що зайшло краще — записати і повторити']])}
+  ${div2()}${lbl('Рефлексія')}
+  <div class="refg">
+    ${refcard('Про роботу і контент',['Скільки робіт цього тижня я не зняла — і чому?','Яке питання клієнтки я чую найчастіше — це вже тема поста','Що в моїй роботі я вважаю звичайним але інші кажуть «вау»?'])}
+    ${refcard('Про сором і страхи',['Хто конкретно може «щось сказати» — і чи важлива їхня думка?','Скільки потенційних клієнтів не побачили мої роботи через мовчання?'])}
+    ${refcard('Про ріст',['Через 3 місяці регулярних публікацій — скільки нових клієнтів?','Що відрізняє майстрів яких я поважаю — вони бояться чи просто діють?'])}
+  </div>
+  <div class="cl cl-dk">Ти вже вмієш робити красу — тепер просто почни показувати це. Одна публікація сьогодні важливіша за ідеальний план завтра. 💆</div>
+`);}
+
+// START
+init();
+</script>
+</body>
+</html>
