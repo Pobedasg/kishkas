@@ -697,11 +697,23 @@ create table if not exists stats (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users,
   month text, year int,
-  ig int default 0, tt int default 0,
-  posts int default 0, stories int default 0,
-  reels int default 0, reach int default 0,
+  ig int default 0, tt int default 0, tg int default 0, yt int default 0,
+  posts int default 0, stories int default 0, reels int default 0, reach int default 0,
+  tt_videos int default 0, tt_views int default 0,
+  tg_posts int default 0, tg_views int default 0,
+  yt_videos int default 0, yt_shorts int default 0, yt_views int default 0,
   note text, created_at timestamptz default now()
 );
+-- For existing installs: add columns if upgrading
+alter table stats add column if not exists tg int default 0;
+alter table stats add column if not exists yt int default 0;
+alter table stats add column if not exists tt_videos int default 0;
+alter table stats add column if not exists tt_views int default 0;
+alter table stats add column if not exists tg_posts int default 0;
+alter table stats add column if not exists tg_views int default 0;
+alter table stats add column if not exists yt_videos int default 0;
+alter table stats add column if not exists yt_shorts int default 0;
+alter table stats add column if not exists yt_views int default 0;
 create table if not exists reflections (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users,
@@ -942,6 +954,27 @@ create policy if not exists "own_baseline" on baseline
           <div class="platform-section-head">🎵 TikTok</div>
           <div class="fgrid">
             <div class="fg"><label>Підписники (всього)</label><input type="number" id="sttt" placeholder="0"></div>
+            <div class="fg"><label>Відео за місяць</label><input type="number" id="sttv" placeholder="0"></div>
+            <div class="fg"><label>Перегляди за місяць</label><input type="number" id="sttviews" placeholder="0"></div>
+          </div>
+        </div>
+
+        <div id="tg-section" class="platform-section">
+          <div class="platform-section-head">✈️ Telegram</div>
+          <div class="fgrid">
+            <div class="fg"><label>Підписники (всього)</label><input type="number" id="sttg" placeholder="0"></div>
+            <div class="fg"><label>Постів за місяць</label><input type="number" id="sttgp" placeholder="0"></div>
+            <div class="fg"><label>Середні перегляди (на пост)</label><input type="number" id="sttgv" placeholder="0"></div>
+          </div>
+        </div>
+
+        <div id="yt-section" class="platform-section">
+          <div class="platform-section-head">📺 YouTube</div>
+          <div class="fgrid">
+            <div class="fg"><label>Підписники (всього)</label><input type="number" id="styt" placeholder="0"></div>
+            <div class="fg"><label>Відео за місяць (long)</label><input type="number" id="stytv" placeholder="0"></div>
+            <div class="fg"><label>Shorts за місяць</label><input type="number" id="styts" placeholder="0"></div>
+            <div class="fg"><label>Перегляди за місяць</label><input type="number" id="stytviews" placeholder="0"></div>
           </div>
         </div>
 
@@ -952,10 +985,12 @@ create policy if not exists "own_baseline" on baseline
         </div>
       </div>
       <div id="chartsec" style="display:none">
-        <div class="cb"><div class="ctitle">Підписники</div><canvas id="chfol" height="160"></canvas></div>
-        <div class="cb"><div class="ctitle">Публікації</div><canvas id="chposts" height="160"></canvas></div>
-        <div class="cb"><div class="ctitle">Охоплення</div><canvas id="chreach" height="160"></canvas></div>
-        <div class="cb"><div class="ctitle">Приріст підписників (місяць до місяця)</div><canvas id="chgrowth" height="160"></canvas></div>
+        <div class="cb" id="cb-fol"><div class="ctitle">Підписники</div><canvas id="chfol" height="160"></canvas></div>
+        <div class="cb" id="cb-growth"><div class="ctitle">Приріст підписників (місяць до місяця)</div><canvas id="chgrowth" height="160"></canvas></div>
+        <div class="cb" id="cb-ig"><div class="ctitle">📷 Instagram — активність і охоплення</div><canvas id="ch-ig" height="160"></canvas></div>
+        <div class="cb" id="cb-tt"><div class="ctitle">🎵 TikTok — відео і перегляди</div><canvas id="ch-tt" height="160"></canvas></div>
+        <div class="cb" id="cb-tg"><div class="ctitle">✈️ Telegram — пости і перегляди</div><canvas id="ch-tg" height="160"></canvas></div>
+        <div class="cb" id="cb-yt"><div class="ctitle">📺 YouTube — відео і перегляди</div><canvas id="ch-yt" height="160"></canvas></div>
       </div>
       <div class="slbl" style="margin-top:24px">Всі місяці</div>
       <div class="mlist" id="mlist"></div>
@@ -1385,10 +1420,18 @@ async function dbSaveStat(entry) {
     lsave('stats',ss); return;
   }
   const { data } = await sb.from('stats').select('id').eq('user_id',sbUser.id).eq('month',entry.month).eq('year',entry.year);
+  const fields = {
+    ig:entry.ig, tt:entry.tt, tg:entry.tg, yt:entry.yt,
+    posts:entry.posts, stories:entry.stories, reels:entry.reels, reach:entry.reach,
+    tt_videos:entry.tt_videos, tt_views:entry.tt_views,
+    tg_posts:entry.tg_posts, tg_views:entry.tg_views,
+    yt_videos:entry.yt_videos, yt_shorts:entry.yt_shorts, yt_views:entry.yt_views,
+    note:entry.note,
+  };
   if (data && data.length) {
-    await sb.from('stats').update({ig:entry.ig,tt:entry.tt,posts:entry.posts,stories:entry.stories,reels:entry.reels,reach:entry.reach,note:entry.note}).eq('id',data[0].id);
+    await sb.from('stats').update(fields).eq('id',data[0].id);
   } else {
-    await sb.from('stats').insert({user_id:sbUser.id,...entry});
+    await sb.from('stats').insert({user_id:sbUser.id, month:entry.month, year:entry.year, ...fields});
   }
 }
 
@@ -1691,8 +1734,10 @@ function closeNote() {
 // STATS
 // ══════════════════════════════════════════
 const PLATFORMS_AVAILABLE = [
-  {id:'ig', name:'Instagram', emoji:'📷'},
-  {id:'tt', name:'TikTok',    emoji:'🎵'},
+  {id:'ig', name:'Instagram', emoji:'📷', color:'#FF6B9D'},
+  {id:'tt', name:'TikTok',    emoji:'🎵', color:'#003a80'},
+  {id:'tg', name:'Telegram',  emoji:'✈️', color:'#0088CC'},
+  {id:'yt', name:'YouTube',   emoji:'📺', color:'#FF0000'},
 ];
 
 function getPlatforms() {
@@ -1727,21 +1772,26 @@ function renderPlatformChips() {
 
 function applyPlatformVisibility() {
   const enabled = getPlatforms();
-  const ig = document.getElementById('ig-section');
-  const tt = document.getElementById('tt-section');
-  if (ig) ig.style.display = enabled.includes('ig') ? '' : 'none';
-  if (tt) tt.style.display = enabled.includes('tt') ? '' : 'none';
-  document.getElementById('chfol').parentElement.style.display = (enabled.includes('ig')||enabled.includes('tt')) ? '' : 'none';
-  document.getElementById('chposts').parentElement.style.display = enabled.includes('ig') ? '' : 'none';
-  document.getElementById('chreach').parentElement.style.display = enabled.includes('ig') ? '' : 'none';
-  document.getElementById('chgrowth').parentElement.style.display = (enabled.includes('ig')||enabled.includes('tt')) ? '' : 'none';
+  PLATFORMS_AVAILABLE.forEach(p => {
+    const sec = document.getElementById(p.id + '-section');
+    if (sec) sec.style.display = enabled.includes(p.id) ? '' : 'none';
+    const chartBox = document.getElementById('cb-' + p.id);
+    if (chartBox) chartBox.style.display = enabled.includes(p.id) ? '' : 'none';
+  });
+  const anyEnabled = enabled.length > 0;
+  const cbFol = document.getElementById('cb-fol');
+  const cbGrowth = document.getElementById('cb-growth');
+  if (cbFol) cbFol.style.display = anyEnabled ? '' : 'none';
+  if (cbGrowth) cbGrowth.style.display = anyEnabled ? '' : 'none';
   renderPlatformChips();
 }
 
 let editingMonthId = null;
 
+const STAT_FORM_IDS = ['stig','sttt','sttv','sttviews','sttg','sttgp','sttgv','styt','stytv','styts','stytviews','stp','sts','str','streach','stnote'];
+
 function clearStatForm() {
-  ['stig','sttt','stp','sts','str','streach','stnote'].forEach(id => document.getElementById(id).value='');
+  STAT_FORM_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.value=''; });
 }
 
 async function loadStats() {
@@ -1755,6 +1805,8 @@ async function loadStats() {
         <div class="mbadges">
           ${platforms.includes('ig')?`<span class="mbadge">IG ${m.ig||0}</span>`:''}
           ${platforms.includes('tt')?`<span class="mbadge">TT ${m.tt||0}</span>`:''}
+          ${platforms.includes('tg')?`<span class="mbadge">TG ${m.tg||0}</span>`:''}
+          ${platforms.includes('yt')?`<span class="mbadge">YT ${m.yt||0}</span>`:''}
           <button class="btn btn-out btn-sm" onclick="editMonth('${m.id}')">✎</button>
           <button class="btn btn-red btn-sm" onclick="delMonthById('${m.id}')">✕</button>
         </div></div>`).join('');
@@ -1768,15 +1820,23 @@ async function editMonth(id) {
   document.getElementById('stmo').value = m.month;
   document.getElementById('styr').value = m.year;
   document.getElementById('stig').value = m.ig || '';
-  document.getElementById('sttt').value = m.tt || '';
   document.getElementById('stp').value = m.posts || '';
   document.getElementById('sts').value = m.stories || '';
   document.getElementById('str').value = m.reels || '';
   document.getElementById('streach').value = m.reach || '';
+  document.getElementById('sttt').value = m.tt || '';
+  document.getElementById('sttv').value = m.tt_videos || '';
+  document.getElementById('sttviews').value = m.tt_views || '';
+  document.getElementById('sttg').value = m.tg || '';
+  document.getElementById('sttgp').value = m.tg_posts || '';
+  document.getElementById('sttgv').value = m.tg_views || '';
+  document.getElementById('styt').value = m.yt || '';
+  document.getElementById('stytv').value = m.yt_videos || '';
+  document.getElementById('styts').value = m.yt_shorts || '';
+  document.getElementById('stytviews').value = m.yt_views || '';
   document.getElementById('stnote').value = m.note || '';
   document.getElementById('statFormTitle').textContent = `✎ Редагування: ${m.month} ${m.year}`;
   document.getElementById('statcancelbtn').style.display = '';
-  document.querySelector('#tab-stats .card[id]')?.scrollIntoView({behavior:'smooth',block:'start'});
   window.scrollTo({top: document.querySelector('#stmo').closest('.card').offsetTop - 80, behavior:'smooth'});
 }
 
@@ -1788,16 +1848,16 @@ function cancelEditMonth() {
 }
 
 async function addMonth() {
+  const n = id => parseInt(document.getElementById(id).value) || 0;
   const entry = {
     id: editingMonthId || Date.now().toString(),
     month: document.getElementById('stmo').value,
     year: parseInt(document.getElementById('styr').value),
-    ig: parseInt(document.getElementById('stig').value)||0,
-    tt: parseInt(document.getElementById('sttt').value)||0,
-    posts: parseInt(document.getElementById('stp').value)||0,
-    stories: parseInt(document.getElementById('sts').value)||0,
-    reels: parseInt(document.getElementById('str').value)||0,
-    reach: parseInt(document.getElementById('streach').value)||0,
+    ig: n('stig'),
+    posts: n('stp'), stories: n('sts'), reels: n('str'), reach: n('streach'),
+    tt: n('sttt'), tt_videos: n('sttv'), tt_views: n('sttviews'),
+    tg: n('sttg'), tg_posts: n('sttgp'), tg_views: n('sttgv'),
+    yt: n('styt'), yt_videos: n('stytv'), yt_shorts: n('styts'), yt_views: n('stytviews'),
     note: document.getElementById('stnote').value,
   };
   await dbSaveStat(entry);
@@ -1822,43 +1882,84 @@ async function renderCharts() {
   if (!stats.length) return;
   const platforms = getPlatforms();
   const labels = stats.map(m=>m.month.substring(0,3)+' '+m.year);
-  ['chfol','chposts','chreach','chgrowth'].forEach(id=>{ if(charts[id]) charts[id].destroy(); });
+  ['chfol','chgrowth','ch-ig','ch-tt','ch-tg','ch-yt'].forEach(id=>{ if(charts[id]) charts[id].destroy(); });
 
-  const folDs = [];
-  if (platforms.includes('ig')) folDs.push({label:'Instagram',data:stats.map(m=>m.ig||0),borderColor:'#FF6B9D',backgroundColor:'rgba(255,107,157,.08)',tension:0.4,fill:true});
-  if (platforms.includes('tt')) folDs.push({label:'TikTok',data:stats.map(m=>m.tt||0),borderColor:'#003a80',backgroundColor:'rgba(0,58,128,.08)',tension:0.4,fill:true});
+  const PLAT_COLORS = {ig:'#FF6B9D', tt:'#003a80', tg:'#0088CC', yt:'#FF0000'};
+  const PLAT_NAMES = {ig:'Instagram', tt:'TikTok', tg:'Telegram', yt:'YouTube'};
+
+  // Followers — combined line
+  const folDs = platforms.map(p => ({
+    label: PLAT_NAMES[p],
+    data: stats.map(m => m[p] || 0),
+    borderColor: PLAT_COLORS[p],
+    backgroundColor: PLAT_COLORS[p] + '14',
+    tension: 0.4, fill: true,
+  }));
   if (folDs.length) charts['chfol']=new Chart(document.getElementById('chfol').getContext('2d'),{
-    type:'line',data:{labels,datasets:folDs},
+    type:'line', data:{labels,datasets:folDs},
     options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}
   });
 
-  if (platforms.includes('ig')) charts['chposts']=new Chart(document.getElementById('chposts').getContext('2d'),{
-    type:'bar',data:{labels,datasets:[
-      {label:'Пости',data:stats.map(m=>m.posts||0),backgroundColor:'rgba(255,107,157,.7)'},
-      {label:'Сторіс',data:stats.map(m=>m.stories||0),backgroundColor:'rgba(255,160,190,.7)'},
-      {label:'Reels',data:stats.map(m=>m.reels||0),backgroundColor:'rgba(108,92,231,.7)'},
-    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}
-  });
-
-  if (platforms.includes('ig')) charts['chreach']=new Chart(document.getElementById('chreach').getContext('2d'),{
-    type:'line',data:{labels,datasets:[
-      {label:'Охоплення',data:stats.map(m=>m.reach||0),borderColor:'#6C5CE7',backgroundColor:'rgba(108,92,231,.1)',tension:0.4,fill:true},
-    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}
-  });
-
+  // Growth — combined bar
   const colorBars = (arr, pos, neg) => arr.map(v => v==null ? 'transparent' : v>=0 ? pos : neg);
-  const growDs = [];
-  if (platforms.includes('ig')) {
-    const igDelta = stats.map((m,i)=>i>0?(m.ig||0)-(stats[i-1].ig||0):null);
-    growDs.push({label:'IG',data:igDelta,backgroundColor:colorBars(igDelta,'rgba(34,197,94,.75)','rgba(220,38,38,.75)')});
-  }
-  if (platforms.includes('tt')) {
-    const ttDelta = stats.map((m,i)=>i>0?(m.tt||0)-(stats[i-1].tt||0):null);
-    growDs.push({label:'TikTok',data:ttDelta,backgroundColor:colorBars(ttDelta,'rgba(34,197,94,.45)','rgba(220,38,38,.45)')});
-  }
+  const growDs = platforms.map(p => {
+    const delta = stats.map((m,i)=>i>0?(m[p]||0)-(stats[i-1][p]||0):null);
+    return {label: PLAT_NAMES[p], data: delta, backgroundColor: colorBars(delta,'rgba(34,197,94,.7)','rgba(220,38,38,.7)')};
+  });
   if (growDs.length) charts['chgrowth']=new Chart(document.getElementById('chgrowth').getContext('2d'),{
-    type:'bar',data:{labels,datasets:growDs},
+    type:'bar', data:{labels,datasets:growDs},
     options:{responsive:true,plugins:{legend:{position:'bottom'}}}
+  });
+
+  // IG activity + reach (dual axis)
+  if (platforms.includes('ig')) charts['ch-ig']=new Chart(document.getElementById('ch-ig').getContext('2d'),{
+    data:{labels,datasets:[
+      {type:'bar', label:'Пости',data:stats.map(m=>m.posts||0),backgroundColor:'rgba(255,107,157,.75)',yAxisID:'y'},
+      {type:'bar', label:'Сторіс',data:stats.map(m=>m.stories||0),backgroundColor:'rgba(255,160,190,.7)',yAxisID:'y'},
+      {type:'bar', label:'Reels',data:stats.map(m=>m.reels||0),backgroundColor:'rgba(108,92,231,.7)',yAxisID:'y'},
+      {type:'line', label:'Охоплення',data:stats.map(m=>m.reach||0),borderColor:'#FF6B9D',backgroundColor:'transparent',yAxisID:'y1',tension:.4},
+    ]},
+    options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{
+      y:{beginAtZero:true,position:'left',title:{display:true,text:'Публікації'}},
+      y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'Охоплення'}}
+    }}
+  });
+
+  // TT activity + views
+  if (platforms.includes('tt')) charts['ch-tt']=new Chart(document.getElementById('ch-tt').getContext('2d'),{
+    data:{labels,datasets:[
+      {type:'bar', label:'Відео',data:stats.map(m=>m.tt_videos||0),backgroundColor:'rgba(0,58,128,.75)',yAxisID:'y'},
+      {type:'line', label:'Перегляди',data:stats.map(m=>m.tt_views||0),borderColor:'#003a80',backgroundColor:'transparent',yAxisID:'y1',tension:.4},
+    ]},
+    options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{
+      y:{beginAtZero:true,position:'left',title:{display:true,text:'Відео'}},
+      y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'Перегляди'}}
+    }}
+  });
+
+  // TG posts + avg views
+  if (platforms.includes('tg')) charts['ch-tg']=new Chart(document.getElementById('ch-tg').getContext('2d'),{
+    data:{labels,datasets:[
+      {type:'bar', label:'Постів',data:stats.map(m=>m.tg_posts||0),backgroundColor:'rgba(0,136,204,.75)',yAxisID:'y'},
+      {type:'line', label:'Середні перегляди',data:stats.map(m=>m.tg_views||0),borderColor:'#0088CC',backgroundColor:'transparent',yAxisID:'y1',tension:.4},
+    ]},
+    options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{
+      y:{beginAtZero:true,position:'left',title:{display:true,text:'Постів'}},
+      y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'Перегляди'}}
+    }}
+  });
+
+  // YT videos + shorts + views
+  if (platforms.includes('yt')) charts['ch-yt']=new Chart(document.getElementById('ch-yt').getContext('2d'),{
+    data:{labels,datasets:[
+      {type:'bar', label:'Відео',data:stats.map(m=>m.yt_videos||0),backgroundColor:'rgba(255,0,0,.7)',yAxisID:'y'},
+      {type:'bar', label:'Shorts',data:stats.map(m=>m.yt_shorts||0),backgroundColor:'rgba(255,120,120,.65)',yAxisID:'y'},
+      {type:'line', label:'Перегляди',data:stats.map(m=>m.yt_views||0),borderColor:'#FF0000',backgroundColor:'transparent',yAxisID:'y1',tension:.4},
+    ]},
+    options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{
+      y:{beginAtZero:true,position:'left',title:{display:true,text:'Відео'}},
+      y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'Перегляди'}}
+    }}
   });
 
   applyPlatformVisibility();
