@@ -1591,7 +1591,9 @@ const WIDGET_BY_ID = Object.fromEntries(DASHBOARD_WIDGETS.map(w => [w.id, w]));
 
 function getBlockDims(id) {
   try {
-    const dims = JSON.parse(localStorage.getItem('kishkas-dashboard-dims-'+CU) || '{}');
+    const key = 'kishkas-dashboard-dims-'+CU;
+    const raw = localStorage.getItem(key);
+    const dims = JSON.parse(raw || '{}');
     return dims[id] || null;
   } catch (e) { return null; }
 }
@@ -1602,7 +1604,8 @@ function saveBlockDims(id, w, h) {
     const dims = JSON.parse(localStorage.getItem(key) || '{}');
     dims[id] = { w, h };
     localStorage.setItem(key, JSON.stringify(dims));
-  } catch (e) { console.warn('saveBlockDims', e); }
+    console.log('[dashboard] saved size for', id, '→', w+'x'+h, '| CU:', CU, '| key:', key);
+  } catch (e) { console.warn('saveBlockDims failed', e); }
 }
 
 function blk(id, body, action) {
@@ -1654,7 +1657,7 @@ function snapBlockSize(el, opts = {}) {
   if (id === 'growth') drawDashGrowth();
 }
 
-const RENDER_SETTLE_MS = 600;
+const RENDER_SETTLE_MS = 250;
 
 function flushPendingResizes() {
   document.querySelectorAll('.dash-block').forEach(el => {
@@ -1705,7 +1708,8 @@ function observeBlockResize() {
         const dW = Math.abs(el.offsetWidth - el._startW);
         const dH = Math.abs(el.offsetHeight - el._startH);
         el._saveTimer = null;
-        if (dW <= AXIS_THRESHOLD && dH <= AXIS_THRESHOLD) return; // nothing changed
+        console.log('[dashboard] resize end', el.dataset.widget, 'dW:', dW, 'dH:', dH);
+        if (dW < 1 && dH < 1) return; // truly nothing
         snapBlockSize(el, { snapW: dW > AXIS_THRESHOLD, snapH: dH > AXIS_THRESHOLD });
       }, 300);
     }
@@ -1771,8 +1775,10 @@ function initDashSortable() {
     onEnd: function() {
       try {
         const order = Array.from(container.querySelectorAll('.dash-block')).map(b => b.dataset.widget);
-        localStorage.setItem('kishkas-dashboard-order-'+CU, JSON.stringify(order));
-      } catch(e) { console.warn('order save', e); }
+        const key = 'kishkas-dashboard-order-'+CU;
+        localStorage.setItem(key, JSON.stringify(order));
+        console.log('[dashboard] saved order', order, '| CU:', CU, '| key:', key);
+      } catch(e) { console.warn('order save failed', e); }
     }
   });
 }
