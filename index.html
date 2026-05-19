@@ -1590,14 +1590,19 @@ const DASHBOARD_WIDGETS = [
 const WIDGET_BY_ID = Object.fromEntries(DASHBOARD_WIDGETS.map(w => [w.id, w]));
 
 function getBlockDims(id) {
-  const dims = JSON.parse(localStorage.getItem('kishkas-dashboard-dims-'+CU) || '{}');
-  return dims[id] || null;
+  try {
+    const dims = JSON.parse(localStorage.getItem('kishkas-dashboard-dims-'+CU) || '{}');
+    return dims[id] || null;
+  } catch (e) { return null; }
 }
 
 function saveBlockDims(id, w, h) {
-  const dims = JSON.parse(localStorage.getItem('kishkas-dashboard-dims-'+CU) || '{}');
-  dims[id] = { w, h };
-  localStorage.setItem('kishkas-dashboard-dims-'+CU, JSON.stringify(dims));
+  try {
+    const key = 'kishkas-dashboard-dims-'+CU;
+    const dims = JSON.parse(localStorage.getItem(key) || '{}');
+    dims[id] = { w, h };
+    localStorage.setItem(key, JSON.stringify(dims));
+  } catch (e) { console.warn('saveBlockDims', e); }
 }
 
 function blk(id, body, action) {
@@ -1649,9 +1654,26 @@ function snapBlockSize(el, opts = {}) {
   if (id === 'growth') drawDashGrowth();
 }
 
+const RENDER_SETTLE_MS = 600;
+
+function flushPendingResizes() {
+  document.querySelectorAll('.dash-block').forEach(el => {
+    if (!el._saveTimer) return;
+    clearTimeout(el._saveTimer);
+    el._saveTimer = null;
+    const dW = Math.abs(el.offsetWidth - (el._startW || 0));
+    const dH = Math.abs(el.offsetHeight - (el._startH || 0));
+    if (dW > AXIS_THRESHOLD || dH > AXIS_THRESHOLD) {
+      snapBlockSize(el, { snapW: dW > AXIS_THRESHOLD, snapH: dH > AXIS_THRESHOLD });
+    }
+  });
+}
+
 function observeBlockResize() {
   if (!window.ResizeObserver) return;
   if (window._blockRO) window._blockRO.disconnect();
+  const renderTime = Date.now();
+  window._blockRenderTime = renderTime;
   window._blockRO = new ResizeObserver(entries => {
     for (const entry of entries) {
       const el = entry.target;
@@ -1666,7 +1688,12 @@ function observeBlockResize() {
         el._lastH = curH;
         continue;
       }
-      // First event of a new gesture — capture the size BEFORE this change
+      // Skip events during the first ~600ms after render — layout still settling
+      if (Date.now() - window._blockRenderTime < RENDER_SETTLE_MS) {
+        el._lastW = curW;
+        el._lastH = curH;
+        continue;
+      }
       if (!el._saveTimer) {
         el._startW = el._lastW;
         el._startH = el._lastH;
@@ -1677,8 +1704,9 @@ function observeBlockResize() {
       el._saveTimer = setTimeout(() => {
         const dW = Math.abs(el.offsetWidth - el._startW);
         const dH = Math.abs(el.offsetHeight - el._startH);
-        snapBlockSize(el, { snapW: dW > AXIS_THRESHOLD, snapH: dH > AXIS_THRESHOLD });
         el._saveTimer = null;
+        if (dW <= AXIS_THRESHOLD && dH <= AXIS_THRESHOLD) return; // nothing changed
+        snapBlockSize(el, { snapW: dW > AXIS_THRESHOLD, snapH: dH > AXIS_THRESHOLD });
       }, 300);
     }
   });
@@ -1709,8 +1737,10 @@ function saveDashSettings() {
 }
 
 async function renderHome() {
+  flushPendingResizes();
   const selected = getDashSelection();
-  const savedOrder = JSON.parse(localStorage.getItem('kishkas-dashboard-order-'+CU) || 'null');
+  let savedOrder = null;
+  try { savedOrder = JSON.parse(localStorage.getItem('kishkas-dashboard-order-'+CU) || 'null'); } catch{}
   let order;
   if (Array.isArray(savedOrder)) {
     order = [...savedOrder.filter(id => selected.includes(id)), ...selected.filter(id => !savedOrder.includes(id))];
@@ -1739,8 +1769,10 @@ function initDashSortable() {
     chosenClass: 'dash-drag-chosen',
     handle: '.dash-block-title',
     onEnd: function() {
-      const order = Array.from(container.querySelectorAll('.dash-block')).map(b => b.dataset.widget);
-      localStorage.setItem('kishkas-dashboard-order-'+CU, JSON.stringify(order));
+      try {
+        const order = Array.from(container.querySelectorAll('.dash-block')).map(b => b.dataset.widget);
+        localStorage.setItem('kishkas-dashboard-order-'+CU, JSON.stringify(order));
+      } catch(e) { console.warn('order save', e); }
     }
   });
 }
