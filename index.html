@@ -94,6 +94,19 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(17,17,17,.97
 .tab{display:none;padding-top:calc(52px + env(safe-area-inset-top,0px));}
 .tab.on{display:block;}
 
+/* SUBNAV — learning section */
+.subnav{position:fixed;top:calc(52px + env(safe-area-inset-top,0px));left:0;right:0;z-index:95;background:rgba(17,17,17,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.06);padding:8px 14px;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;}
+.subnav::-webkit-scrollbar{display:none;}
+.snb{font-size:13px;font-weight:500;color:rgba(255,255,255,.55);padding:6px 13px;border-radius:8px;border:none;background:none;cursor:pointer;white-space:nowrap;transition:all .15s;font-family:'Geologica',sans-serif;}
+.snb:hover{background:rgba(255,255,255,.08);color:white;}
+.snb.on{background:rgba(255,255,255,.14);color:white;}
+body.subnav-visible .tab{padding-top:calc(52px + 46px + env(safe-area-inset-top,0px));}
+body.theme-modern .subnav{background:rgba(250,247,241,.92);border-bottom-color:var(--border);}
+body.theme-modern.dark .subnav{background:rgba(11,11,13,.92);}
+body.theme-modern .snb{color:var(--muted);}
+body.theme-modern .snb:hover{color:var(--ink);background:var(--border);}
+body.theme-modern .snb.on{color:var(--ink);background:var(--border);}
+
 /* COMMON */
 .sec{padding:40px 22px;max-width:960px;margin:0 auto;}
 .slbl{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
@@ -731,15 +744,10 @@ create policy if not exists "own_audience" on audience_portrait
     <button class="burger" id="burger" onclick="toggleMenu()" aria-label="Меню" aria-expanded="false" aria-controls="nlinks"><span></span></button>
     <div class="nlinks" id="nlinks">
       <button class="nb on" onclick="goTab('home')">Головна</button>
-      <button class="nb" onclick="goTab('notes')">Нотатки</button>
-      <button class="nb" onclick="goTab('stats')">Статистика</button>
+      <button class="nb" onclick="goTab('stats')">Прогрес</button>
+      <button class="nb" data-learn="1" onclick="goLearn()">Навчання</button>
       <button class="nb" onclick="goTab('ai')">ШІ-чат</button>
-      <button class="nb" onclick="goTab('reflect')">Рефлексія</button>
-      <button class="nb" onclick="goTab('progress')">Прогрес</button>
-      <button class="nb" onclick="goTab('practice')">Практика</button>
-      <button class="nb" onclick="goTab('mentor')">Ментор</button>
-      <button class="nb" onclick="goTab('theory')">Теорія</button>
-      <button class="nb" onclick="goTab('tools')">Інструменти</button>
+      <button class="nb" onclick="goTab('notes')">Нотатки</button>
     </div>
     <button class="theme-toggle" id="themetoggle" onclick="toggleTheme()" aria-label="Перемкнути тему">
       <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -748,6 +756,13 @@ create policy if not exists "own_audience" on audience_portrait
     <button class="nusr" id="nusr" onclick="doLogout()">вийти</button>
   </nav>
   <div class="nav-backdrop" id="navbackdrop" onclick="closeMenu()"></div>
+  <div class="subnav" id="subnav" style="display:none">
+    <button class="snb" onclick="goTab('mentor')">Ментор</button>
+    <button class="snb" onclick="goTab('practice')">Практика</button>
+    <button class="snb" onclick="goTab('theory')">Теорія</button>
+    <button class="snb" onclick="goTab('reflect')">Рефлексія</button>
+    <button class="snb" onclick="goTab('tools')">Інструменти</button>
+  </div>
 
   <!-- HOME -->
   <div id="tab-home" class="tab on">
@@ -794,72 +809,11 @@ create policy if not exists "own_audience" on audience_portrait
     </div>
   </div>
 
-  <!-- STATS -->
+  <!-- STATS + PROGRESS -->
   <div id="tab-stats" class="tab">
     <div class="sec">
-      <div class="stitle">Статистика</div>
-      <div class="cl cl-dk">Вводь дані раз на місяць — займає 2 хвилини. Зберігається в хмарі через Supabase.</div>
-      <div class="card">
-        <div style="font-size:14px;font-weight:700;margin-bottom:14px">+ Новий місяць</div>
-        <div class="fgrid">
-          <div class="fg"><label>Місяць</label>
-            <select id="stmo"><option>Січень</option><option>Лютий</option><option>Березень</option><option>Квітень</option><option>Травень</option><option>Червень</option><option>Липень</option><option>Серпень</option><option>Вересень</option><option>Жовтень</option><option>Листопад</option><option>Грудень</option></select></div>
-          <div class="fg"><label>Рік</label><input type="number" id="styr" value="2025"></div>
-          <div class="fg"><label>IG підписники</label><input type="number" id="stig" placeholder="0"></div>
-          <div class="fg"><label>TikTok</label><input type="number" id="sttt" placeholder="0"></div>
-          <div class="fg"><label>Постів IG</label><input type="number" id="stp" placeholder="0"></div>
-          <div class="fg"><label>Сторіс</label><input type="number" id="sts" placeholder="0"></div>
-          <div class="fg"><label>Reels/TikTok відео</label><input type="number" id="str" placeholder="0"></div>
-          <div class="fg"><label>Охоплення (ср.)</label><input type="number" id="streach" placeholder="0"></div>
-        </div>
-        <div class="fg" style="margin:10px 0"><label>Нотатка до місяця</label><textarea id="stnote" placeholder="Що важливого цього місяця?"></textarea></div>
-        <button class="btn btn-ac" id="statsavebtn" onclick="addMonth()">Зберегти</button>
-      </div>
-      <div id="chartsec" style="display:none">
-        <div class="cb"><div class="ctitle">Підписники</div><canvas id="chfol" height="160"></canvas></div>
-        <div class="cb"><div class="ctitle">Публікації</div><canvas id="chposts" height="160"></canvas></div>
-        <div class="cb"><div class="ctitle">Охоплення</div><canvas id="chreach" height="160"></canvas></div>
-        <div class="cb"><div class="ctitle">Приріст підписників (місяць до місяця)</div><canvas id="chgrowth" height="160"></canvas></div>
-      </div>
-      <div class="slbl" style="margin-top:24px">Всі місяці</div>
-      <div class="mlist" id="mlist"></div>
-    </div>
-  </div>
-
-  <!-- AI CHAT -->
-  <div id="tab-ai" class="tab">
-    <div class="sec">
-      <div class="stitle">ШІ-чат</div>
-      <div class="cl cl-p">Питай що завгодно: аналіз статистики, ідеї постів, написати сценарій, текст для підпису, стратегія. ШІ знає твій профіль і статистику.</div>
-      <div class="slbl">Швидкі запити</div>
-      <div class="chips" id="aichips"></div>
-      <div class="chatw" id="chatw">
-        <div class="chatm"><div class="chatav">🤖</div><div class="chatb">Привіт! Я твій ШІ-помічник. Можу допомогти з аналізом статистики, ідеями постів, написати підпис або сценарій для Reels. Що хочеш?</div></div>
-      </div>
-      <div class="ciw">
-        <textarea id="aiq" placeholder="Запитай або опиши ідею..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
-        <button class="btn btn-ac btn-sm" id="aisend" onclick="sendChat()" style="height:52px;white-space:nowrap;flex-shrink:0">→</button>
-      </div>
-      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <button class="btn btn-out btn-sm" onclick="clearChat()">Очистити чат</button>
-        <span id="aist" style="font-size:12px;color:var(--muted)"></span>
-      </div>
-    </div>
-  </div>
-
-  <!-- REFLECT -->
-  <div id="tab-reflect" class="tab">
-    <div class="sec">
-      <div class="stitle">Рефлексія</div>
-      <div class="cl cl-g">Відповідай чесно — ШІ проаналізує відповідь і дасть зворотній зв'язок. Повертайся раз на тиждень.</div>
-      <div id="reflectqs"></div>
-    </div>
-  </div>
-
-  <!-- PROGRESS -->
-  <div id="tab-progress" class="tab">
-    <div class="sec">
       <div class="stitle">Прогрес</div>
+      <div class="cl cl-dk">Все що допомагає бачити рух — стрік, цілі, графіки, портрет аудиторії. Вводь місячні дані раз на місяць (2 хв).</div>
 
       <div class="card">
         <div class="ctitle">🔥 Стрік публікацій</div>
@@ -893,6 +847,36 @@ create policy if not exists "own_audience" on audience_portrait
         <button class="btn btn-out btn-sm" onclick="resetChecklist()">Скинути</button>
       </div>
 
+      <div class="divider"></div>
+      <div class="slbl">Статистика по місяцях</div>
+
+      <div class="card">
+        <div style="font-size:14px;font-weight:700;margin-bottom:14px">+ Новий місяць</div>
+        <div class="fgrid">
+          <div class="fg"><label>Місяць</label>
+            <select id="stmo"><option>Січень</option><option>Лютий</option><option>Березень</option><option>Квітень</option><option>Травень</option><option>Червень</option><option>Липень</option><option>Серпень</option><option>Вересень</option><option>Жовтень</option><option>Листопад</option><option>Грудень</option></select></div>
+          <div class="fg"><label>Рік</label><input type="number" id="styr" value="2025"></div>
+          <div class="fg"><label>IG підписники</label><input type="number" id="stig" placeholder="0"></div>
+          <div class="fg"><label>TikTok</label><input type="number" id="sttt" placeholder="0"></div>
+          <div class="fg"><label>Постів IG</label><input type="number" id="stp" placeholder="0"></div>
+          <div class="fg"><label>Сторіс</label><input type="number" id="sts" placeholder="0"></div>
+          <div class="fg"><label>Reels/TikTok відео</label><input type="number" id="str" placeholder="0"></div>
+          <div class="fg"><label>Охоплення (ср.)</label><input type="number" id="streach" placeholder="0"></div>
+        </div>
+        <div class="fg" style="margin:10px 0"><label>Нотатка до місяця</label><textarea id="stnote" placeholder="Що важливого цього місяця?"></textarea></div>
+        <button class="btn btn-ac" id="statsavebtn" onclick="addMonth()">Зберегти</button>
+      </div>
+      <div id="chartsec" style="display:none">
+        <div class="cb"><div class="ctitle">Підписники</div><canvas id="chfol" height="160"></canvas></div>
+        <div class="cb"><div class="ctitle">Публікації</div><canvas id="chposts" height="160"></canvas></div>
+        <div class="cb"><div class="ctitle">Охоплення</div><canvas id="chreach" height="160"></canvas></div>
+        <div class="cb"><div class="ctitle">Приріст підписників (місяць до місяця)</div><canvas id="chgrowth" height="160"></canvas></div>
+      </div>
+      <div class="slbl" style="margin-top:24px">Всі місяці</div>
+      <div class="mlist" id="mlist"></div>
+
+      <div class="divider"></div>
+
       <div class="card">
         <div class="ctitle">👥 Портрет ЦА</div>
         <p style="font-size:13px;color:var(--muted);margin:8px 0 12px">Опиши що знаєш про свою аудиторію — вік, гео, інтереси, поведінку. ШІ розгорне в детальний портрет.</p>
@@ -900,6 +884,36 @@ create policy if not exists "own_audience" on audience_portrait
         <button class="btn btn-ac" id="audienceBtn" onclick="generateAudiencePortrait()" style="margin-top:10px">Згенерувати портрет →</button>
         <div id="audienceResult" class="audience-out"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- AI CHAT -->
+  <div id="tab-ai" class="tab">
+    <div class="sec">
+      <div class="stitle">ШІ-чат</div>
+      <div class="cl cl-p">Питай що завгодно: аналіз статистики, ідеї постів, написати сценарій, текст для підпису, стратегія. ШІ знає твій профіль і статистику.</div>
+      <div class="slbl">Швидкі запити</div>
+      <div class="chips" id="aichips"></div>
+      <div class="chatw" id="chatw">
+        <div class="chatm"><div class="chatav">🤖</div><div class="chatb">Привіт! Я твій ШІ-помічник. Можу допомогти з аналізом статистики, ідеями постів, написати підпис або сценарій для Reels. Що хочеш?</div></div>
+      </div>
+      <div class="ciw">
+        <textarea id="aiq" placeholder="Запитай або опиши ідею..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+        <button class="btn btn-ac btn-sm" id="aisend" onclick="sendChat()" style="height:52px;white-space:nowrap;flex-shrink:0">→</button>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-out btn-sm" onclick="clearChat()">Очистити чат</button>
+        <span id="aist" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- REFLECT -->
+  <div id="tab-reflect" class="tab">
+    <div class="sec">
+      <div class="stitle">Рефлексія</div>
+      <div class="cl cl-g">Відповідай чесно — ШІ проаналізує відповідь і дасть зворотній зв'язок. Повертайся раз на тиждень.</div>
+      <div id="reflectqs"></div>
     </div>
   </div>
 
@@ -1184,19 +1198,41 @@ async function doLogout() {
 // ══════════════════════════════════════════
 // TABS
 // ══════════════════════════════════════════
+const LEARN_TABS = ['mentor','practice','theory','reflect','tools'];
+
 function goTab(name) {
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
-  document.getElementById('tab-'+name).classList.add('on');
-  document.querySelectorAll('.nb').forEach(b=>{
-    if((b.getAttribute('onclick')||'').includes("'"+name+"'")) b.classList.add('on');
-  });
-  if(name==='stats') renderCharts();
+  document.querySelectorAll('.snb').forEach(b=>b.classList.remove('on'));
+  const tabEl = document.getElementById('tab-'+name);
+  if (tabEl) tabEl.classList.add('on');
+
+  const isLearn = LEARN_TABS.includes(name);
+  document.getElementById('subnav').style.display = isLearn ? 'flex' : 'none';
+  document.body.classList.toggle('subnav-visible', isLearn);
+
+  if (isLearn) {
+    document.querySelector('.nb[data-learn]')?.classList.add('on');
+    document.querySelectorAll('.snb').forEach(b=>{
+      if((b.getAttribute('onclick')||'').includes("'"+name+"'")) b.classList.add('on');
+    });
+    localStorage.setItem('kishkas-last-learn', name);
+  } else {
+    document.querySelectorAll('.nb').forEach(b=>{
+      if((b.getAttribute('onclick')||'').includes("'"+name+"'")) b.classList.add('on');
+    });
+  }
+
+  if(name==='stats') { renderCharts(); renderProgress(); }
   if(name==='home') renderHome();
-  if(name==='progress') renderProgress();
   if(name==='practice') renderPractice();
   closeMenu();
   window.scrollTo({top:0,behavior:'instant'});
+}
+
+function goLearn() {
+  const last = localStorage.getItem('kishkas-last-learn') || 'mentor';
+  goTab(LEARN_TABS.includes(last) ? last : 'mentor');
 }
 
 function toggleMenu(){
