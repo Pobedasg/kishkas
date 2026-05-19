@@ -64,17 +64,34 @@ body{font-family:'Geologica',sans-serif;background:var(--bg);color:var(--ink);li
 
 /* NAV */
 #app{display:none;}
-nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(17,17,17,.97);backdrop-filter:blur(12px);display:flex;align-items:center;padding:0 16px;height:52px;border-bottom:1px solid rgba(255,255,255,.06);}
-.nbrand{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:900;color:var(--ac);margin-right:10px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
-.nlinks{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;}
-.nlinks::-webkit-scrollbar{display:none;}
-.nb{font-size:11px;font-weight:500;color:rgba(255,255,255,.4);padding:5px 9px;border-radius:6px;transition:all .2s;white-space:nowrap;cursor:pointer;background:none;border:none;font-family:'Geologica',sans-serif;}
-.nb:hover,.nb.on{color:white;background:rgba(255,255,255,.08);}
-.nusr{margin-left:5px;font-size:11px;font-weight:600;white-space:nowrap;cursor:pointer;padding:5px 9px;background:rgba(255,255,255,.07);border-radius:7px;border:none;font-family:'Geologica',sans-serif;color:white;flex-shrink:0;}
-.nusr:hover{background:rgba(255,255,255,.12);}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(17,17,17,.97);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:center;gap:6px;padding:0 16px;padding-top:env(safe-area-inset-top,0px);height:calc(52px + env(safe-area-inset-top,0px));border-bottom:1px solid rgba(255,255,255,.06);}
+.nbrand{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:900;color:var(--ac);cursor:pointer;white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:7px;background:none;border:none;padding:6px 6px;border-radius:8px;letter-spacing:-.3px;}
+.nbrand:hover{background:rgba(255,255,255,.05);}
+.nbemoji{font-size:17px;line-height:1;}
+.nlinks{display:flex;gap:2px;flex:1;align-items:center;}
+.nb{font-size:12px;font-weight:500;color:rgba(255,255,255,.5);padding:6px 10px;border-radius:7px;transition:all .15s;white-space:nowrap;cursor:pointer;background:none;border:none;font-family:'Geologica',sans-serif;}
+.nb:hover{color:white;background:rgba(255,255,255,.06);}
+.nb.on{color:white;background:rgba(255,255,255,.1);}
+.nusr{margin-left:auto;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;padding:7px 13px;background:rgba(255,255,255,.07);border-radius:8px;border:none;font-family:'Geologica',sans-serif;color:white;flex-shrink:0;transition:background .15s;}
+.nusr:hover{background:rgba(255,255,255,.14);}
+
+/* BURGER */
+.burger{display:none;background:none;border:none;color:rgba(255,255,255,.9);width:40px;height:40px;cursor:pointer;align-items:center;justify-content:center;border-radius:9px;padding:0;flex-shrink:0;transition:background .15s;}
+.burger:hover,.burger.on{background:rgba(255,255,255,.08);}
+.burger span{display:block;width:18px;height:2px;background:currentColor;border-radius:1px;position:relative;transition:background .15s;}
+.burger span::before,.burger span::after{content:'';position:absolute;left:0;width:18px;height:2px;background:currentColor;border-radius:1px;transition:transform .25s ease,top .25s ease;}
+.burger span::before{top:-6px;}
+.burger span::after{top:6px;}
+.burger.on span{background:transparent;}
+.burger.on span::before{top:0;transform:rotate(45deg);}
+.burger.on span::after{top:0;transform:rotate(-45deg);}
+
+.nav-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:90;}
+.nav-backdrop.on{display:block;animation:bgfade .2s ease;}
+@keyframes bgfade{from{opacity:0}to{opacity:1}}
 
 /* TABS */
-.tab{display:none;padding-top:52px;}
+.tab{display:none;padding-top:calc(52px + env(safe-area-inset-top,0px));}
 .tab.on{display:block;}
 
 /* COMMON */
@@ -291,6 +308,15 @@ label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bot
 .pct{font-size:14px;font-weight:700;margin-bottom:5px;}
 .pcd{font-size:13px;color:#555;line-height:1.65;}
 
+@media(max-width:900px){
+  .burger{display:inline-flex;}
+  .nlinks{position:fixed;top:calc(52px + env(safe-area-inset-top,0px));left:0;right:0;flex-direction:column;background:rgba(17,17,17,.99);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:10px 12px 18px;gap:4px;border-bottom:1px solid rgba(255,255,255,.08);transform:translateY(-110%);transition:transform .28s cubic-bezier(.4,0,.2,1);z-index:99;max-height:calc(100vh - 52px - env(safe-area-inset-top,0px));overflow-y:auto;pointer-events:none;}
+  .nlinks.on{transform:translateY(0);pointer-events:auto;box-shadow:0 10px 30px rgba(0,0,0,.45);}
+  .nlinks .nb{font-size:15px;padding:13px 14px;text-align:left;width:100%;border-radius:10px;font-weight:500;}
+  .nlinks .nb.on{background:rgba(255,255,255,.12);color:white;}
+  .nlinks .nb:hover{background:rgba(255,255,255,.08);}
+}
+
 @media(max-width:640px){
   .nwrap{grid-template-columns:1fr;}
   .ned{position:static;}
@@ -298,8 +324,11 @@ label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bot
   .safeg{grid-template-columns:1fr;}
   .fmlbox{grid-template-columns:1fr;}
   .sec{padding:24px 14px;}
-  nav{padding:0 10px;}
+  nav{padding:0 12px;}
   .pday{grid-template-columns:50px 1fr;}
+  .nbrand{font-size:13px;padding:6px 4px;}
+  .nbemoji{font-size:16px;}
+  .nusr{font-size:11px;padding:7px 11px;}
 }
 </style>
 </head>
@@ -369,8 +398,12 @@ create policy if not exists "own_stats" on stats
 <!-- APP -->
 <div id="app">
   <nav>
-    <span class="nbrand" id="nbrand" onclick="goTab('home')">кішкас</span>
-    <div class="nlinks">
+    <button class="nbrand" id="nbrand" onclick="goTab('home')" aria-label="Головна">
+      <span class="nbemoji" id="nbemoji">🐱</span>
+      <span id="nbname">кішкас</span>
+    </button>
+    <button class="burger" id="burger" onclick="toggleMenu()" aria-label="Меню" aria-expanded="false" aria-controls="nlinks"><span></span></button>
+    <div class="nlinks" id="nlinks">
       <button class="nb on" onclick="goTab('home')">Головна</button>
       <button class="nb" onclick="goTab('notes')">Нотатки</button>
       <button class="nb" onclick="goTab('stats')">Статистика</button>
@@ -382,6 +415,7 @@ create policy if not exists "own_stats" on stats
     </div>
     <button class="nusr" id="nusr" onclick="doLogout()">вийти</button>
   </nav>
+  <div class="nav-backdrop" id="navbackdrop" onclick="closeMenu()"></div>
 
   <!-- HOME -->
   <div id="tab-home" class="tab on">
@@ -691,8 +725,10 @@ function loginSuccess() {
   document.documentElement.style.setProperty('--ac', u.color);
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  document.getElementById('nusr').textContent = u.emoji + ' ' + u.name + ' · вийти';
+  document.getElementById('nusr').textContent = 'вийти';
   document.getElementById('nbrand').style.color = u.color;
+  document.getElementById('nbemoji').textContent = u.emoji;
+  document.getElementById('nbname').textContent = u.name.toLowerCase();
   document.getElementById('htag').textContent = u.heroTag;
   document.getElementById('htitle').innerHTML = u.heroTitle;
   document.getElementById('hdesc').textContent = u.heroDesc;
@@ -739,7 +775,26 @@ function goTab(name) {
   });
   if(name==='stats') renderCharts();
   if(name==='home') renderHome();
+  closeMenu();
+  window.scrollTo({top:0,behavior:'instant'});
 }
+
+function toggleMenu(){
+  const links=document.getElementById('nlinks');
+  const isOpen=links.classList.toggle('on');
+  document.getElementById('burger').classList.toggle('on',isOpen);
+  document.getElementById('burger').setAttribute('aria-expanded',isOpen);
+  document.getElementById('navbackdrop').classList.toggle('on',isOpen);
+}
+
+function closeMenu(){
+  document.getElementById('nlinks').classList.remove('on');
+  document.getElementById('burger').classList.remove('on');
+  document.getElementById('burger').setAttribute('aria-expanded','false');
+  document.getElementById('navbackdrop').classList.remove('on');
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();});
 
 // ══════════════════════════════════════════
 // STORAGE — Supabase + localStorage fallback
