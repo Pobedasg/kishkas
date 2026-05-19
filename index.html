@@ -378,6 +378,13 @@ body.theme-modern .res-item:hover{box-shadow:var(--shadow-card-hover);}
   .nlinks .nb.on{background:rgba(255,255,255,.12);color:white;}
   .nlinks .nb:hover{background:rgba(255,255,255,.08);}
 
+  /* modern theme: burger menu matches theme background */
+  body.theme-modern .nlinks{background:rgba(250,247,241,.98);border-bottom-color:var(--border);}
+  body.theme-modern.dark .nlinks{background:rgba(11,11,13,.98);}
+  body.theme-modern .nlinks .nb{color:var(--muted);}
+  body.theme-modern .nlinks .nb:hover{color:var(--ink);background:var(--border);}
+  body.theme-modern .nlinks .nb.on{color:var(--ink);background:var(--border);}
+
   /* classic mode: horizontal scrolling nav (no burger) */
   body.nav-classic .burger{display:none;}
   body.nav-classic .nav-backdrop{display:none !important;}
