@@ -183,6 +183,9 @@ label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bot
 .rqtxt{font-size:14px;font-weight:600;margin-bottom:9px;line-height:1.5;}
 .rans{background:var(--bg);border-radius:9px;padding:13px 15px;font-size:13px;line-height:1.65;color:var(--ink2);margin-top:8px;display:none;white-space:pre-wrap;}
 .rans.on{display:block;}
+.rqhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap;}
+.rqcount{font-size:12px;color:var(--muted);letter-spacing:.02em;}
+.rqcat{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ac);margin-bottom:10px;}
 
 /* THEORY */
 .tcard{background:var(--card);border:1px solid var(--border);border-radius:13px;overflow:hidden;margin-bottom:9px;}
@@ -412,6 +415,7 @@ body.theme-modern .ned,
 body.theme-modern .scard,
 body.theme-modern .mrow{background:var(--card);border:none;box-shadow:var(--shadow-card);border-radius:var(--radius);transition:box-shadow .2s ease,transform .2s ease;}
 body.theme-modern .card{padding:24px;}
+body.theme-modern .rqbox{padding:24px;margin-bottom:14px;}
 body.theme-modern .pillar:hover,body.theme-modern .toolc:hover,body.theme-modern .pcard2:hover,body.theme-modern .nitem:hover{box-shadow:var(--shadow-card-hover);transform:translateY(-2px);}
 body.theme-modern .nitem.on{box-shadow:var(--shadow-card-hover);outline:2px solid var(--ac);outline-offset:-2px;border:none;}
 body.theme-modern .stritem,body.theme-modern .titem,body.theme-modern .uitem{background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;box-shadow:none;}
@@ -786,7 +790,7 @@ const sb = supabase.createClient(SB_URL, SB_KEY);
 // ══════════════════════════════════════════
 const USERS = {
   vika:{
-    name:'Віка',brand:'кішкас',design:'modern',emoji:'🐱',color:'#FF6B9D',role:'кішкас · лайфстайл',
+    name:'Віка',brand:'кішкас',design:'modern',reflectRotate:true,emoji:'🐱',color:'#FF6B9D',role:'кішкас · лайфстайл',
     heroTag:'🐱 кішкас · план ментора',
     heroTitle:'Від блокеру<br>до <span style="color:#FF6B9D">публікації</span>',
     heroDesc:'Ти не починаєш з нуля. Ти продовжуєш — але тепер із системою і розумінням навіщо це тобі.',
@@ -1319,10 +1323,34 @@ const REFLECT_QS = {
   vika:[
     {q:'Що зняла цього тижня і навіть не думала що це може бути контент?',cat:'Контент'},
     {q:'Який пост або сторіс мені самій найбільше сподобались — і чому?',cat:'Контент'},
+    {q:'Що в моєму житті ще не контент, але міг би стати?',cat:'Контент'},
+    {q:'Який останній момент я зняла, але не виклала — і чому злякалась?',cat:'Контент'},
+    {q:'Якби я могла знімати тільки один тип контенту — який це був би?',cat:'Контент'},
+
     {q:'Блокери ще є — але чи такі ж гучні як на початку?',cat:'Голова'},
     {q:'Коли мені найлегше знімати, а коли найважче? Що впливає?',cat:'Голова'},
+    {q:'Що я не дозволяю собі сказати в контенті — і чому?',cat:'Голова'},
+    {q:'Якщо чесно: я постю для себе чи для них?',cat:'Голова'},
+    {q:'Що я отримаю, коли «дійду до 10к» — крім самих цифр?',cat:'Голова'},
+
     {q:'Що зайшло краще в статистиці цього тижня — і що це означає?',cat:'Ріст'},
     {q:'Що б я сказала собі місяць тому?',cat:'Ріст'},
+    {q:'Які 3 пости/Reels мали найбільший engagement — що в них спільного?',cat:'Ріст'},
+    {q:'Якби я мала проконсультувати себе як стороння — що б сказала найперше?',cat:'Ріст'},
+    {q:'Що мене стримує робити більше того що вже працює?',cat:'Ріст'},
+
+    {q:'Кому я писала останній пост — собі чи конкретній людині?',cat:'Аудиторія'},
+    {q:'Хто моя «улюблена підписниця» — і що в неї спільного зі мною?',cat:'Аудиторія'},
+    {q:'Що я знаю про свою аудиторію крім цифр?',cat:'Аудиторія'},
+    {q:'Яка проблема моєї підписниці мені особисто близька?',cat:'Аудиторія'},
+
+    {q:'Що в моєму контенті — я, а що «треба бо так роблять інші»?',cat:'Цінності'},
+    {q:'Якби я знімала тільки те що ціную — що б це було?',cat:'Цінності'},
+    {q:'Який тип контенту я ніколи не зніматиму — і чому це важливо?',cat:'Цінності'},
+
+    {q:'Звідки прийшла моя остання ідея для контенту?',cat:'Творчість'},
+    {q:'Що я зараз дивлюсь / читаю — і як це впливає на мій контент?',cat:'Творчість'},
+    {q:'Що б я зняла, якби мені платили за процес, а не за результат?',cat:'Творчість'},
   ],
   aluna:[
     {q:'Що цікавого відбулось цього тижня що я ще не показала?',cat:'Контент'},
@@ -1342,28 +1370,81 @@ const REFLECT_QS = {
   ]
 };
 
-function renderReflect() {
-  const qs = REFLECT_QS[CU] || [];
-  document.getElementById('reflectqs').innerHTML = qs.map((q,i)=>`
-    <div class="rqbox">
-      <div class="rqtxt">${q.q}</div>
-      <label style="margin-bottom:5px;font-size:10px">Твоя відповідь</label>
-      <textarea id="rq${i}" placeholder="Пиши чесно — для себе..."></textarea>
-      <div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap">
-        <button class="btn btn-ac btn-sm" style="background:${USERS[CU].color}" onclick="analyzeReflect(${i})">Проаналізувати →</button>
-        <span id="rst${i}" style="font-size:12px;color:var(--muted);align-self:center"></span>
-      </div>
-      <div class="rans" id="rans${i}"></div>
-    </div>`).join('');
+function pickReflectSet(user, n=4) {
+  const pool = REFLECT_QS[user] || [];
+  if (pool.length <= n) return pool.map((_,i)=>i);
+  const shuffled = pool.map((q,i)=>({q,i})).sort(()=>Math.random()-0.5);
+  const picked = []; const usedCats = new Set();
+  for (const item of shuffled) {
+    if (!usedCats.has(item.q.cat)) {
+      picked.push(item.i); usedCats.add(item.q.cat);
+      if (picked.length === n) break;
+    }
+  }
+  for (const item of shuffled) {
+    if (picked.length === n) break;
+    if (!picked.includes(item.i)) picked.push(item.i);
+  }
+  return picked;
 }
 
-async function analyzeReflect(i) {
-  const ans = document.getElementById('rq'+i).value.trim();
+function shuffleReflect() {
+  const set = pickReflectSet(CU);
+  localStorage.setItem('kishkas-reflect-set-'+CU, JSON.stringify(set));
+  renderReflect();
+}
+
+function saveReflectAnswer(idx, text) {
+  const key = 'kishkas-reflect-answers-'+CU;
+  const data = JSON.parse(localStorage.getItem(key) || '{}');
+  if (text) data[idx] = text; else delete data[idx];
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+function renderReflect() {
+  const u = USERS[CU];
+  const pool = REFLECT_QS[CU] || [];
+  let indices;
+  if (u.reflectRotate) {
+    const saved = localStorage.getItem('kishkas-reflect-set-'+CU);
+    try { indices = saved ? JSON.parse(saved) : null; } catch(e) { indices = null; }
+    if (!Array.isArray(indices) || indices.length === 0 || indices.some(i => !pool[i])) {
+      indices = pickReflectSet(CU);
+      localStorage.setItem('kishkas-reflect-set-'+CU, JSON.stringify(indices));
+    }
+  } else {
+    indices = pool.map((_,i)=>i);
+  }
+  const answers = JSON.parse(localStorage.getItem('kishkas-reflect-answers-'+CU) || '{}');
+  const shuffleBtn = u.reflectRotate
+    ? `<div class="rqhead"><span class="rqcount">${indices.length} питань · оновлюється</span><button class="btn btn-out btn-sm" onclick="shuffleReflect()">↻ Інші питання</button></div>`
+    : '';
+  document.getElementById('reflectqs').innerHTML = shuffleBtn + indices.map(idx=>{
+    const q = pool[idx]; if (!q) return '';
+    const ans = (answers[idx] || '').replace(/</g,'&lt;');
+    const catBadge = u.reflectRotate ? `<div class="rqcat">${q.cat}</div>` : '';
+    return `
+      <div class="rqbox">
+        ${catBadge}
+        <div class="rqtxt">${q.q}</div>
+        <label style="margin-bottom:5px;font-size:10px">Твоя відповідь</label>
+        <textarea id="rq${idx}" oninput="saveReflectAnswer(${idx},this.value)" placeholder="Пиши чесно — для себе...">${ans}</textarea>
+        <div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn btn-ac btn-sm" style="background:${USERS[CU].color}" onclick="analyzeReflect(${idx})">Проаналізувати →</button>
+          <span id="rst${idx}" style="font-size:12px;color:var(--muted);align-self:center"></span>
+        </div>
+        <div class="rans" id="rans${idx}"></div>
+      </div>`;
+  }).join('');
+}
+
+async function analyzeReflect(idx) {
+  const ans = document.getElementById('rq'+idx).value.trim();
   if (!ans) return;
-  const st = document.getElementById('rst'+i);
-  const out = document.getElementById('rans'+i);
+  const st = document.getElementById('rst'+idx);
+  const out = document.getElementById('rans'+idx);
   st.textContent = '⏳'; out.classList.remove('on');
-  const q = REFLECT_QS[CU][i].q;
+  const q = REFLECT_QS[CU][idx].q;
   try {
     const res = await fetch('/api/chat',{
       method:'POST',headers:{'Content-Type':'application/json'},
