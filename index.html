@@ -1077,9 +1077,9 @@ create policy if not exists "own_baseline" on baseline
             <div class="fgrid">
               <div class="fg"><label>Підписники</label><input type="number" id="bIg" placeholder="0"></div>
               <div class="fg"><label>Постів (всього)</label><input type="number" id="bPosts" placeholder="0"></div>
-              <div class="fg"><label>Сторіс (всього)</label><input type="number" id="bStories" placeholder="0"></div>
               <div class="fg"><label>Reels (всього)</label><input type="number" id="bReels" placeholder="0"></div>
             </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px">Сторіс не лічимо — вони зникають за 24 год, лайфтайм-кількість не показова.</div>
           </div>
 
           <div id="bl-tt-section" class="platform-section">
@@ -3558,7 +3558,6 @@ async function prepBaselineForm() {
   document.getElementById('bTg').value = b?.tg_followers || '';
   document.getElementById('bYt').value = b?.yt_followers || '';
   document.getElementById('bPosts').value = b?.total_posts || '';
-  document.getElementById('bStories').value = b?.total_stories || '';
   document.getElementById('bReels').value = b?.total_reels || '';
   document.getElementById('bTtVideos').value = b?.total_tt_videos || '';
   document.getElementById('bTgPosts').value = b?.total_tg_posts || '';
@@ -3573,7 +3572,7 @@ async function saveBaseline() {
   const b = {
     ig_followers: n('bIg'), tt_followers: n('bTt'),
     tg_followers: n('bTg'), yt_followers: n('bYt'),
-    total_posts: n('bPosts'), total_stories: n('bStories'), total_reels: n('bReels'),
+    total_posts: n('bPosts'), total_reels: n('bReels'),
     total_tt_videos: n('bTtVideos'),
     total_tg_posts: n('bTgPosts'),
     total_yt_videos: n('bYtVideos'), total_yt_shorts: n('bYtShorts'),
@@ -3602,7 +3601,6 @@ async function renderBaseline() {
     platforms.includes('tg') && b.tg_followers && {v:b.tg_followers, l:'TG підписники'},
     platforms.includes('yt') && b.yt_followers && {v:b.yt_followers, l:'YT підписники'},
     platforms.includes('ig') && b.total_posts && {v:b.total_posts, l:'Постів IG'},
-    platforms.includes('ig') && b.total_stories && {v:b.total_stories, l:'Сторіс'},
     platforms.includes('ig') && b.total_reels && {v:b.total_reels, l:'Reels'},
     platforms.includes('tt') && b.total_tt_videos && {v:b.total_tt_videos, l:'TT відео'},
     platforms.includes('tg') && b.total_tg_posts && {v:b.total_tg_posts, l:'TG пости'},
