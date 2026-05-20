@@ -1506,6 +1506,7 @@ function loginSuccess() {
   document.getElementById('nbrand').style.color = u.color;
   document.getElementById('nbemoji').textContent = u.emoji;
   document.getElementById('nbname').textContent = (u.brand || u.name).toLowerCase();
+  document.title = `${u.emoji} ${u.brand || u.name} · платформа для зростання`;
   document.body.classList.toggle('nav-classic', u.navStyle === 'classic');
   document.body.classList.toggle('theme-modern', u.design === 'modern');
   if (u.design === 'modern') {
@@ -2048,16 +2049,24 @@ function setEmojiFavicon(emoji) {
 
 async function applyProfileOverrides() {
   const p = await dbProfile();
-  const defaultEmoji = USERS[CU]?.emoji || '🐱';
-  if (!p) { setEmojiFavicon(defaultEmoji); return; }
+  const u = USERS[CU] || {};
+  const defaultEmoji = u.emoji || '🐱';
+  const defaultName = u.brand || u.name || 'користувач';
+  if (!p) {
+    setEmojiFavicon(defaultEmoji);
+    document.title = `${defaultEmoji} ${defaultName} · платформа для зростання`;
+    return;
+  }
   if (p.display_name) {
     const nb = document.getElementById('nbname');
     if (nb) nb.textContent = p.display_name.toLowerCase();
   }
   const usedEmoji = p.display_emoji || defaultEmoji;
+  const usedName = p.display_name || defaultName;
   const em = document.getElementById('nbemoji');
   if (em) em.textContent = usedEmoji;
   setEmojiFavicon(usedEmoji);
+  document.title = `${usedEmoji} ${usedName} · платформа для зростання`;
   if (p.accent_color) {
     document.documentElement.style.setProperty('--ac', p.accent_color);
     const nbrand = document.getElementById('nbrand');
