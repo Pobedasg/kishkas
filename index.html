@@ -2182,6 +2182,7 @@ function extractJSON(text) {
 }
 
 async function generateMentorPlan() {
+  if (window._mentorGenerating) { showToast('Вже генерую — зачекай', 'error'); return; }
   const profile = await dbProfile();
   if (!profile || (!profile.has_blog && (!profile.blockers || !profile.blockers.length) && !profile.profession)) {
     if (confirm('Спочатку заповни анкету профіля — тоді план буде дійсно персональним. Відкрити анкету?')) {
@@ -2189,8 +2190,12 @@ async function generateMentorPlan() {
     }
     return;
   }
+  window._mentorGenerating = true;
   const btn = document.getElementById('generateMentorBtn');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Генерую план... (~1–2 хв)'; }
+  const regenBtns = document.querySelectorAll('button[onclick="regenerateMentorPlan()"]');
+  regenBtns.forEach(b => { b.disabled = true; b.textContent = '⏳ Генерую...'; });
+  showToast('Генерую план... зачекай 1–2 хв', 'success');
 
   const profileCtx = await getProfileContext();
   const stats = await dbStats();
@@ -2276,10 +2281,14 @@ async function generateMentorPlan() {
     console.error('[mentor plan] gen failed:', e);
     showToast('Помилка: ' + e.message, 'error');
     if (btn) { btn.disabled = false; btn.textContent = '🤖 Згенерувати персональний план'; }
+    regenBtns.forEach(b => { b.disabled = false; b.textContent = '↻ Перегенерувати'; });
+  } finally {
+    window._mentorGenerating = false;
   }
 }
 
 async function regenerateMentorPlan() {
+  if (window._mentorGenerating) { showToast('Вже генерую — зачекай', 'error'); return; }
   if (!confirm('Перегенерувати план? Поточний буде замінено.')) return;
   await generateMentorPlan();
 }
