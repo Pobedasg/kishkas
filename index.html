@@ -8,6 +8,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link rel="icon" id="favicon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🐱%3C/text%3E%3C/svg%3E">
 <style>
 :root{
   --ink:#111;--ink2:#333;--muted:#777;
@@ -1702,15 +1704,15 @@ const DEMO_STATS = [
 // HOME
 // ══════════════════════════════════════════
 const DASHBOARD_WIDGETS = [
-  {id:'streak',      name:'🔥 Стрік публікацій',           default:false, color:'#FF6B35', size:'small'},
-  {id:'goals',       name:'🎯 Цілі (прогрес)',             default:false, color:'#16A34A', size:'small'},
-  {id:'stats',       name:'📊 Статистика останнього місяця',default:true,  color:'#FF6B9D', size:'wide'},
-  {id:'growth',      name:'📈 Графік росту',               default:false, color:'#6C5CE7', size:'wide'},
-  {id:'notes',       name:'📝 Останні нотатки',            default:true,  color:'#3B82F6', size:'wide'},
-  {id:'reflectDay',  name:'🪞 Питання дня з рефлексії',    default:false, color:'#A855F7', size:'small'},
-  {id:'checklist',   name:'✅ Прогрес чекліста',           default:false, color:'#14B8A6', size:'small'},
-  {id:'audience',    name:'👥 Портрет ЦА (підсумок)',       default:false, color:'#0891B2', size:'wide'},
-  {id:'aiChips',     name:'🤖 Швидкі ШІ-запити',           default:false, color:'#EAB308', size:'wide'},
+  {id:'streak',      name:'Стрік публікацій',           icon:'flame',         default:false, color:'#FF6B35', size:'small'},
+  {id:'goals',       name:'Цілі (прогрес)',             icon:'target',        default:false, color:'#16A34A', size:'small'},
+  {id:'stats',       name:'Статистика останнього місяця',icon:'bar-chart-3',   default:true,  color:'#FF6B9D', size:'wide'},
+  {id:'growth',      name:'Графік росту',               icon:'trending-up',   default:false, color:'#6C5CE7', size:'wide'},
+  {id:'notes',       name:'Останні нотатки',            icon:'sticky-note',   default:true,  color:'#3B82F6', size:'wide'},
+  {id:'reflectDay',  name:'Питання дня з рефлексії',    icon:'help-circle',   default:false, color:'#A855F7', size:'small'},
+  {id:'checklist',   name:'Прогрес чекліста',           icon:'check-square',  default:false, color:'#14B8A6', size:'small'},
+  {id:'audience',    name:'Портрет ЦА',                 icon:'users',         default:false, color:'#0891B2', size:'wide'},
+  {id:'aiChips',     name:'Швидкі ШІ-запити',           icon:'sparkles',      default:false, color:'#EAB308', size:'wide'},
 ];
 
 const WIDGET_BY_ID = Object.fromEntries(DASHBOARD_WIDGETS.map(w => [w.id, w]));
@@ -1718,10 +1720,11 @@ const WIDGET_BY_ID = Object.fromEntries(DASHBOARD_WIDGETS.map(w => [w.id, w]));
 function blk(id, body, action) {
   const cfg = WIDGET_BY_ID[id];
   const sizeClass = cfg.size === 'wide' ? ' size-wide' : '';
+  const iconHTML = cfg.icon ? `<i data-lucide="${cfg.icon}" style="width:15px;height:15px;color:${cfg.color};vertical-align:-2px"></i>` : '';
   const actBtn = action ? `<button class="dash-block-action" onclick="${action.fn}">${action.label}</button>` : '';
   return `<div class="dash-block${sizeClass}" data-widget="${id}">
     <div class="dash-accent" style="background:${cfg.color}"></div>
-    <div class="dash-block-title"><span>${cfg.name}</span>${actBtn}</div>
+    <div class="dash-block-title"><span style="display:inline-flex;align-items:center;gap:8px">${iconHTML}${cfg.name}</span>${actBtn}</div>
     ${body}
   </div>`;
 }
@@ -2029,17 +2032,32 @@ function pickEmoji(e) {
   if (pick && e) pick.style.display = 'none';
 }
 
+function setEmojiFavicon(emoji) {
+  if (!emoji) emoji = '🐱';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50" y="55" font-size="78" text-anchor="middle" dominant-baseline="middle">${emoji}</text></svg>`;
+  const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  let link = document.getElementById('favicon') || document.querySelector("link[rel*='icon']");
+  if (!link) {
+    link = document.createElement('link');
+    link.id = 'favicon';
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+  link.href = url;
+}
+
 async function applyProfileOverrides() {
   const p = await dbProfile();
-  if (!p) return;
+  const defaultEmoji = USERS[CU]?.emoji || '🐱';
+  if (!p) { setEmojiFavicon(defaultEmoji); return; }
   if (p.display_name) {
     const nb = document.getElementById('nbname');
     if (nb) nb.textContent = p.display_name.toLowerCase();
   }
-  if (p.display_emoji) {
-    const em = document.getElementById('nbemoji');
-    if (em) em.textContent = p.display_emoji;
-  }
+  const usedEmoji = p.display_emoji || defaultEmoji;
+  const em = document.getElementById('nbemoji');
+  if (em) em.textContent = usedEmoji;
+  setEmojiFavicon(usedEmoji);
   if (p.accent_color) {
     document.documentElement.style.setProperty('--ac', p.accent_color);
     const nbrand = document.getElementById('nbrand');
@@ -2392,6 +2410,7 @@ async function renderHome() {
   container.innerHTML = renders.filter(Boolean).join('');
   if (order.includes('growth')) drawDashGrowth();
   initDashSortable();
+  if (window.lucide) window.lucide.createIcons();
 }
 
 function initDashSortable() {
