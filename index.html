@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>кішкас · платформа</title>
+<title>Sprout · платформа для росту</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Geologica:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-<link rel="icon" id="favicon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🐱%3C/text%3E%3C/svg%3E">
+<link rel="icon" id="favicon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌱%3C/text%3E%3C/svg%3E">
 <style>
 :root{
   --ink:#111;--ink2:#333;--muted:#777;
@@ -770,7 +770,7 @@ body.theme-modern .tab{padding-top:calc(60px + env(safe-area-inset-top,0px));}
   <div class="ag"></div>
   <div class="abg">girls</div>
   <div class="abox">
-    <div class="abrand">кішкас</div>
+    <div class="abrand">🌱 Sprout</div>
     <div class="asub">платформа для контент-творців</div>
     <div class="mtabs">
       <div class="mtab on" onclick="setMode('login',this)">Увійти</div>
@@ -986,7 +986,7 @@ create policy if not exists "own_baseline" on baseline
   <nav>
     <button class="nbrand" id="nbrand" onclick="goTab('home')" aria-label="Головна">
       <span class="nbemoji" id="nbemoji">🐱</span>
-      <span id="nbname">кішкас</span>
+      <span id="nbname">Sprout</span>
     </button>
     <button class="burger" id="burger" onclick="toggleMenu()" aria-label="Меню" aria-expanded="false" aria-controls="nlinks"><span></span></button>
     <div class="nlinks" id="nlinks">
@@ -1018,7 +1018,7 @@ create policy if not exists "own_baseline" on baseline
   <div id="tab-home" class="tab on">
     <div class="hero">
       <div class="hg"></div>
-      <div class="hbg" id="hbg">кішкас</div>
+      <div class="hbg" id="hbg">Sprout</div>
       <div class="htag" id="htag" style="color:var(--ac)">🐱 план ментора</div>
       <h1 class="htitle" id="htitle">Від блокеру<br>до <span id="hspan" style="color:var(--ac)">публікації</span></h1>
       <p class="hdesc" id="hdesc">Ти не починаєш з нуля. Ти продовжуєш — але тепер із системою.</p>
@@ -1365,7 +1365,7 @@ const USERS = {
     aiCtx:'Ти консультуєш Алуну — дівчину яка веде лайфстайл-блог в Instagram і TikTok. Фокус на ЗАРАЗ: настрій, розпаковки, магазини, лайфхаки, спорт і харчування, краса. У минулому: повар, бариста, заводи в Польщі — це може бути контентом в майбутньому але не основа зараз. Основа: реальне щоденне life.'
   },
   demo:{
-    name:'Демо',brand:'кішкас · демо',design:'modern',reflectRotate:true,emoji:'✨',color:'#0066FF',role:'демо-перегляд',
+    name:'Демо',brand:'Sprout · демо',design:'modern',reflectRotate:true,emoji:'🌱',color:'#0066FF',role:'демо-перегляд',
     heroTag:'✨ демо-сторінка',
     heroTitle:'Подивись як це <span style="color:#0066FF">працює</span>',
     heroDesc:'Це приклад заповненої сторінки — з прикладами нотаток, статистики, рефлексії. Зареєструйся щоб мати свою.',
@@ -1382,7 +1382,7 @@ const USERS = {
     aiCtx:'Ти консультуєш гостя у демо-режимі платформи. Показуй приклади відповідей, які підійшли б типовому контент-творцю — конкретно, практично, дружньо.'
   },
   default:{
-    name:'Користувачка',brand:'кішкас',design:'modern',reflectRotate:true,emoji:'👤',color:'#0066FF',role:'нова користувачка',
+    name:'Користувачка',brand:'Sprout',design:'modern',reflectRotate:true,emoji:'🌱',color:'#0066FF',role:'нова користувачка',
     heroTag:'✨ ласкаво просимо',
     heroTitle:'Твоя платформа<br>для <span style="color:#0066FF">росту</span>',
     heroDesc:'Веди статистику, плануй контент, аналізуй з ШІ. Все що треба контент-творцеві в одному місці.',
@@ -2034,7 +2034,7 @@ function pickEmoji(e) {
 }
 
 function setEmojiFavicon(emoji) {
-  if (!emoji) emoji = '🐱';
+  if (!emoji) emoji = '🌱';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50" y="55" font-size="78" text-anchor="middle" dominant-baseline="middle">${emoji}</text></svg>`;
   const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   let link = document.getElementById('favicon') || document.querySelector("link[rel*='icon']");
@@ -2050,7 +2050,7 @@ function setEmojiFavicon(emoji) {
 async function applyProfileOverrides() {
   const p = await dbProfile();
   const u = USERS[CU] || {};
-  const defaultEmoji = u.emoji || '🐱';
+  const defaultEmoji = u.emoji || '🌱';
   const defaultName = u.brand || u.name || 'користувач';
   if (!p) {
     setEmojiFavicon(defaultEmoji);
