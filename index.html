@@ -354,6 +354,8 @@ body.theme-modern .res-item:hover{box-shadow:var(--shadow-card-hover);}
 .tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(225px,1fr));gap:8px;}
 .toolc{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:15px;}
 .toole{font-size:20px;margin-bottom:7px;display:block;}
+.brand-icon{width:28px;height:28px;display:block;margin-bottom:9px;object-fit:contain;}
+body.theme-modern.dark .brand-icon{filter:brightness(1.1);}
 .tooln{font-size:13px;font-weight:700;margin-bottom:3px;}
 .toold{font-size:13px;color:#555;line-height:1.6;}
 .tooltag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--bg);color:var(--muted);margin-top:6px;}
@@ -3842,26 +3844,29 @@ function renderTheory() {
 function renderTools() {
   const sections = [
     {title:'✂️ Монтаж відео',tools:[
-      {e:'📱',n:'CapCut',d:'Найкращий для Reels і TikTok. Автосубтитри, шаблони, beat sync, AI фон. Безкоштовно.',tag:'iOS + Android · Безкоштовно'},
-      {e:'🎬',n:'InShot',d:'Простий і швидкий. Кадрування під всі формати, музика, текст. Ідеально для старту.',tag:'iOS + Android · Безкоштовно+'},
-      {e:'⚡',n:'Splice',d:'Потужний timeline-монтаж на телефоні. Для більшого контролю над кліпами.',tag:'iOS · Безкоштовно+'},
+      {e:'📱',si:'capcut',n:'CapCut',d:'Найкращий для Reels і TikTok. Автосубтитри, шаблони, beat sync, AI фон. Безкоштовно.',tag:'iOS + Android · Безкоштовно'},
+      {e:'🎬',si:'',n:'InShot',d:'Простий і швидкий. Кадрування під всі формати, музика, текст. Ідеально для старту.',tag:'iOS + Android · Безкоштовно+'},
+      {e:'⚡',si:'splice',n:'Splice',d:'Потужний timeline-монтаж на телефоні. Для більшого контролю над кліпами.',tag:'iOS · Безкоштовно+'},
     ]},
     {title:'🎨 Дизайн і графіка',tools:[
-      {e:'🖌',n:'Canva',d:'Шаблони для сторіс, каруселей, обкладинок. Брендові кольори і шрифти.',tag:'Всі платформи · Безкоштовно+'},
-      {e:'📐',n:'Adobe Express',d:'Потужніший Canva. Remove background, анімації. Безкоштовна версія щедра.',tag:'Всі платформи · Безкоштовно+'},
-      {e:'✨',n:'Unfold',d:'Красиві мінімалістичні шаблони для сторіс. Естетика яку любить IG аудиторія.',tag:'iOS + Android · Безкоштовно+'},
+      {e:'🖌',si:'canva',n:'Canva',d:'Шаблони для сторіс, каруселей, обкладинок. Брендові кольори і шрифти.',tag:'Всі платформи · Безкоштовно+'},
+      {e:'📐',si:'adobe',n:'Adobe Express',d:'Потужніший Canva. Remove background, анімації. Безкоштовна версія щедра.',tag:'Всі платформи · Безкоштовно+'},
+      {e:'✨',si:'',n:'Unfold',d:'Красиві мінімалістичні шаблони для сторіс. Естетика яку любить IG аудиторія.',tag:'iOS + Android · Безкоштовно+'},
     ]},
     {title:'📸 Фото і обробка',tools:[
-      {e:'🌈',n:'Lightroom Mobile',d:'Пресети для єдиної естетики стрічки. Один клік — консистентний вигляд.',tag:'iOS + Android · Безкоштовно+'},
-      {e:'💎',n:'VSCO',d:'Фільтри і пресети. Тепла або мінімалістична естетика.',tag:'iOS + Android · Безкоштовно+'},
-      {e:'🪄',n:'Facetune',d:'Ретуш, вирівнювання фону. Для б\'юті контенту незамінне.',tag:'iOS + Android · Платно'},
+      {e:'🌈',si:'adobelightroom',n:'Lightroom Mobile',d:'Пресети для єдиної естетики стрічки. Один клік — консистентний вигляд.',tag:'iOS + Android · Безкоштовно+'},
+      {e:'💎',si:'vsco',n:'VSCO',d:'Фільтри і пресети. Тепла або мінімалістична естетика.',tag:'iOS + Android · Безкоштовно+'},
+      {e:'🪄',si:'',n:'Facetune',d:'Ретуш, вирівнювання фону. Для б\'юті контенту незамінне.',tag:'iOS + Android · Платно'},
     ]},
     {title:'📅 Планування і аналітика',tools:[
-      {e:'🗓',n:'Later',d:'Планування постів наперед, drag-and-drop календар, аналітика.',tag:'Всі платформи · Безкоштовно+'},
-      {e:'📊',n:'Instagram Insights',d:'Вбудована аналітика. Охоплення, збереження, аудиторія, час — безкоштовно.',tag:'В додатку · Безкоштовно'},
-      {e:'🎵',n:'TrendTok',d:'Трендові звуки для TikTok і Reels. Вчасно ловити тренд = більше охоплення.',tag:'Веб · Безкоштовно'},
+      {e:'🗓',si:'',n:'Later',d:'Планування постів наперед, drag-and-drop календар, аналітика.',tag:'Всі платформи · Безкоштовно+'},
+      {e:'📊',si:'instagram',n:'Instagram Insights',d:'Вбудована аналітика. Охоплення, збереження, аудиторія, час — безкоштовно.',tag:'В додатку · Безкоштовно'},
+      {e:'🎵',si:'tiktok',n:'TrendTok',d:'Трендові звуки для TikTok і Reels. Вчасно ловити тренд = більше охоплення.',tag:'Веб · Безкоштовно'},
     ]},
   ];
+  const toolIcon = t => t.si
+    ? `<img src="https://cdn.simpleicons.org/${t.si}" alt="${t.n}" class="brand-icon" onerror="this.outerHTML='<span class=\\'toole\\'>${t.e}</span>'">`
+    : `<span class="toole">${t.e}</span>`;
   const capcut = [
     {title:'⚙️ Базові налаштування',items:[
       '<strong>Формат 9:16 відразу</strong> — Canvas → Ratio → 9:16. Встанови до початку монтажу.',
@@ -3916,7 +3921,7 @@ function renderTools() {
     ]},
   ];
   document.getElementById('toolscontent').innerHTML =
-    sections.map(s=>`<div class="tsec"><div class="tsect">${s.title}</div><div class="tgrid">${s.tools.map(t=>`<div class="toolc"><span class="toole">${t.e}</span><div class="tooln">${t.n}</div><div class="toold">${t.d}</div><span class="tooltag">${t.tag}</span></div>`).join('')}</div></div>`).join('') +
+    sections.map(s=>`<div class="tsec"><div class="tsect">${s.title}</div><div class="tgrid">${s.tools.map(t=>`<div class="toolc">${toolIcon(t)}<div class="tooln">${t.n}</div><div class="toold">${t.d}</div><span class="tooltag">${t.tag}</span></div>`).join('')}</div></div>`).join('') +
     '<div class="divider"></div><div class="slbl">Лайфхаки CapCut</div><div class="cl cl-dk" style="margin-bottom:14px">Найпопулярніший редактор. Ось що реально варто знати.</div>' +
     capcut.map(s=>`<div class="tcard" onclick="this.classList.toggle(\'on\')" style="margin-bottom:9px"><div class="thead"><div class="ticon" style="background:#fff8e0">💡</div><div><div class="ttl2">${s.title}</div></div><div class="tarr">↓</div></div><div class="tbody">${s.items.map(it=>`<div class="titem"><div class="tdot" style="background:var(--ac)"></div><div class="ttxt">${it}</div></div>`).join('')}</div></div>`).join('') +
     '<div class="divider"></div><div class="slbl">Лайфхаки для сторіс</div><div class="tgrid" style="margin-bottom:28px">' +
