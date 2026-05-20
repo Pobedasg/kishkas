@@ -2046,13 +2046,20 @@ async function generateMentorPlan() {
 
   const system = `Ти стратег контент-маркетингу і ментор для контент-творців. На основі профіля користувача згенеруй ПЕРСОНАЛЬНИЙ ментор-план у форматі JSON.
 
-ВАЖЛИВО:
-- Поверни ТІЛЬКИ валідний JSON. Без markdown-цитат, без коментарів, без пояснень до/після.
+КРИТИЧНО ВАЖЛИВО:
+- Твоя відповідь МАЄ ПОЧИНАТИСЬ символом { і ЗАКІНЧУВАТИСЬ символом }
+- ЖОДНОГО тексту до { або після }
+- ЖОДНИХ markdown-блоків (без \`\`\`json і \`\`\`)
+- ЖОДНИХ привітань, пояснень, коментарів
+- Тільки чистий JSON
+
+Інші правила:
 - Усе українською.
 - Будь конкретним. Бери до уваги тип блогу, блокери, цілі і досвід.
 - Уникай загальних фраз. Кожна рекомендація має бути дієвою.
+- Якщо якесь поле профіля порожнє — не вигадуй, роби загальніший пункт.
 
-Структура JSON:
+Структура JSON (саме така, з саме такими ключами):
 {
   "positioning": "2-3 речення: хто користувач і що дає підписникам",
   "pillars": [
@@ -2094,22 +2101,28 @@ async function generateMentorPlan() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 4000,
+        max_tokens: 6000,
         system,
         messages: [{ role: 'user', content: userMsg }]
       })
     });
     const data = await res.json();
-    if (data.error) throw new Error(data.error.message || data.error.type || 'API error');
+    console.log('[mentor plan] full API response:', data);
+    if (data.error) throw new Error(data.error.message || data.error.type || JSON.stringify(data.error));
     const text = data.content?.find(b => b.type === 'text')?.text || '';
+    console.log('[mentor plan] stop_reason:', data.stop_reason, '| text length:', text.length);
+    console.log('[mentor plan] raw text:', text);
+    if (!text) throw new Error('Порожня відповідь від ШІ');
+    if (data.stop_reason === 'max_tokens') console.warn('Response was truncated by max_tokens');
     const plan = extractJSON(text);
-    if (!plan || !plan.positioning) throw new Error('Не вдалося розпарсити відповідь ШІ');
+    if (!plan) throw new Error('Невалідний JSON. Дивись консоль (Cmd+Option+J) — там повний текст.');
+    if (!plan.positioning) throw new Error('JSON без поля "positioning". Дивись консоль.');
     const saveResult = await dbSaveMentorPlan(plan);
     showToast(saveResult.ok ? '✓ План згенеровано' : '⚠ Згенеровано локально', saveResult.ok ? 'success' : 'error');
     renderMentor();
   } catch(e) {
-    console.error('mentor gen', e);
-    showToast('Помилка генерації: ' + e.message, 'error');
+    console.error('[mentor plan] gen failed:', e);
+    showToast('Помилка: ' + e.message, 'error');
     if (btn) { btn.disabled = false; btn.textContent = '🤖 Згенерувати персональний план'; }
   }
 }
