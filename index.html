@@ -550,6 +550,12 @@ body.theme-modern .nav-icon-btn:hover{background:var(--border);}
 .profile-form .pf-head:first-child{margin-top:0;}
 .profile-form label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
 
+/* Accent color palette */
+.color-palette{display:flex;flex-wrap:wrap;gap:8px;}
+.color-swatch{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer;padding:0;transition:transform .15s ease,border-color .15s;}
+.color-swatch:hover{transform:scale(1.1);}
+.color-swatch.on{border-color:var(--ink);box-shadow:0 0 0 2px var(--card);}
+
 /* Big visual blog-type toggle */
 .blogtype-toggle{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .btype-btn{background:transparent;border:2px solid var(--border);border-radius:14px;padding:16px 14px;cursor:pointer;text-align:center;font-family:'Geologica',sans-serif;transition:all .15s;color:var(--ink);}
@@ -863,6 +869,8 @@ create table if not exists user_questionnaire (
 alter table user_questionnaire add column if not exists profession text;
 alter table user_questionnaire add column if not exists blog_type text;
 alter table user_questionnaire add column if not exists blog_topic text;
+alter table user_questionnaire add column if not exists display_name text;
+alter table user_questionnaire add column if not exists accent_color text;
 create table if not exists chats (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users,
@@ -1503,6 +1511,7 @@ function loginSuccess() {
   loadNotes();
   loadStats();
   renderHome();
+  applyProfileOverrides();
   const mos=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
   document.getElementById('stmo').value = mos[new Date().getMonth()];
   document.getElementById('styr').value = new Date().getFullYear();
@@ -1851,13 +1860,27 @@ function profileFormHTML(p) {
       </div>
     </div>`;
 
+  const PALETTE = ['#FF6B9D','#FF4444','#4DA6FF','#7C3AED','#14B8A6','#FF6B35','#16A34A','#F59E0B','#06B6D4','#6366F1','#EC4899','#0E0E10'];
+  const colorPaletteHTML = `
+    <div class="pf-row">
+      <label>Акцентний колір</label>
+      <div class="color-palette" data-name="accent_color">
+        ${PALETTE.map(c => `<button type="button" class="color-swatch ${p.accent_color===c?'on':''}" data-color="${c}" style="background:${c}" onclick="selectAccentColor('${c}')"></button>`).join('')}
+      </div>
+    </div>`;
+
   return [
     head('Про тебе'),
+    `<div class="pf-row">
+      <label>Як тебе називати (ім'я, нік, псевдонім)</label>
+      <input type="text" id="p-name" value="${(p.display_name||'').replace(/"/g,'&quot;')}" placeholder="Наприклад: Олена, або Olenka_blog, або просто Аноним">
+    </div>`,
     sel('p-gender', 'Як до тебе звертатись', [
       {v:'f', l:'У жіночому роді'},
       {v:'m', l:'У чоловічому роді'},
       {v:'n', l:'Нейтрально / без роду'},
     ], p.gender),
+    colorPaletteHTML,
 
     head('Блог'),
     `<div class="pf-row">
@@ -1920,6 +1943,27 @@ function onBlogTypeChange(v) {
   if (profBlock) profBlock.style.display = (v === 'professional') ? 'contents' : 'none';
 }
 
+function selectAccentColor(c) {
+  document.querySelectorAll('.color-swatch').forEach(s => {
+    s.classList.toggle('on', s.dataset.color === c);
+  });
+  document.documentElement.style.setProperty('--ac', c);
+}
+
+async function applyProfileOverrides() {
+  const p = await dbProfile();
+  if (!p) return;
+  if (p.display_name) {
+    const nb = document.getElementById('nbname');
+    if (nb) nb.textContent = p.display_name.toLowerCase();
+  }
+  if (p.accent_color) {
+    document.documentElement.style.setProperty('--ac', p.accent_color);
+    const nbrand = document.getElementById('nbrand');
+    if (nbrand) nbrand.style.color = p.accent_color;
+  }
+}
+
 async function openProfileModal() {
   const p = await dbProfile() || {};
   document.getElementById('profileForm').innerHTML = profileFormHTML(p);
@@ -1939,8 +1983,11 @@ async function saveProfile() {
     const get = id => document.getElementById(id)?.value || '';
     const multi = name => Array.from(document.querySelectorAll(`.multi-chips[data-name="${name}"] .m-chip.on`)).map(c => c.dataset.value);
     const blogType = document.querySelector('.blogtype-toggle .btype-btn.on')?.dataset.value || '';
+    const accent = document.querySelector('.color-swatch.on')?.dataset.color || '';
     const data = {
+      display_name: get('p-name'),
       gender: get('p-gender'),
+      accent_color: accent,
       profession: blogType === 'professional' ? get('p-profession') : '',
       field_experience: blogType === 'professional' ? get('p-fieldexp') : '',
       has_blog: get('p-hasblog'),
@@ -1962,6 +2009,7 @@ async function saveProfile() {
       showToast('⚠ Збережено локально. Виконай SQL для user_questionnaire щоб синхронізувалось у хмару.', 'error');
       console.warn('profile save error', result.error);
     }
+    applyProfileOverrides();
   } catch (e) {
     console.error('saveProfile crash', e);
     showToast('Помилка: ' + e.message, 'error');
@@ -2038,7 +2086,7 @@ async function generateMentorPlan() {
     return;
   }
   const btn = document.getElementById('generateMentorBtn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Генерую план... (~30 сек)'; }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Генерую план... (~1–2 хв)'; }
 
   const profileCtx = await getProfileContext();
   const stats = await dbStats();
@@ -3777,7 +3825,7 @@ function genericM() {
       <div class="card" style="text-align:center;padding:26px 22px;margin-bottom:14px">
         <div style="font-size:14px;color:var(--muted);margin-bottom:14px">Заповни профіль і згенеруй персональний план — позиціонування, опори, тижнева дорога, формула, питання рефлексії, промпти і стратегії під твої блокери.</div>
         <button class="btn btn-ac" id="generateMentorBtn" onclick="generateMentorPlan()">🤖 Згенерувати персональний план</button>
-        <div style="font-size:12px;color:var(--muted);margin-top:10px">Займе ~30 секунд</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:10px">Займе 1–2 хвилини</div>
       </div>
     `}
 
