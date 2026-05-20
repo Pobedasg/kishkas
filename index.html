@@ -871,6 +871,9 @@ alter table user_questionnaire add column if not exists blog_type text;
 alter table user_questionnaire add column if not exists blog_topic text;
 alter table user_questionnaire add column if not exists display_name text;
 alter table user_questionnaire add column if not exists accent_color text;
+alter table user_questionnaire add column if not exists display_emoji text;
+alter table user_questionnaire add column if not exists blockers_other text;
+alter table user_questionnaire add column if not exists needs_other text;
 create table if not exists chats (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users,
@@ -1814,13 +1817,15 @@ function profileFormHTML(p) {
         ${options.map(o => `<option value="${o.v}" ${current===o.v?'selected':''}>${o.l}</option>`).join('')}
       </select>
     </div>`;
-  const multi = (name, label, options, current) => {
+  const multi = (name, label, options, current, otherId, otherValue) => {
     const cur = Array.isArray(current) ? current : [];
+    const otherInput = otherId ? `<input type="text" id="${otherId}" value="${(otherValue||'').replace(/"/g,'&quot;')}" placeholder="Свій варіант (опціонально)" style="margin-top:8px">` : '';
     return `<div class="pf-row">
       <label>${label}</label>
       <div class="multi-chips" data-name="${name}">
         ${options.map(o => `<button type="button" class="m-chip ${cur.includes(o.v)?'on':''}" data-value="${o.v}" onclick="this.classList.toggle('on')">${o.l}</button>`).join('')}
       </div>
+      ${otherInput}
     </div>`;
   };
   const ta = (id, label, current, placeholder='') => `
@@ -1873,7 +1878,11 @@ function profileFormHTML(p) {
     head('Про тебе'),
     `<div class="pf-row">
       <label>Як тебе називати (ім'я, нік, псевдонім)</label>
-      <input type="text" id="p-name" value="${(p.display_name||'').replace(/"/g,'&quot;')}" placeholder="Наприклад: Олена, або Olenka_blog, або просто Аноним">
+      <input type="text" id="p-name" value="${(p.display_name||'').replace(/"/g,'&quot;')}" placeholder="Наприклад: Олена, або Olenka_blog, або просто Анонім">
+    </div>`,
+    `<div class="pf-row">
+      <label>Емодзі для лівого кутка (1 символ)</label>
+      <input type="text" id="p-emoji" value="${(p.display_emoji||'').replace(/"/g,'&quot;')}" placeholder="Наприклад: 🐱 ✨ 🎯 🌿 🚀" maxlength="4" style="max-width:200px">
     </div>`,
     sel('p-gender', 'Як до тебе звертатись', [
       {v:'f', l:'У жіночому роді'},
@@ -1922,8 +1931,8 @@ function profileFormHTML(p) {
       {v:'partial', l:'Частково (додатковий дохід)'},
       {v:'main', l:'Це мій основний дохід'},
     ], p.monetization),
-    multi('blockers', 'Головні блокери зараз', PROFILE_BLOCKERS, p.blockers),
-    multi('needs', 'Що найбільше потрібно', PROFILE_NEEDS, p.needs),
+    multi('blockers', 'Головні блокери зараз', PROFILE_BLOCKERS, p.blockers, 'p-blockersOther', p.blockers_other),
+    multi('needs', 'Що найбільше потрібно', PROFILE_NEEDS, p.needs, 'p-needsOther', p.needs_other),
     ta('p-goals', 'Цілі на найближчі 3–6 місяців', p.goals, 'Наприклад: дійти до 5k підписників, запустити курс, побороти страх показувати обличчя...'),
   ].join('');
 }
@@ -1957,6 +1966,10 @@ async function applyProfileOverrides() {
     const nb = document.getElementById('nbname');
     if (nb) nb.textContent = p.display_name.toLowerCase();
   }
+  if (p.display_emoji) {
+    const em = document.getElementById('nbemoji');
+    if (em) em.textContent = p.display_emoji;
+  }
   if (p.accent_color) {
     document.documentElement.style.setProperty('--ac', p.accent_color);
     const nbrand = document.getElementById('nbrand');
@@ -1986,6 +1999,7 @@ async function saveProfile() {
     const accent = document.querySelector('.color-swatch.on')?.dataset.color || '';
     const data = {
       display_name: get('p-name'),
+      display_emoji: get('p-emoji'),
       gender: get('p-gender'),
       accent_color: accent,
       profession: blogType === 'professional' ? get('p-profession') : '',
@@ -1996,7 +2010,9 @@ async function saveProfile() {
       blog_experience: get('p-blogexp'),
       hours_per_week: get('p-hours'),
       blockers: multi('blockers'),
+      blockers_other: get('p-blockersOther'),
       needs: multi('needs'),
+      needs_other: get('p-needsOther'),
       monetization: get('p-monetization'),
       goals: get('p-goals'),
     };
@@ -2231,10 +2247,14 @@ function renderMentorPlan(plan) {
     <div class="slbl">Швидкі ШІ-промпти під твою нішу</div>
     <div class="chips" style="margin-bottom:18px">${plan.quick_prompts.map(p=>`<div class="chip" onclick="askAiFromDash(${JSON.stringify(p.text||'').replace(/"/g,'&quot;')})">${p.label||''}</div>`).join('')}</div>` : '';
 
+  const hasBase = ['vika','aluna','dodo'].includes(CU);
   return `<div class="sec">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:8px">
       <div class="slbl" style="margin:0">Твій персональний план</div>
-      <button class="btn btn-out btn-sm" onclick="regenerateMentorPlan()">↻ Перегенерувати</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-out btn-sm" onclick="regenerateMentorPlan()">↻ Перегенерувати</button>
+        ${hasBase ? '<button class="btn btn-out btn-sm" onclick="deleteMentorPlan()">↩ Базовий план</button>' : ''}
+      </div>
     </div>
     ${positioning}
     ${thisWeek}
@@ -2266,8 +2286,14 @@ async function getProfileContext() {
   if (p.blog_topic || p.niche) s += `\n- Тема блогу: ${p.blog_topic || p.niche}`;
   if (p.blog_experience) s += `\n- Досвід ведення блогу: ${FE[p.blog_experience]||p.blog_experience}`;
   if (p.hours_per_week) s += `\n- Готовий_а приділяти блогу: ${HRS[p.hours_per_week]||p.hours_per_week} на тиждень`;
-  if (p.blockers && p.blockers.length) s += `\n- Блокери: ${p.blockers.map(b=>BLK[b]||b).join(', ')}`;
-  if (p.needs && p.needs.length) s += `\n- Потрібна допомога з: ${p.needs.map(n=>NDS[n]||n).join(', ')}`;
+  const blockersList = [];
+  if (p.blockers && p.blockers.length) blockersList.push(...p.blockers.map(b=>BLK[b]||b));
+  if (p.blockers_other) blockersList.push(p.blockers_other);
+  if (blockersList.length) s += `\n- Блокери: ${blockersList.join(', ')}`;
+  const needsList = [];
+  if (p.needs && p.needs.length) needsList.push(...p.needs.map(n=>NDS[n]||n));
+  if (p.needs_other) needsList.push(p.needs_other);
+  if (needsList.length) s += `\n- Потрібна допомога з: ${needsList.join(', ')}`;
   if (p.monetization) s += `\n- Монетизація: ${MON[p.monetization]||p.monetization}`;
   if (p.goals) s += `\n- Цілі: ${p.goals}`;
   if ((p.blog_type === 'personal' || p.blog_type === 'lifestyle') && p.profession) {
@@ -3802,16 +3828,38 @@ async function renderMentor() {
   document.getElementById('mtag').textContent = USERS[CU].heroTag;
   document.getElementById('mtitle').innerHTML = 'Хто ти і що ти <span style="color:'+USERS[CU].color+'">даєш</span>';
   const el = document.getElementById('mentorcontent');
-  if(CU==='vika') { el.innerHTML = vikaM(); return; }
-  if(CU==='aluna') { el.innerHTML = alunaM(); return; }
-  if(CU==='dodo') { el.innerHTML = dodoM(); return; }
-  // default / demo / new user: check for AI-generated plan
+  // For real users (not demo), check for AI-generated plan first — it overrides hardcoded
   const plan = (CU === 'demo') ? null : await dbMentorPlan();
   if (plan && plan.positioning) {
     el.innerHTML = renderMentorPlan(plan);
-  } else {
-    el.innerHTML = genericM();
+    return;
   }
+  // No plan — show hardcoded (vika/aluna/dodo) or generic placeholder
+  if(CU==='vika') { el.innerHTML = vikaM() + aiPlanCTA(); return; }
+  if(CU==='aluna') { el.innerHTML = alunaM() + aiPlanCTA(); return; }
+  if(CU==='dodo') { el.innerHTML = dodoM() + aiPlanCTA(); return; }
+  el.innerHTML = genericM();
+}
+
+function aiPlanCTA() {
+  if (CU === 'demo') return '';
+  return `<div class="sec">
+    <div class="card" style="text-align:center;padding:22px;background:var(--bg)">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">Хочеш AI-варіант плану під твій профіль? Він тимчасово замінить цей базовий, але можна буде повернутись.</div>
+      <button class="btn btn-out btn-sm" id="generateMentorBtn" onclick="generateMentorPlan()">🤖 Згенерувати AI-варіант</button>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">Займе 1–2 хвилини</div>
+    </div>
+  </div>`;
+}
+
+async function deleteMentorPlan() {
+  if (!confirm('Видалити AI-план і повернутись до базового?')) return;
+  if (sbUser) {
+    try { await sb.from('mentor_plan').delete().eq('user_id', sbUser.id); } catch(e) { console.warn('delete plan', e); }
+  }
+  try { localStorage.removeItem(`ksk_${CU}_mentor_plan`); } catch(e) {}
+  renderMentor();
+  showToast('Повернулись до базового', 'success');
 }
 
 function genericM() {
