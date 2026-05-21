@@ -350,7 +350,7 @@ function startDemoTour() {
         element: '.nlinks',
         popover: {
           title: '🗂 Навігація',
-          description: '<b>Головна</b> — дашборд · <b>Прогрес</b> — статистика · <b>ШІ-чат</b> — наставник · <b>Нотатки</b> · <b>Навчання</b> — ментор, рефлексія, інструменти.',
+          description: '<b>Головна</b> — дашборд · <b>Прогрес</b> — статистика · <b>Навчання</b> — ментор, рефлексія, інструменти · <b>ШІ-чат</b> — наставник · <b>Нотатки</b>.',
           side: 'bottom', align: 'start',
         }
       },
@@ -448,12 +448,12 @@ function startDemoTour() {
         }
       },
 
-      // ── 12. Learning subnav ──────────────────────────────
+      // ── 12. Learning subnav overview ────────────────────
       {
-        element: '#subnav',
+        element: '#snb-mentor',
         popover: {
           title: '📚 Розділ Навчання',
-          description: 'П\'ять вкладок: <b>Ментор</b> · <b>Практика</b> · <b>Теорія</b> · <b>Рефлексія</b> · <b>Інструменти</b>. Розкажу про кожен.',
+          description: 'П\'ять підрозділів: <b>Ментор</b> · <b>Практика</b> · <b>Теорія</b> · <b>Рефлексія</b> · <b>Інструменти</b>. Зараз покажу кожен.',
           side: 'bottom', align: 'start',
         }
       },
@@ -465,22 +465,33 @@ function startDemoTour() {
           title: '🎯 Менторський план',
           description: 'ШІ генерує персональний план розвитку — на основі твого профілю, блокерів і цілей. Розбиває на тижні і конкретні дії.',
           side: 'top', align: 'center',
-          onNextClick: nav('reflect', 500),
+          onNextClick: nav('reflect', 550),
         }
       },
 
-      // ── 14. Reflect ──────────────────────────────────────
+      // ── 14. Reflect subnav tab ───────────────────────────
       {
-        element: '#reflectqs',
+        element: '#snb-reflect',
         popover: {
           title: '🪞 Рефлексія',
           description: 'Питання для глибшого розуміння себе як блогера. Відповідаєш — ШІ аналізує і дає зворотній зв\'язок. Щоразу нові питання.',
-          side: 'top', align: 'center',
-          onNextClick: nav('tools', 500),
+          side: 'bottom', align: 'start',
+          onNextClick: () => { goTab('reflect'); setTimeout(() => d.moveNext(), 500); return false; },
         }
       },
 
-      // ── 15. Tools ────────────────────────────────────────
+      // ── 15. Reflect content ──────────────────────────────
+      {
+        element: '#reflectqs',
+        popover: {
+          title: '💬 Питання для роздумів',
+          description: 'Обираєш питання, пишеш відповідь — і отримуєш чесний, підтримуючий аналіз від ШІ. Допомагає краще зрозуміти свої блокери.',
+          side: 'top', align: 'center',
+          onNextClick: nav('tools', 550),
+        }
+      },
+
+      // ── 16. Tools ────────────────────────────────────────
       {
         element: '#toolscontent',
         popover: {
@@ -491,7 +502,7 @@ function startDemoTour() {
         }
       },
 
-      // ── 16. Profile ──────────────────────────────────────
+      // ── 17. Profile ──────────────────────────────────────
       {
         element: '#profileBtn',
         popover: {
@@ -501,12 +512,13 @@ function startDemoTour() {
         }
       },
 
-      // ── 17. Final CTA ────────────────────────────────────
+      // ── 18. Final CTA ────────────────────────────────────
       {
         popover: {
           title: '🚀 Готово до старту!',
           description: 'Це лише демо — твої дані тут не зберігаються. <b>Зареєструйся безкоштовно</b> щоб мати власний акаунт, зберігати все і отримати персонального ШІ-наставника.',
           side: 'over', align: 'center',
+          onHighlighted: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
           onNextClick: () => {
             d.destroy();
             document.getElementById('auth-screen').style.display = 'flex';

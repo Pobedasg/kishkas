@@ -788,3 +788,11 @@ body.theme-modern .tab{padding-top:calc(60px + env(safe-area-inset-top,0px));}
 .sprout-tour .driver-popover-close-btn{color:#999;}
 .sprout-tour .driver-popover-progress-text{font-size:11px;color:#999;font-family:'Geologica',sans-serif;}
 @media(max-width:640px){.sprout-tour .driver-popover{max-width:88vw;}}
+/* Dark mode — use a light foggy overlay instead of dark one */
+body.dark .driver-overlay{background:rgba(200,210,255,.07)!important;}
+body.dark .sprout-tour .driver-popover{background:#1e1e24;color:#f0f0f0;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+body.dark .sprout-tour .driver-popover-title{color:#fff;}
+body.dark .sprout-tour .driver-popover-description{color:#bbb;}
+body.dark .sprout-tour .driver-popover-description b{color:#fff;}
+body.dark .sprout-tour .driver-popover-prev-btn{border-color:rgba(255,255,255,.18)!important;color:#aaa!important;}
+body.dark .sprout-tour .driver-popover-close-btn{color:#666;}
