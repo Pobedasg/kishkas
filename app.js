@@ -110,6 +110,11 @@ let authMode = 'login';
 // INIT
 // ══════════════════════════════════════════
 async function init() {
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      enterResetMode();
+    }
+  });
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     sbUser = session.user;
@@ -125,16 +130,92 @@ async function init() {
   }
 }
 
+function enterResetMode() {
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  authMode = 'reset';
+  document.querySelectorAll('.mtab').forEach(t => t.classList.remove('on'));
+  document.getElementById('areset-banner').style.display = 'block';
+  document.getElementById('aemail-wrap').style.display = 'none';
+  document.getElementById('apass-wrap').style.display = 'block';
+  document.getElementById('aname-wrap').style.display = 'none';
+  document.getElementById('aforgot-link').style.display = 'none';
+  document.getElementById('aforgot-ok').style.display = 'none';
+  document.getElementById('aerr').style.display = 'none';
+  document.querySelector('#apass-wrap .albl').textContent = 'Новий пароль';
+  document.getElementById('apass').placeholder = 'Мінімум 6 символів';
+  document.getElementById('apass').value = '';
+  const btn = document.getElementById('abtn');
+  btn.style.display = '';
+  btn.textContent = 'Зберегти пароль →';
+  btn.onclick = doResetPassword;
+}
+
+async function doResetPassword() {
+  const newPass = document.getElementById('apass').value;
+  const errEl = document.getElementById('aerr');
+  errEl.style.display = 'none';
+  if (!newPass || newPass.length < 6) {
+    errEl.textContent = 'Пароль має бути мінімум 6 символів';
+    errEl.style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('abtn');
+  btn.textContent = '...'; btn.disabled = true;
+  try {
+    const { error } = await sb.auth.updateUser({ password: newPass });
+    if (error) throw error;
+    showToast('Пароль оновлено!', 'success');
+    // Restore auth UI and sign in
+    restoreAuthUI();
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      sbUser = session.user;
+      CU = (session.user.user_metadata?.profile && USERS[session.user.user_metadata.profile])
+        ? session.user.user_metadata.profile : 'default';
+      loginSuccess();
+    }
+  } catch(e) {
+    errEl.textContent = e.message || 'Сталась помилка, спробуй ще раз';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Зберегти пароль →';
+  }
+}
+
+function restoreAuthUI() {
+  authMode = 'login';
+  document.getElementById('areset-banner').style.display = 'none';
+  document.getElementById('aemail-wrap').style.display = 'block';
+  document.getElementById('apass-wrap').style.display = 'block';
+  document.getElementById('aname-wrap').style.display = 'none';
+  document.getElementById('aforgot-link').style.display = 'block';
+  document.getElementById('aforgot-ok').style.display = 'none';
+  document.getElementById('aerr').style.display = 'none';
+  document.querySelector('#apass-wrap .albl').textContent = 'Пароль';
+  document.getElementById('apass').placeholder = '••••••';
+  const loginTab = document.querySelector('.mtab');
+  if (loginTab) loginTab.classList.add('on');
+  const btn = document.getElementById('abtn');
+  btn.style.display = '';
+  btn.textContent = 'Увійти →';
+  btn.onclick = doAuth;
+}
+
 function setMode(mode, el) {
   authMode = mode;
   document.querySelectorAll('.mtab').forEach(t => t.classList.remove('on'));
   if (el) el.classList.add('on');
   const isForgot = mode === 'forgot';
+  document.getElementById('areset-banner').style.display = 'none';
+  document.getElementById('aemail-wrap').style.display = 'block';
   document.getElementById('apass-wrap').style.display = isForgot ? 'none' : 'block';
   document.getElementById('aname-wrap').style.display = mode === 'reg' ? 'block' : 'none';
   document.getElementById('aforgot-link').style.display = (mode === 'login') ? 'block' : 'none';
   document.getElementById('aforgot-ok').style.display = 'none';
   document.getElementById('aerr').style.display = 'none';
+  document.querySelector('#apass-wrap .albl').textContent = 'Пароль';
+  document.getElementById('apass').placeholder = '••••••';
   const btn = document.getElementById('abtn');
   btn.style.display = '';
   if (isForgot) {

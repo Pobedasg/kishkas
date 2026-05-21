@@ -25,9 +25,14 @@
       <div class="mtab on" onclick="setMode('login',this)">Увійти</div>
       <div class="mtab" onclick="setMode('reg',this)">Реєстрація</div>
     </div>
+    <div id="areset-banner" style="display:none;background:rgba(255,107,157,.12);border:1px solid rgba(255,107,157,.3);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:rgba(255,255,255,.75);line-height:1.5;">
+        Введи новий пароль для свого акаунту
+      </div>
     <div>
-      <div class="albl">Email</div>
-      <input type="email" class="ainp" id="aemail" placeholder="your@email.com" onkeydown="if(event.key==='Enter')doAuth()">
+      <div id="aemail-wrap">
+        <div class="albl">Email</div>
+        <input type="email" class="ainp" id="aemail" placeholder="your@email.com" onkeydown="if(event.key==='Enter')doAuth()">
+      </div>
       <div id="apass-wrap">
         <div class="albl">Пароль</div>
         <input type="password" class="ainp" id="apass" placeholder="••••••" onkeydown="if(event.key==='Enter')doAuth()">
