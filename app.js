@@ -315,6 +315,13 @@ function startDemoTour() {
   if (!window.driver?.js?.driver) { console.warn('driver.js not loaded'); return; }
   const { driver } = window.driver.js;
 
+  // Helper: navigate to tab then advance tour after CSS transition settles
+  const nav = (tab, ms = 500) => () => {
+    goTab(tab);
+    setTimeout(() => d.moveNext(), ms);
+    return false;
+  };
+
   const d = driver({
     showProgress: true,
     progressText: '{{current}} / {{total}}',
@@ -322,81 +329,183 @@ function startDemoTour() {
     prevBtnText: '← Назад',
     doneBtnText: 'Готово 🚀',
     allowClose: true,
-    overlayOpacity: 0.55,
+    overlayOpacity: 0.5,
+    smoothScroll: true,
+    animate: true,
     popoverClass: 'sprout-tour',
     onDestroyStarted: () => { d.destroy(); localStorage.setItem('ksk_tour_seen', '1'); },
     steps: [
+
+      // ── 1. Welcome ──────────────────────────────────────
       {
         popover: {
           title: '👋 Ласкаво просимо в Sprout!',
-          description: 'Це твоя особиста платформа для зростання в соцмережах. Я покажу ключові можливості — займе ~2 хвилини.',
+          description: 'Це твоя особиста платформа для зростання в соцмережах. Покажу всі ключові можливості — займе ~3 хвилини.',
           side: 'over', align: 'center',
         }
       },
-      {
-        element: '#nbrand',
-        popover: {
-          title: '🌱 Логотип = Головна',
-          description: 'Натискаєш — завжди повертаєшся на головний дашборд з усіма віджетами.',
-          side: 'bottom', align: 'start',
-        }
-      },
+
+      // ── 2. Nav ──────────────────────────────────────────
       {
         element: '.nlinks',
         popover: {
           title: '🗂 Навігація',
-          description: 'Основні розділи: <b>Головна</b> — дашборд, <b>Прогрес</b> — статистика по місяцях, <b>ШІ-чат</b> — твій наставник, <b>Нотатки</b> — ідеї та плани.',
+          description: '<b>Головна</b> — дашборд · <b>Прогрес</b> — статистика · <b>ШІ-чат</b> — наставник · <b>Нотатки</b> · <b>Навчання</b> — ментор, рефлексія, інструменти.',
           side: 'bottom', align: 'start',
         }
       },
+
+      // ── 3. Dashboard ────────────────────────────────────
       {
         element: '#dashboardWidgets',
         popover: {
           title: '📊 Дашборд',
-          description: 'Тут збирається всього потроху: стрік, цілі, остання статистика, нотатки, аудиторія. Можна налаштувати які блоки показувати і переставляти їх місцями.',
+          description: 'Твій центр управління. Тут — стрік, цілі, остання статистика, нотатки. Кожен блок ти обираєш сам_а.',
           side: 'top', align: 'center',
-          onNextClick: () => { goTab('stats'); setTimeout(() => d.moveNext(), 400); return false; },
         }
       },
+
+      // ── 4. Dashboard settings ────────────────────────────
+      {
+        element: '#dashSettingsBtn',
+        popover: {
+          title: '⚙ Кастомізація дашборду',
+          description: 'Натискаєш — обираєш які віджети показувати. А самі блоки можна <b>перетягувати мишкою</b> і міняти місцями — порядок зберігається.',
+          side: 'top', align: 'start',
+        }
+      },
+
+      // ── 5. Drag hint ─────────────────────────────────────
+      {
+        element: '#dashDragHint',
+        popover: {
+          title: '↕ Drag & drop',
+          description: 'Хапаєш будь-який блок за заголовок і перетягуєш туди де зручніше. Твій особистий порядок зберігається між сесіями.',
+          side: 'top', align: 'start',
+          onNextClick: nav('stats'),
+        }
+      },
+
+      // ── 6. Stats form ────────────────────────────────────
       {
         element: '#statsForm',
         popover: {
-          title: '📈 Статистика',
-          description: 'Щомісяця вносиш цифри — підписники, охоплення, пости. Платформа малює графіки росту і показує динаміку по всіх платформах.',
+          title: '📈 Прогрес',
+          description: 'Щомісяця вносиш цифри по кожній платформі — підписники, охоплення, пости, Reels. Платформа будує графіки росту.',
           side: 'top', align: 'center',
-          onNextClick: () => { goTab('ai'); setTimeout(() => d.moveNext(), 400); return false; },
         }
       },
+
+      // ── 7. Stats chart ───────────────────────────────────
+      {
+        popover: {
+          title: '📉 Графіки росту',
+          description: 'Після того як внесеш хоч два місяці — з\'являються графіки підписників, охоплення і активності. Видно тренди і де просідання.',
+          side: 'over', align: 'center',
+          onNextClick: nav('ai'),
+        }
+      },
+
+      // ── 8. AI chips ──────────────────────────────────────
       {
         element: '#aichips',
         popover: {
           title: '🤖 ШІ-наставник',
-          description: 'Знає твою статистику і профіль — аналізує що йде добре, генерує ідеї для контенту, пише тексти і сценарії. Натисни чіп або введи своє питання.',
+          description: 'Швидкі запити — натискаєш чіп і ШІ одразу відповідає. Знає твою статистику, тему блогу і блокери.',
           side: 'bottom', align: 'start',
-          onNextClick: () => { goTab('notes'); setTimeout(() => d.moveNext(), 400); return false; },
         }
       },
+
+      // ── 9. AI input ──────────────────────────────────────
+      {
+        element: '#aiq',
+        popover: {
+          title: '💬 Свій запит',
+          description: 'Або пишеш своє питання: аналіз статистики, ідеї контенту, сценарій Reels, текст підпису. ШІ відповідає з урахуванням твого профілю.',
+          side: 'top', align: 'center',
+          onNextClick: nav('notes'),
+        }
+      },
+
+      // ── 10. Notes ────────────────────────────────────────
       {
         element: '#newnotebtn',
         popover: {
           title: '📝 Нотатки',
-          description: 'Записуй ідеї для постів, плани, тексти — все зберігається в твоєму акаунті. Потім можна передати ідею прямо в ШІ-чат.',
+          description: 'Записуй ідеї для постів, плани, чернетки текстів — все синхронізується між пристроями.',
           side: 'bottom', align: 'start',
-          onNextClick: () => { goTab('home'); setTimeout(() => d.moveNext(), 400); return false; },
         }
       },
+
+      // ── 11. Notes list ───────────────────────────────────
+      {
+        element: '#nlist',
+        popover: {
+          title: '🗒 Список нотаток',
+          description: 'Всі нотатки тут. Клік — відкриває редактор. Видалити можна хрестиком на картці нотатки.',
+          side: 'top', align: 'center',
+          onNextClick: nav('mentor', 600),
+        }
+      },
+
+      // ── 12. Learning subnav ──────────────────────────────
+      {
+        element: '#subnav',
+        popover: {
+          title: '📚 Розділ Навчання',
+          description: 'П\'ять вкладок: <b>Ментор</b> · <b>Практика</b> · <b>Теорія</b> · <b>Рефлексія</b> · <b>Інструменти</b>. Розкажу про кожен.',
+          side: 'bottom', align: 'start',
+        }
+      },
+
+      // ── 13. Mentor ───────────────────────────────────────
+      {
+        element: '#mentorcontent',
+        popover: {
+          title: '🎯 Менторський план',
+          description: 'ШІ генерує персональний план розвитку — на основі твого профілю, блокерів і цілей. Розбиває на тижні і конкретні дії.',
+          side: 'top', align: 'center',
+          onNextClick: nav('reflect', 500),
+        }
+      },
+
+      // ── 14. Reflect ──────────────────────────────────────
+      {
+        element: '#reflectqs',
+        popover: {
+          title: '🪞 Рефлексія',
+          description: 'Питання для глибшого розуміння себе як блогера. Відповідаєш — ШІ аналізує і дає зворотній зв\'язок. Щоразу нові питання.',
+          side: 'top', align: 'center',
+          onNextClick: nav('tools', 500),
+        }
+      },
+
+      // ── 15. Tools ────────────────────────────────────────
+      {
+        element: '#toolscontent',
+        popover: {
+          title: '🛠 Інструменти',
+          description: 'Перевірена добірка застосунків для монтажу, дизайну, аналітики і планування. З посиланнями і описами.',
+          side: 'top', align: 'center',
+          onNextClick: nav('home', 500),
+        }
+      },
+
+      // ── 16. Profile ──────────────────────────────────────
       {
         element: '#profileBtn',
         popover: {
-          title: '👤 Профіль',
-          description: 'Чим детальніше розкажеш про себе — тему блогу, блокери, цілі — тим точнішими будуть поради ШІ. Можна обрати свій акцентний колір.',
+          title: '👤 Твій профіль',
+          description: 'Вкажи тему блогу, платформи, блокери, цілі — і ШІ стане набагато точнішим. Можна змінити колір акценту та аватар.',
           side: 'bottom', align: 'end',
         }
       },
+
+      // ── 17. Final CTA ────────────────────────────────────
       {
         popover: {
-          title: '🚀 Готово!',
-          description: 'Це лише демо — твої дані тут не зберігаються. <b>Зареєструйся</b> щоб мати власний акаунт, зберігати статистику і нотатки, і отримати персонального ШІ-наставника.',
+          title: '🚀 Готово до старту!',
+          description: 'Це лише демо — твої дані тут не зберігаються. <b>Зареєструйся безкоштовно</b> щоб мати власний акаунт, зберігати все і отримати персонального ШІ-наставника.',
           side: 'over', align: 'center',
           onNextClick: () => {
             d.destroy();
@@ -405,6 +514,7 @@ function startDemoTour() {
           }
         }
       },
+
     ]
   });
 

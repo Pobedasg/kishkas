@@ -323,8 +323,8 @@ create policy if not exists "own_baseline" on baseline
         <button class="nudge-close" onclick="dismissProfileNudge()" aria-label="Закрити">✕</button>
       </div>
       <div id="dashboardWidgets" class="dash-grid"></div>
-      <button class="btn btn-out btn-sm" onclick="openDashSettings()" style="margin-top:16px">⚙ Налаштувати дашборд</button>
-      <div style="font-size:12px;color:var(--muted);margin-top:8px">Перетягни блоки щоб змінити порядок — він збережеться.</div>
+      <button id="dashSettingsBtn" class="btn btn-out btn-sm" onclick="openDashSettings()" style="margin-top:16px">⚙ Налаштувати дашборд</button>
+      <div id="dashDragHint" style="font-size:12px;color:var(--muted);margin-top:8px">Перетягни блоки щоб змінити порядок — він збережеться.</div>
     </div>
   </div>
 
