@@ -1939,6 +1939,13 @@ function toggleChatSidebar(forceState) {
 async function sendChat() {
   const q = document.getElementById('aiq').value.trim();
   if (!q) return;
+  if (!sbUser) {
+    document.getElementById('aiq').value = '';
+    addMsg('user', q);
+    const el = addMsg('ai', '');
+    el.innerHTML = '🔒 ШІ-чат доступний тільки зареєстрованим користувачам.<br><br><button onclick="document.getElementById(\'auth-screen\').style.display=\'flex\';document.getElementById(\'app\').style.display=\'none\'" style="background:var(--ac);color:#fff;border:none;padding:8px 16px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Зареєструватись →</button>';
+    return;
+  }
   document.getElementById('aiq').value = '';
   document.getElementById('aist').textContent = '⏳';
   document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
