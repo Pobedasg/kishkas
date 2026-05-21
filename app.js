@@ -293,6 +293,122 @@ function enterDemo() {
   if (!localStorage.getItem(`ksk_demo_notes`)) lsave('notes', DEMO_NOTES);
   if (!localStorage.getItem(`ksk_demo_stats`)) lsave('stats', DEMO_STATS);
   loginSuccess();
+  // Offer tour unless already seen
+  if (!localStorage.getItem('ksk_tour_seen')) {
+    setTimeout(showTourOffer, 800);
+  }
+}
+
+function showTourOffer() {
+  const el = document.getElementById('tour-offer');
+  if (el) { el.style.display = 'flex'; }
+}
+
+function closeTourOffer() {
+  const el = document.getElementById('tour-offer');
+  if (el) el.style.display = 'none';
+  localStorage.setItem('ksk_tour_seen', '1');
+}
+
+function startDemoTour() {
+  closeTourOffer();
+  if (!window.driver?.js?.driver) { console.warn('driver.js not loaded'); return; }
+  const { driver } = window.driver.js;
+
+  const d = driver({
+    showProgress: true,
+    progressText: '{{current}} / {{total}}',
+    nextBtnText: 'Далі →',
+    prevBtnText: '← Назад',
+    doneBtnText: 'Готово 🚀',
+    allowClose: true,
+    overlayOpacity: 0.55,
+    popoverClass: 'sprout-tour',
+    onDestroyStarted: () => { d.destroy(); localStorage.setItem('ksk_tour_seen', '1'); },
+    steps: [
+      {
+        popover: {
+          title: '👋 Ласкаво просимо в Sprout!',
+          description: 'Це твоя особиста платформа для зростання в соцмережах. Я покажу ключові можливості — займе ~2 хвилини.',
+          side: 'over', align: 'center',
+        }
+      },
+      {
+        element: '#nbrand',
+        popover: {
+          title: '🌱 Логотип = Головна',
+          description: 'Натискаєш — завжди повертаєшся на головний дашборд з усіма віджетами.',
+          side: 'bottom', align: 'start',
+        }
+      },
+      {
+        element: '.nlinks',
+        popover: {
+          title: '🗂 Навігація',
+          description: 'Основні розділи: <b>Головна</b> — дашборд, <b>Прогрес</b> — статистика по місяцях, <b>ШІ-чат</b> — твій наставник, <b>Нотатки</b> — ідеї та плани.',
+          side: 'bottom', align: 'start',
+        }
+      },
+      {
+        element: '#dashboardWidgets',
+        popover: {
+          title: '📊 Дашборд',
+          description: 'Тут збирається всього потроху: стрік, цілі, остання статистика, нотатки, аудиторія. Можна налаштувати які блоки показувати і переставляти їх місцями.',
+          side: 'top', align: 'center',
+          onNextClick: () => { goTab('stats'); setTimeout(() => d.moveNext(), 400); return false; },
+        }
+      },
+      {
+        element: '#statsForm',
+        popover: {
+          title: '📈 Статистика',
+          description: 'Щомісяця вносиш цифри — підписники, охоплення, пости. Платформа малює графіки росту і показує динаміку по всіх платформах.',
+          side: 'top', align: 'center',
+          onNextClick: () => { goTab('ai'); setTimeout(() => d.moveNext(), 400); return false; },
+        }
+      },
+      {
+        element: '#aichips',
+        popover: {
+          title: '🤖 ШІ-наставник',
+          description: 'Знає твою статистику і профіль — аналізує що йде добре, генерує ідеї для контенту, пише тексти і сценарії. Натисни чіп або введи своє питання.',
+          side: 'bottom', align: 'start',
+          onNextClick: () => { goTab('notes'); setTimeout(() => d.moveNext(), 400); return false; },
+        }
+      },
+      {
+        element: '#newnotebtn',
+        popover: {
+          title: '📝 Нотатки',
+          description: 'Записуй ідеї для постів, плани, тексти — все зберігається в твоєму акаунті. Потім можна передати ідею прямо в ШІ-чат.',
+          side: 'bottom', align: 'start',
+          onNextClick: () => { goTab('home'); setTimeout(() => d.moveNext(), 400); return false; },
+        }
+      },
+      {
+        element: '#profileBtn',
+        popover: {
+          title: '👤 Профіль',
+          description: 'Чим детальніше розкажеш про себе — тему блогу, блокери, цілі — тим точнішими будуть поради ШІ. Можна обрати свій акцентний колір.',
+          side: 'bottom', align: 'end',
+        }
+      },
+      {
+        popover: {
+          title: '🚀 Готово!',
+          description: 'Це лише демо — твої дані тут не зберігаються. <b>Зареєструйся</b> щоб мати власний акаунт, зберігати статистику і нотатки, і отримати персонального ШІ-наставника.',
+          side: 'over', align: 'center',
+          onNextClick: () => {
+            d.destroy();
+            document.getElementById('auth-screen').style.display = 'flex';
+            document.getElementById('app').style.display = 'none';
+          }
+        }
+      },
+    ]
+  });
+
+  d.drive();
 }
 
 function loginSuccess() {

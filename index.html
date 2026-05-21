@@ -9,8 +9,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/driver.js@1/dist/driver.js.iife.js"></script>
 <link rel="icon" id="favicon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌱%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1/dist/driver.css">
 </head>
 <body>
 
@@ -593,5 +595,13 @@ create policy if not exists "own_baseline" on baseline
 </div>
 
 <script src="app.js"></script>
+
+<!-- TOUR OFFER BANNER -->
+<div id="tour-offer" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:8000;background:var(--ink);color:var(--bg);border-radius:16px;padding:16px 20px;display:none;align-items:center;gap:14px;box-shadow:0 12px 40px rgba(0,0,0,.25);max-width:92%;white-space:nowrap;animation:toastIn .3s ease;">
+  <span style="font-size:18px">👋</span>
+  <span style="font-size:14px;font-weight:500">Хочеш екскурсію по платформі?</span>
+  <button onclick="startDemoTour()" style="background:var(--ac);color:#fff;border:none;padding:8px 16px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Так, покажи →</button>
+  <button onclick="closeTourOffer()" style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.7);border:none;padding:8px 12px;border-radius:9px;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap">Пропустити</button>
+</div>
 </body>
 </html>
