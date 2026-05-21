@@ -2650,10 +2650,9 @@ async function saveNote() {
     ? { id: Date.now().toString(), title, content, date: new Date().toLocaleDateString('uk-UA'), _new: true }
     : { id: curNoteId, title, content };
   await dbSaveNote(note);
-  if (curNoteId === '__new__') curNoteId = note.id;
-  await loadNotes();
+  closeNote();
   renderHome();
-  alert('Збережено ✓');
+  showToast('✓ Збережено', 'success');
 }
 
 async function delNote() {
