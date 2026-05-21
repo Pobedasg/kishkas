@@ -204,15 +204,14 @@ body.theme-modern .chat-list-item:hover{background:var(--border);color:var(--ink
 .modal-close-btn:hover{background:var(--border);color:var(--ink);}
 
 /* ── iOS-style dialogs ───────────────────────────────── */
-.ios-dlg{display:none;position:fixed;inset:0;z-index:9700;align-items:center;justify-content:center;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
-.ios-dlg[style*="flex"]{display:flex;}
-.ios-dlg-box{background:var(--card);border-radius:14px;width:270px;max-width:88vw;overflow:hidden;box-shadow:0 28px 70px rgba(0,0,0,.22);animation:iosDlgIn .2s cubic-bezier(.34,1.4,.64,1);}
+.ios-dlg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);background:rgba(0,0,0,.4);z-index:9999;}
+.ios-dlg-box{width:270px;background:var(--card);border-radius:14px;overflow:hidden;box-shadow:0 28px 70px rgba(0,0,0,.22);animation:iosDlgIn .2s cubic-bezier(.34,1.4,.64,1);}
 @keyframes iosDlgIn{from{opacity:0;transform:scale(.88);}to{opacity:1;transform:scale(1);}}
 .ios-dlg-body{padding:20px 16px 14px;text-align:center;}
 .ios-dlg-title{font-size:17px;font-weight:600;color:var(--ink);margin-bottom:5px;font-family:'Geologica',sans-serif;}
 .ios-dlg-desc{font-size:13px;color:var(--muted);line-height:1.45;}
 .ios-dlg-btns{display:flex;border-top:1px solid var(--border);}
-.ios-dlg-btn{flex:1;padding:15px 8px;border:none;background:none;font-size:16px;font-family:'Geologica',sans-serif;cursor:pointer;color:var(--ac);font-weight:400;transition:background .12s;}
+.ios-dlg-btn{flex:1;padding:15px 8px;border:none;background:none;font-size:16px;font-family:'Geologica',sans-serif;cursor:pointer;color:white;font-weight:400;transition:background .12s;}
 .ios-dlg-btn+.ios-dlg-btn{border-left:1px solid var(--border);}
 .ios-dlg-btn:hover{background:var(--border);}
 .ios-dlg-btn-destructive{color:#ef4444;font-weight:600;}
