@@ -548,10 +548,12 @@ function loginSuccess() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
 
-  // Demo mode: back button, no confirmation needed
+  // Demo mode: back button + tour button
   const nusrBtn = document.getElementById('nusr');
   nusrBtn.textContent = (CU === 'demo') ? '← вийти' : 'вийти';
   nusrBtn.onclick = doLogout;
+  const tourBtn = document.getElementById('tourBtn');
+  if (tourBtn) tourBtn.style.display = (CU === 'demo') ? 'inline-flex' : 'none';
 
   document.getElementById('nbrand').style.color = accentColor;
   document.getElementById('nbemoji').textContent = cached?.display_emoji || u.emoji;
