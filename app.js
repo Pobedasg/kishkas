@@ -550,7 +550,7 @@ function loginSuccess() {
 
   // Demo mode: back button + tour button
   const nusrBtn = document.getElementById('nusr');
-  nusrBtn.textContent = (CU === 'demo') ? '← вийти' : 'вийти';
+  nusrBtn.textContent = 'вийти';
   nusrBtn.onclick = doLogout;
   const tourBtn = document.getElementById('tourBtn');
   if (tourBtn) tourBtn.style.display = (CU === 'demo') ? 'inline-flex' : 'none';
