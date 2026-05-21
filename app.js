@@ -541,10 +541,6 @@ function loginSuccess() {
   const accentColor = cached?.accent_color || u.color;
   document.documentElement.style.setProperty('--ac', accentColor);
 
-  // Show veil over stale content, then reveal cleanly after update
-  const veil = document.getElementById('app-veil');
-  if (veil) { veil.style.display = 'block'; veil.style.opacity = '1'; }
-
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
 
@@ -1125,14 +1121,9 @@ function showConfirm({ title, desc = '', yesText = 'Так', onYes }) {
   document.getElementById('confirm-modal').style.display = 'flex';
 }
 
-function liftVeil() {
-  const veil = document.getElementById('app-veil');
-  if (veil) { veil.style.opacity = '0'; setTimeout(() => { veil.style.display = 'none'; }, 220); }
-}
 
 async function applyProfileOverrides() {
-  try {
-    const p = await dbProfile();
+  const p = await dbProfile();
     const u = USERS[CU] || {};
     const defaultEmoji = u.emoji || '🌱';
     const defaultName = u.brand || u.name || 'користувач';
@@ -1173,9 +1164,6 @@ async function applyProfileOverrides() {
         display_emoji: p?.display_emoji || u2.emoji,
         accent_color: p?.accent_color || u2.color,
       });
-    }
-  } finally {
-    liftVeil();
   }
 }
 
