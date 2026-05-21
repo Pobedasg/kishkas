@@ -560,9 +560,9 @@ function loginSuccess() {
   document.getElementById('hbg').textContent = u.name.toLowerCase();
   document.getElementById('hpills').innerHTML = u.pills.map((p,i)=>`<span class="pill${i===0?' ac':''}">${p}</span>`).join('');
   document.getElementById('aichips').innerHTML = u.chips.map((c,i)=>`<div class="chip" onclick="setChip(this,'${u.chipTexts[i].replace(/'/g,"\\'")}')">${c}</div>`).join('');
-  document.getElementById('newnotebtn').style.background = u.color;
-  document.getElementById('statsavebtn').style.background = u.color;
-  document.getElementById('aisend').style.background = u.color;
+  document.getElementById('newnotebtn').style.background = accentColor;
+  document.getElementById('statsavebtn').style.background = accentColor;
+  document.getElementById('aisend').style.background = accentColor;
   renderMentor();
   renderTheory();
   renderTools();
@@ -602,6 +602,9 @@ async function performLogout() {
   document.documentElement.style.setProperty('--ac', '#22C55E');
   document.body.classList.remove('theme-modern', 'dark', 'nav-classic');
   document.querySelectorAll('.pcard').forEach(c => c.classList.remove('sel'));
+  // Reset title and favicon to platform defaults
+  document.title = 'Sprout · платформа для росту';
+  setEmojiFavicon('🌱');
   goTab('home');
 }
 
@@ -1099,16 +1102,33 @@ function setEmojiFavicon(emoji) {
   link.href = url;
 }
 
+function showConfirm({ icon = '', title, desc = '', yesText = 'Так', yesStyle = 'background:#ef4444;color:#fff', onYes }) {
+  document.getElementById('confirm-icon').textContent = icon;
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-desc').textContent = desc;
+  const btn = document.getElementById('confirm-yes-btn');
+  btn.textContent = yesText;
+  btn.style.cssText = yesStyle;
+  btn.onclick = () => { document.getElementById('confirm-modal').style.display = 'none'; onYes(); };
+  document.getElementById('confirm-modal').style.display = 'flex';
+}
+
+function liftVeil() {
+  const veil = document.getElementById('app-veil');
+  if (veil) { veil.style.opacity = '0'; setTimeout(() => { veil.style.display = 'none'; }, 220); }
+}
+
 async function applyProfileOverrides() {
-  const p = await dbProfile();
-  const u = USERS[CU] || {};
-  const defaultEmoji = u.emoji || '🌱';
-  const defaultName = u.brand || u.name || 'користувач';
-  if (!p) {
-    setEmojiFavicon(defaultEmoji);
-    document.title = `${defaultName} · платформа для росту`;
-    return;
-  }
+  try {
+    const p = await dbProfile();
+    const u = USERS[CU] || {};
+    const defaultEmoji = u.emoji || '🌱';
+    const defaultName = u.brand || u.name || 'користувач';
+    if (!p) {
+      setEmojiFavicon(defaultEmoji);
+      document.title = `${defaultName} · платформа для росту`;
+      return;
+    }
   if (p.display_name) {
     const nb = document.getElementById('nbname');
     if (nb) nb.textContent = p.display_name.toLowerCase();
@@ -1131,20 +1151,20 @@ async function applyProfileOverrides() {
     if (htag) htag.textContent = hero.tag;
     if (htitle) htitle.innerHTML = hero.title;
   }
-  // Auto-migrate hardcoded profile data to Supabase on first login
-  if (['vika','aluna','dodo'].includes(CU) && sbUser && (!p || !p.ai_context)) {
-    const u = USERS[CU];
-    dbSaveProfile({
-      ...(p || {}),
-      ai_context: u.aiCtx,
-      display_name: p?.display_name || u.name,
-      display_emoji: p?.display_emoji || u.emoji,
-      accent_color: p?.accent_color || u.color,
-    });
+    // Auto-migrate hardcoded profile data to Supabase on first login
+    if (['vika','aluna','dodo'].includes(CU) && sbUser && (!p || !p.ai_context)) {
+      const u2 = USERS[CU];
+      dbSaveProfile({
+        ...(p || {}),
+        ai_context: u2.aiCtx,
+        display_name: p?.display_name || u2.name,
+        display_emoji: p?.display_emoji || u2.emoji,
+        accent_color: p?.accent_color || u2.color,
+      });
+    }
+  } finally {
+    liftVeil();
   }
-  // Lift the transition veil now that all overrides are applied
-  const veil = document.getElementById('app-veil');
-  if (veil) { veil.style.opacity = '0'; setTimeout(() => { veil.style.display = 'none'; }, 220); }
 }
 
 function buildPersonalizedHero(p) {
@@ -1828,17 +1848,24 @@ async function saveNote() {
   showToast('✓ Збережено', 'success');
 }
 
-async function delNoteById(id) {
-  if (!confirm('Видалити нотатку назавжди?')) return;
-  await dbDelNote(id);
-  if (curNoteId === id) closeNote();
-  await loadNotes();
-  renderHome();
+function delNoteById(id) {
+  showConfirm({
+    icon: '🗑',
+    title: 'Видалити нотатку?',
+    desc: 'Це не можна скасувати.',
+    yesText: 'Так, видалити',
+    onYes: async () => {
+      await dbDelNote(id);
+      if (curNoteId === id) closeNote();
+      await loadNotes();
+      renderHome();
+    }
+  });
 }
 
-async function delNote() {
-  if (!curNoteId || !confirm('Видалити?')) return;
-  await delNoteById(curNoteId);
+function delNote() {
+  if (!curNoteId) return;
+  delNoteById(curNoteId);
 }
 
 
@@ -2251,11 +2278,15 @@ async function renameCurrentChat() {
   renderChatList();
 }
 
-async function deleteCurrentChat() {
+function deleteCurrentChat() {
   if (!currentChatId) return;
-  if (!confirm('Видалити цей чат назавжди?')) return;
-  await dbDelChat(currentChatId);
-  newChat();
+  showConfirm({
+    icon: '💬',
+    title: 'Видалити чат?',
+    desc: 'Всі повідомлення будуть видалені назавжди.',
+    yesText: 'Так, видалити',
+    onYes: async () => { await dbDelChat(currentChatId); newChat(); }
+  });
 }
 
 function toggleChatSidebar(forceState) {
