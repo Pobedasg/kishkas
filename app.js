@@ -314,13 +314,47 @@ function startDemoTour() {
   closeTourOffer();
   if (!window.driver?.js?.driver) { console.warn('driver.js not loaded'); return; }
   const { driver } = window.driver.js;
+  const isMobile = window.innerWidth < 900;
 
-  // Helper: navigate to tab then advance tour after CSS transition settles
   const nav = (tab, ms = 500) => () => {
+    if (isMobile) closeMenu();
     goTab(tab);
     setTimeout(() => d.moveNext(), ms);
     return false;
   };
+
+  // Mobile: simplified tour — all centered popovers, no element targeting
+  if (isMobile) {
+    const md = driver({
+      showProgress: true,
+      progressText: '{{current}} / {{total}}',
+      nextBtnText: 'Далі →',
+      prevBtnText: 'Назад',
+      doneBtnText: 'Готово 🚀',
+      allowClose: true,
+      overlayOpacity: 0,
+      popoverClass: 'sprout-tour',
+      onDestroyStarted: () => { md.destroy(); localStorage.setItem('ksk_tour_seen', '1'); },
+      steps: [
+        { popover: { title: '👋 Ласкаво просимо!', description: 'Це Sprout — платформа для зростання в соцмережах. Покажу що тут є. Гортай стрілками.', side:'over', align:'center' } },
+        { popover: { title: '🗂 Навігація', description: '<b>Головна</b> — дашборд · <b>Прогрес</b> — статистика · <b>Навчання</b> — ментор, рефлексія, інструменти · <b>ШІ-чат</b> · <b>Нотатки</b>', side:'over', align:'center' } },
+        { popover: { title: '📊 Дашборд', description: 'Головна — це твій центр: стрік, цілі, нотатки, статистика. Блоки можна обирати і переставляти.', side:'over', align:'center' } },
+        { popover: { title: '📈 Прогрес', description: 'Вносиш цифри щомісяця — підписники, охоплення, пости. З\'являються графіки росту по всіх платформах.', side:'over', align:'center',
+          onNextClick: () => { goTab('ai'); setTimeout(() => md.moveNext(), 400); return false; } } },
+        { popover: { title: '🤖 ШІ-наставник', description: 'Знає твою статистику і профіль — аналізує, генерує ідеї, пише тексти. Натискаєш чіп або пишеш своє питання.', side:'over', align:'center',
+          onNextClick: () => { goTab('notes'); setTimeout(() => md.moveNext(), 400); return false; } } },
+        { popover: { title: '📝 Нотатки', description: 'Записуй ідеї для постів, плани, чернетки. Все синхронізується між пристроями.', side:'over', align:'center',
+          onNextClick: () => { goTab('mentor'); setTimeout(() => md.moveNext(), 500); return false; } } },
+        { popover: { title: '📚 Навчання', description: '<b>Ментор</b> — персональний план від ШІ · <b>Практика</b> · <b>Теорія</b> · <b>Рефлексія</b> · <b>Інструменти</b> — перевірені застосунки.', side:'over', align:'center',
+          onNextClick: () => { goTab('home'); setTimeout(() => md.moveNext(), 400); return false; } } },
+        { popover: { title: '👤 Профіль', description: 'Заповни тему блогу, блокери, цілі — і ШІ стане точнішим. Можна обрати свій акцентний колір.', side:'over', align:'center' } },
+        { popover: { title: '🚀 Готово!', description: 'Це демо — дані не зберігаються. <b>Зареєструйся</b> щоб мати власний акаунт і персонального ШІ-наставника.', side:'over', align:'center',
+          onNextClick: () => { md.destroy(); document.getElementById('auth-screen').style.display='flex'; document.getElementById('app').style.display='none'; } } },
+      ]
+    });
+    md.drive();
+    return;
+  }
 
   const d = driver({
     showProgress: true,
@@ -1112,6 +1146,20 @@ function setEmojiFavicon(emoji) {
   link.href = url;
 }
 
+function requireAuth() {
+  if (sbUser) return true;
+  showConfirm({
+    title: 'Потрібна реєстрація',
+    desc: 'Ця функція доступна тільки зареєстрованим користувачам.',
+    yesText: 'Зареєструватись',
+    onYes: () => {
+      document.getElementById('auth-screen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+    }
+  });
+  return false;
+}
+
 function showConfirm({ title, desc = '', yesText = 'Так', onYes }) {
   document.getElementById('confirm-title').textContent = title;
   document.getElementById('confirm-desc').textContent = desc;
@@ -1808,6 +1856,7 @@ async function loadNotes() {
 }
 
 function newNote() {
+  if (!requireAuth()) return;
   curNoteId = '__new__';
   document.getElementById('nttl').value='';
   document.getElementById('ntxt').value='';
@@ -1829,6 +1878,7 @@ async function openNote(id) {
 }
 
 async function saveNote() {
+  if (!requireAuth()) return;
   const titleEl = document.getElementById('nttl');
   const title = titleEl.value.trim();
   if (!title) {
@@ -1850,8 +1900,8 @@ async function saveNote() {
 }
 
 function delNoteById(id) {
+  if (!requireAuth()) return;
   showConfirm({
-    icon: '🗑',
     title: 'Видалити нотатку?',
     desc: 'Це не можна скасувати.',
     yesText: 'Так, видалити',
@@ -1997,6 +2047,7 @@ function cancelEditMonth() {
 }
 
 async function addMonth() {
+  if (!requireAuth()) return;
   const n = id => parseInt(document.getElementById(id).value) || 0;
   const entry = {
     id: editingMonthId || Date.now().toString(),
@@ -2017,13 +2068,20 @@ async function addMonth() {
   alert('Збережено ✓');
 }
 
-async function delMonthById(id) {
-  if (!confirm('Видалити місяць?')) return;
-  await dbDelStat(id);
-  if (editingMonthId === id) cancelEditMonth();
-  await loadStats();
-  renderCharts();
-  renderHome();
+function delMonthById(id) {
+  if (!requireAuth()) return;
+  showConfirm({
+    title: 'Видалити місяць?',
+    desc: 'Статистику за цей місяць буде видалено.',
+    yesText: 'Видалити',
+    onYes: async () => {
+      await dbDelStat(id);
+      if (editingMonthId === id) cancelEditMonth();
+      await loadStats();
+      renderCharts();
+      renderHome();
+    }
+  });
 }
 
 async function renderCharts() {
