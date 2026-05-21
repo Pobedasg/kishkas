@@ -413,13 +413,27 @@ function startDemoTour() {
 
 function loginSuccess() {
   const u = USERS[CU];
-  document.documentElement.style.setProperty('--ac', u.color);
+
+  // Apply cached accent color immediately to avoid flash of default green
+  const cached = lload('profile', null);
+  const accentColor = cached?.accent_color || u.color;
+  document.documentElement.style.setProperty('--ac', accentColor);
+
+  // Show veil over stale content, then reveal cleanly after update
+  const veil = document.getElementById('app-veil');
+  if (veil) { veil.style.display = 'block'; veil.style.opacity = '1'; }
+
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  document.getElementById('nusr').textContent = 'вийти';
-  document.getElementById('nbrand').style.color = u.color;
-  document.getElementById('nbemoji').textContent = u.emoji;
-  document.getElementById('nbname').textContent = (u.brand || u.name).toLowerCase();
+
+  // Demo mode: back button, no confirmation needed
+  const nusrBtn = document.getElementById('nusr');
+  nusrBtn.textContent = (CU === 'demo') ? '← вийти' : 'вийти';
+  nusrBtn.onclick = doLogout;
+
+  document.getElementById('nbrand').style.color = accentColor;
+  document.getElementById('nbemoji').textContent = cached?.display_emoji || u.emoji;
+  document.getElementById('nbname').textContent = (cached?.display_name || u.brand || u.name).toLowerCase();
   document.title = `${u.brand || u.name} · платформа для росту`;
   document.body.classList.toggle('nav-classic', u.navStyle === 'classic');
   document.body.classList.toggle('theme-modern', u.design === 'modern');
@@ -453,17 +467,31 @@ function loginSuccess() {
   document.getElementById('styr').value = new Date().getFullYear();
 }
 
-async function doLogout() {
-  if (!confirm('Вийти?')) return;
+function doLogout() {
+  if (CU === 'demo' || !sbUser) {
+    // Demo: just return to auth, no confirmation
+    performLogout();
+    return;
+  }
+  // Real user: show custom confirmation modal
+  const modal = document.getElementById('logout-modal');
+  modal.style.display = 'flex';
+  document.getElementById('logout-confirm-btn').onclick = () => {
+    modal.style.display = 'none';
+    performLogout();
+  };
+}
+
+async function performLogout() {
   if (sbUser) await sb.auth.signOut();
   CU = null; sbUser = null; curNoteId = null; chatHistory = [];
   Object.values(charts).forEach(c => c && c.destroy && c.destroy());
   charts = {};
   document.getElementById('app').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'flex';
-  document.documentElement.style.setProperty('--ac','#FF6B9D');
-  document.body.classList.remove('theme-modern','dark','nav-classic');
-  document.querySelectorAll('.pcard').forEach(c=>c.classList.remove('sel'));
+  document.documentElement.style.setProperty('--ac', '#22C55E');
+  document.body.classList.remove('theme-modern', 'dark', 'nav-classic');
+  document.querySelectorAll('.pcard').forEach(c => c.classList.remove('sel'));
   goTab('home');
 }
 
@@ -1004,6 +1032,9 @@ async function applyProfileOverrides() {
       accent_color: p?.accent_color || u.color,
     });
   }
+  // Lift the transition veil now that all overrides are applied
+  const veil = document.getElementById('app-veil');
+  if (veil) { veil.style.opacity = '0'; setTimeout(() => { veil.style.display = 'none'; }, 220); }
 }
 
 function buildPersonalizedHero(p) {
