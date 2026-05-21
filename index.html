@@ -284,35 +284,6 @@ create policy if not exists "own_baseline" on baseline
     </button>
     <button class="nusr" id="nusr" onclick="doLogout()">вийти</button>
 
-<!-- LOGOUT CONFIRM -->
-<div class="ios-dlg" id="logout-modal" style="display:none">
-  <div class="ios-dlg-box">
-    <div class="ios-dlg-body">
-      <div class="ios-dlg-title">Виходимо?</div>
-      <div class="ios-dlg-desc">Твої дані збережені — зможеш повернутись будь-коли</div>
-    </div>
-    <div class="ios-dlg-btns">
-      <button id="logout-confirm-btn" class="ios-dlg-btn ios-dlg-btn-destructive">Вийти</button>
-      <button class="ios-dlg-btn" onclick="document.getElementById('logout-modal').style.display='none'">Скасувати</button>
-    </div>
-  </div>
-</div>
-
-<!-- GENERIC CONFIRM MODAL -->
-<div class="ios-dlg" id="confirm-modal" style="display:none">
-  <div class="ios-dlg-box">
-    <div class="ios-dlg-body">
-      <div class="ios-dlg-title" id="confirm-title"></div>
-      <div class="ios-dlg-desc" id="confirm-desc"></div>
-    </div>
-    <div class="ios-dlg-btns">
-      <button id="confirm-yes-btn" class="ios-dlg-btn ios-dlg-btn-destructive"></button>
-      <button class="ios-dlg-btn" onclick="document.getElementById('confirm-modal').style.display='none'">Скасувати</button>
-    </div>
-  </div>
-</div>
-
-<!-- APP TRANSITION OVERLAY -->
   </nav>
   <div class="nav-backdrop" id="navbackdrop" onclick="closeMenu()"></div>
   <div class="subnav" id="subnav" style="display:none">
@@ -623,6 +594,33 @@ create policy if not exists "own_baseline" on baseline
       <div class="stitle">Інструменти</div>
       <div class="cl cl-dk">Перевірені застосунки для монтажу, дизайну і аналітики.</div>
       <div id="toolscontent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- DIALOGS — outside nav and #app to avoid backdrop-filter stacking context -->
+<div class="ios-dlg" id="logout-modal" style="display:none">
+  <div class="ios-dlg-box">
+    <div class="ios-dlg-body">
+      <div class="ios-dlg-title">Виходимо?</div>
+      <div class="ios-dlg-desc">Твої дані збережені — зможеш повернутись будь-коли</div>
+    </div>
+    <div class="ios-dlg-btns">
+      <button id="logout-confirm-btn" class="ios-dlg-btn ios-dlg-btn-destructive">Вийти</button>
+      <button class="ios-dlg-btn" onclick="document.getElementById('logout-modal').style.display='none'">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<div class="ios-dlg" id="confirm-modal" style="display:none">
+  <div class="ios-dlg-box">
+    <div class="ios-dlg-body">
+      <div class="ios-dlg-title" id="confirm-title"></div>
+      <div class="ios-dlg-desc" id="confirm-desc"></div>
+    </div>
+    <div class="ios-dlg-btns">
+      <button id="confirm-yes-btn" class="ios-dlg-btn ios-dlg-btn-destructive"></button>
+      <button class="ios-dlg-btn" onclick="document.getElementById('confirm-modal').style.display='none'">Скасувати</button>
     </div>
   </div>
 </div>
