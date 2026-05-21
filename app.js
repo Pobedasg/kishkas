@@ -265,8 +265,11 @@ async function doAuth() {
         options: { data: { profile: 'default' } }
       });
       if (error) throw error;
-      if (data.user) { sbUser = data.user; CU = 'default'; loginSuccess(); }
-      else showErr('Перевір email для підтвердження');
+      if (data.session) {
+        sbUser = data.user; CU = 'default'; loginSuccess();
+      } else {
+        showErr('Перевір пошту — надіслали листа для підтвердження акаунту');
+      }
     } else {
       const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
       if (error) throw error;
