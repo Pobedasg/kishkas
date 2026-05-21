@@ -876,6 +876,17 @@ async function applyProfileOverrides() {
     if (htag) htag.textContent = hero.tag;
     if (htitle) htitle.innerHTML = hero.title;
   }
+  // Auto-migrate hardcoded profile data to Supabase on first login
+  if (['vika','aluna','dodo'].includes(CU) && sbUser && (!p || !p.ai_context)) {
+    const u = USERS[CU];
+    dbSaveProfile({
+      ...(p || {}),
+      ai_context: u.aiCtx,
+      display_name: p?.display_name || u.name,
+      display_emoji: p?.display_emoji || u.emoji,
+      accent_color: p?.accent_color || u.color,
+    });
+  }
 }
 
 function buildPersonalizedHero(p) {
@@ -1221,7 +1232,9 @@ function renderMentorPlan(plan) {
 
 async function getProfileContext() {
   const p = await dbProfile();
-  if (!p) return '';
+  // Base persona: Supabase profile's ai_context > hardcoded USERS entry > empty
+  const baseCtx = p?.ai_context || USERS[CU]?.aiCtx || '';
+  if (!p) return baseCtx;
   const BLK = Object.fromEntries(PROFILE_BLOCKERS.map(b=>[b.v,b.l]));
   const NDS = Object.fromEntries(PROFILE_NEEDS.map(b=>[b.v,b.l]));
   const FE = {'<6m':'менше 6 місяців','6m-1y':'6 місяців – 1 рік','1-3y':'1–3 роки','3-5y':'3–5 років','5+':'5+ років'};
@@ -1252,7 +1265,7 @@ async function getProfileContext() {
   if ((p.blog_type === 'personal' || p.blog_type === 'lifestyle') && p.profession) {
     s += `\n\nВАЖЛИВО: блог особистий — НЕ давай порад через призму професії "${p.profession}". Блог про життя, не про роботу.`;
   }
-  return s;
+  return baseCtx + s;
 }
 
 async function renderHome() {
@@ -1942,7 +1955,7 @@ async function sendChat() {
   }
 
   const profileCtx = await getProfileContext();
-  const sys = `Ти — досвідчений SMM-наставник для контент-творців. Відповідай українською мовою. Будь конкретним, практичним, дружнім. До 400 слів.\n\n${USERS[CU].aiCtx}${statCtx}${profileCtx}`;
+  const sys = `Ти — досвідчений SMM-наставник для контент-творців. Відповідай українською мовою. Будь конкретним, практичним, дружнім. До 400 слів.\n\n${profileCtx}${statCtx}`;
 
   const bubbleEl = addMsg('ai', '...');
   bubbleEl.textContent = '';
@@ -2177,7 +2190,7 @@ async function analyzeReflect(idx) {
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',max_tokens:600,
-        system:`Ти підтримуючий коуч для контент-творця. ${USERS[CU].aiCtx}${await getProfileContext()}\nДай коротку (3-5 речень) чесну і підтримуючу відповідь на рефлексію. Українська мова. Будь конкретним і практичним.`,
+        system:`Ти підтримуючий коуч для контент-творця. ${await getProfileContext()}\nДай коротку (3-5 речень) чесну і підтримуючу відповідь на рефлексію. Українська мова. Будь конкретним і практичним.`,
         messages:[{role:'user',content:`Питання: "${q}"\n\nМоя відповідь: "${ans}"\n\nДай зворотній зв'язок.`}]
       })
     });
@@ -2343,7 +2356,7 @@ async function generateAudiencePortrait() {
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6', max_tokens:1200,
-        system:`Ти стратег контент-маркетингу для контент-творця. ${USERS[CU].aiCtx}${await getProfileContext()}\nЗ опису аудиторії сформуй детальний портрет ЦА українською. Структура:\n1) Хто вони (вік, гео, спосіб життя — конкретно; враховуй що серед них можуть бути різні статі)\n2) Топ-3 болі\n3) Топ-3 бажання\n4) Як з ними говорити (тон, формати контенту, тригери)\n5) Що НЕ робити\n6) 5 конкретних ідей контенту що відгукнуться саме їм\nБудь конкретним, без води.`,
+        system:`Ти стратег контент-маркетингу для контент-творця. ${await getProfileContext()}\nЗ опису аудиторії сформуй детальний портрет ЦА українською. Структура:\n1) Хто вони (вік, гео, спосіб життя — конкретно; враховуй що серед них можуть бути різні статі)\n2) Топ-3 болі\n3) Топ-3 бажання\n4) Як з ними говорити (тон, формати контенту, тригери)\n5) Що НЕ робити\n6) 5 конкретних ідей контенту що відгукнуться саме їм\nБудь конкретним, без води.`,
         messages:[{role:'user', content: input}]
       })
     });
@@ -2608,7 +2621,7 @@ async function analyzePractice(id) {
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6', max_tokens:1000,
-        system: practice.analyze.system + '\n\nКонтекст: ' + USERS[CU].aiCtx + (await getProfileContext()),
+        system: practice.analyze.system + '\n\nКонтекст: ' + (await getProfileContext()),
         messages:[{role:'user', content: input}]
       })
     });
