@@ -1116,13 +1116,11 @@ function setEmojiFavicon(emoji) {
   link.href = url;
 }
 
-function showConfirm({ icon = '', title, desc = '', yesText = 'Так', yesStyle = 'background:#ef4444;color:#fff', onYes }) {
-  document.getElementById('confirm-icon').textContent = icon;
+function showConfirm({ title, desc = '', yesText = 'Так', onYes }) {
   document.getElementById('confirm-title').textContent = title;
   document.getElementById('confirm-desc').textContent = desc;
   const btn = document.getElementById('confirm-yes-btn');
   btn.textContent = yesText;
-  btn.style.cssText = yesStyle;
   btn.onclick = () => { document.getElementById('confirm-modal').style.display = 'none'; onYes(); };
   document.getElementById('confirm-modal').style.display = 'flex';
 }
@@ -1264,17 +1262,18 @@ function closeProfileModal() {
   const changed = Object.keys(PROFILE_FIELD_LABELS).filter(k => (current[k]||'') !== (snap[k]||''));
   if (!changed.length) { document.getElementById('profile-modal').classList.remove('on'); return; }
   // Show unsaved changes overlay
-  document.getElementById('unsaved-list').innerHTML = changed.map(k=>`<li>${PROFILE_FIELD_LABELS[k]}</li>`).join('');
-  document.getElementById('unsaved-overlay').classList.add('on');
+  const labels = changed.map(k => PROFILE_FIELD_LABELS[k]).join(', ');
+  document.getElementById('unsaved-desc').textContent = 'Змінено: ' + labels;
+  document.getElementById('unsaved-overlay').style.display = 'flex';
 }
 
 async function saveProfileAndClose() {
-  document.getElementById('unsaved-overlay').classList.remove('on');
+  document.getElementById('unsaved-overlay').style.display = 'none';
   await saveProfile();
 }
 
 function discardProfileChanges() {
-  document.getElementById('unsaved-overlay').classList.remove('on');
+  document.getElementById('unsaved-overlay').style.display = 'none';
   document.getElementById('profile-modal').classList.remove('on');
   _profileSnapshot = null;
 }
