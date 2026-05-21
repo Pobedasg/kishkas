@@ -10,7 +10,7 @@
   --ac:#FF6B9D;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;overflow-x:hidden}
 body{font-family:'Geologica',sans-serif;background:var(--bg);color:var(--ink);line-height:1.7;overflow-x:hidden}
 
 /* AUTH */

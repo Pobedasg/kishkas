@@ -28,14 +28,20 @@
     <div>
       <div class="albl">Email</div>
       <input type="email" class="ainp" id="aemail" placeholder="your@email.com" onkeydown="if(event.key==='Enter')doAuth()">
-      <div class="albl">Пароль</div>
-      <input type="password" class="ainp" id="apass" placeholder="••••••" onkeydown="if(event.key==='Enter')doAuth()">
+      <div id="apass-wrap">
+        <div class="albl">Пароль</div>
+        <input type="password" class="ainp" id="apass" placeholder="••••••" onkeydown="if(event.key==='Enter')doAuth()">
+      </div>
       <div id="aname-wrap" style="display:none">
         <div class="albl">Ваше ім'я</div>
         <input type="text" class="ainp" id="aname" placeholder="Наприклад: Віка">
       </div>
       <button class="abtn" id="abtn" onclick="doAuth()">Увійти →</button>
       <div class="aerr" id="aerr"></div>
+      <div id="aforgot-link" style="margin-top:10px;text-align:center;">
+        <button type="button" onclick="setMode('forgot')" style="background:none;border:none;color:rgba(255,255,255,.35);font-size:12px;cursor:pointer;font-family:inherit;text-decoration:underline;text-underline-offset:3px;">Забули пароль?</button>
+      </div>
+      <div id="aforgot-ok" style="display:none;margin-top:10px;font-size:13px;color:rgba(255,255,255,.55);text-align:center;line-height:1.5;"></div>
     </div>
     <div class="qlogins">
       <div class="qlbl">Або</div>

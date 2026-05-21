@@ -46,7 +46,7 @@ const USERS = {
   demo:{
     name:'Демо',brand:'Sprout · демо',design:'modern',reflectRotate:true,emoji:'🌱',color:'#0066FF',role:'демо-перегляд',
     heroTag:'✨ демо-сторінка',
-    heroTitle:'Подивись як це <span style="color:#0066FF">працює</span>',
+    heroTitle:'Подивись як це <span style="color:var(--ac)">працює</span>',
     heroDesc:'Це приклад заповненої сторінки — з прикладами нотаток, статистики, рефлексії. Зареєструйся щоб мати свою.',
     pills:['нотатки','статистика','ШІ-чат','рефлексія','прогрес'],
     chips:['📊 Аналіз статистики','💡 Ідеї контенту','📝 Написати пост','🎬 Сценарій для Reels','📈 Як рости','😶 Застрягла — що робити'],
@@ -63,7 +63,7 @@ const USERS = {
   default:{
     name:'Користувачка',brand:'Sprout',design:'modern',reflectRotate:true,emoji:'🌱',color:'#0066FF',role:'нова користувачка',
     heroTag:'✨ ласкаво просимо',
-    heroTitle:'Твоя платформа<br>для <span style="color:#0066FF">росту</span>',
+    heroTitle:'Твоя платформа<br>для <span style="color:var(--ac)">росту</span>',
     heroDesc:'Веди статистику, плануй контент, аналізуй з ШІ. Все що треба контент-творцеві в одному місці.',
     pills:['нотатки','стат','ШІ-чат','рефлексія','прогрес'],
     chips:['📊 Аналіз статистики','💡 Ідеї контенту','📝 Написати пост','🎬 Сценарій для Reels','📈 Як рости','😶 Застрягла — що робити'],
@@ -128,9 +128,46 @@ async function init() {
 function setMode(mode, el) {
   authMode = mode;
   document.querySelectorAll('.mtab').forEach(t => t.classList.remove('on'));
-  el.classList.add('on');
+  if (el) el.classList.add('on');
+  const isForgot = mode === 'forgot';
+  document.getElementById('apass-wrap').style.display = isForgot ? 'none' : 'block';
   document.getElementById('aname-wrap').style.display = mode === 'reg' ? 'block' : 'none';
-  document.getElementById('abtn').textContent = mode === 'reg' ? 'Зареєструватись →' : 'Увійти →';
+  document.getElementById('aforgot-link').style.display = (mode === 'login') ? 'block' : 'none';
+  document.getElementById('aforgot-ok').style.display = 'none';
+  document.getElementById('aerr').style.display = 'none';
+  const btn = document.getElementById('abtn');
+  btn.style.display = '';
+  if (isForgot) {
+    btn.textContent = 'Надіслати посилання →';
+    btn.onclick = doForgot;
+  } else {
+    btn.textContent = mode === 'reg' ? 'Зареєструватись →' : 'Увійти →';
+    btn.onclick = doAuth;
+  }
+}
+
+async function doForgot() {
+  const email = document.getElementById('aemail').value.trim();
+  const errEl = document.getElementById('aerr');
+  errEl.style.display = 'none';
+  if (!email) { errEl.textContent = 'Введи свій email'; errEl.style.display = 'block'; return; }
+  const btn = document.getElementById('abtn');
+  btn.textContent = '...'; btn.disabled = true;
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.href
+    });
+    if (error) throw error;
+    document.getElementById('aforgot-ok').textContent = `Посилання для скидання надіслано на ${email}. Перевір пошту — якщо не бачиш, дивись у спам.`;
+    document.getElementById('aforgot-ok').style.display = 'block';
+    btn.style.display = 'none';
+  } catch(e) {
+    errEl.textContent = e.message || 'Сталась помилка, спробуй ще раз';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    if (btn.style.display !== 'none') btn.textContent = 'Надіслати посилання →';
+  }
 }
 
 async function doAuth() {
@@ -751,6 +788,56 @@ async function applyProfileOverrides() {
     const nbrand = document.getElementById('nbrand');
     if (nbrand) nbrand.style.color = p.accent_color;
   }
+  if (CU === 'default') {
+    const hero = buildPersonalizedHero(p);
+    const htag = document.getElementById('htag');
+    const htitle = document.getElementById('htitle');
+    if (htag) htag.textContent = hero.tag;
+    if (htitle) htitle.innerHTML = hero.title;
+  }
+}
+
+function buildPersonalizedHero(p) {
+  const ac = 'color:var(--ac)';
+  const w = t => `<span style="${ac}">${t}</span>`;
+  const name = p?.display_name || '';
+  const greeting = name ? `${name.split(' ')[0]}, ` : '';
+
+  const blockerMap = {
+    fear:        { tag:'💪 подолай страх',       title:`${greeting}від страху<br>до першого ${w('поста')}` },
+    irregular:   { tag:'🔁 про регулярність',    title:`Регулярність —<br>твоя ${w('суперсила')}` },
+    noideas:     { tag:'💡 ідеї є завжди',        title:`Ідей у тебе<br>більше ніж ти ${w('думаєш')}` },
+    time:        { tag:'⏱ навіть 5 хвилин',      title:`Навіть 5 хвилин<br>змінюють ${w('все')}` },
+    criticism:   { tag:'🛡 твій голос',           title:`Твій голос<br>важливіший за чужу ${w('думку')}` },
+    monetization:{ tag:'💰 до монетизації',       title:`Від контенту<br>до ${w('доходу')}` },
+    comparison:  { tag:'🌟 ти унікальна',         title:`Ти унікальна —<br>перестань ${w('порівнювати')}` },
+    algorithm:   { tag:'📈 алгоритм з тобою',     title:`Алгоритм любить<br>твою ${w('автентичність')}` },
+    tech:        { tag:'🎬 зйомка — просто',       title:`Зйомка простіша<br>ніж ти ${w('думаєш')}` },
+  };
+
+  const firstBlocker = p?.blockers?.[0];
+  if (firstBlocker && blockerMap[firstBlocker]) return blockerMap[firstBlocker];
+
+  if (p?.blog_topic) {
+    const topic = p.blog_topic.replace(/^про /i, '').split(/[,\.]/, 1)[0].trim().toLowerCase();
+    return {
+      tag: `✨ ${topic}`,
+      title: `Твій контент про ${topic}<br>${w('чекають')}`,
+    };
+  }
+
+  if (p?.profession) {
+    const prof = p.profession.split(/[,\.]/, 1)[0].trim().toLowerCase();
+    return {
+      tag: `🌱 ${prof} · платформа для росту`,
+      title: `${prof.charAt(0).toUpperCase() + prof.slice(1)},<br>що ${w('натхняє')}`,
+    };
+  }
+
+  return {
+    tag: '✨ ласкаво просимо',
+    title: `Твоя платформа<br>для ${w('росту')}`,
+  };
 }
 
 async function openProfileModal() {
