@@ -1148,15 +1148,22 @@ function setEmojiFavicon(emoji) {
 
 function requireAuth() {
   if (sbUser) return true;
-  showConfirm({
-    title: 'Потрібна реєстрація',
-    desc: 'Ця функція доступна тільки зареєстрованим користувачам.',
-    yesText: 'Зареєструватись',
-    onYes: () => {
-      document.getElementById('auth-screen').style.display = 'flex';
-      document.getElementById('app').style.display = 'none';
-    }
-  });
+  // Use custom styling — not red (destructive), just neutral confirm
+  const modal = document.getElementById('confirm-modal');
+  document.getElementById('confirm-title').textContent = 'Потрібна реєстрація';
+  document.getElementById('confirm-desc').textContent = 'Ця функція доступна тільки зареєстрованим користувачам.';
+  const btn = document.getElementById('confirm-yes-btn');
+  btn.textContent = 'Зареєструватись';
+  btn.style.color = 'var(--ink2)';
+  btn.style.fontWeight = '600';
+  btn.onclick = () => {
+    modal.style.display = 'none';
+    btn.style.color = '';
+    btn.style.fontWeight = '';
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  };
+  modal.style.display = 'flex';
   return false;
 }
 
@@ -1858,11 +1865,11 @@ async function loadNotes() {
 function newNote() {
   if (!requireAuth()) return;
   curNoteId = '__new__';
-  document.getElementById('nttl').value='';
-  document.getElementById('ntxt').value='';
-  document.getElementById('ned').style.display='block';
-  document.getElementById('nph').style.display='none';
-  document.getElementById('nttl').focus();
+  document.getElementById('nttl').value = '';
+  document.getElementById('ntxt').value = '';
+  document.getElementById('ndelBtn').style.display = 'none';
+  document.getElementById('note-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('nttl').focus(), 100);
 }
 
 async function openNote(id) {
@@ -1872,9 +1879,8 @@ async function openNote(id) {
   curNoteId = id;
   document.getElementById('nttl').value = n.title||'';
   document.getElementById('ntxt').value = n.content||n.text||'';
-  document.getElementById('ned').style.display='block';
-  document.getElementById('nph').style.display='none';
-  await loadNotes();
+  document.getElementById('ndelBtn').style.display = 'inline-flex';
+  document.getElementById('note-modal').style.display = 'flex';
 }
 
 async function saveNote() {
@@ -1922,8 +1928,7 @@ function delNote() {
 
 function closeNote() {
   curNoteId = null;
-  document.getElementById('ned').style.display='none';
-  document.getElementById('nph').style.display='block';
+  document.getElementById('note-modal').style.display = 'none';
   loadNotes();
 }
 
