@@ -211,7 +211,7 @@ body.theme-modern .chat-list-item:hover{background:var(--border);color:var(--ink
 .ios-dlg-title{font-size:17px;font-weight:600;color:var(--ink);margin-bottom:5px;font-family:'Geologica',sans-serif;}
 .ios-dlg-desc{font-size:13px;color:var(--muted);line-height:1.45;}
 .ios-dlg-btns{display:flex;border-top:1px solid var(--border);}
-.ios-dlg-btn{flex:1;padding:15px 8px;border:none;background:none;font-size:16px;font-family:'Geologica',sans-serif;cursor:pointer;color:var(--ac);font-weight:400;transition:background .12s;}
+.ios-dlg-btn{flex:1;padding:15px 8px;border:none;background:none;font-size:16px;font-family:'Geologica',sans-serif;cursor:pointer;color:var(--ink2);font-weight:400;transition:background .12s;}
 .ios-dlg-btn+.ios-dlg-btn{border-left:1px solid var(--border);}
 .ios-dlg-btn:hover{background:var(--border);}
 .ios-dlg-btn-destructive{color:#ef4444;font-weight:600;}
