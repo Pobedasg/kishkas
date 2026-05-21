@@ -44,7 +44,7 @@ const USERS = {
     aiCtx:'Ти консультуєш Алуну — дівчину яка веде лайфстайл-блог в Instagram і TikTok. Фокус на ЗАРАЗ: настрій, розпаковки, магазини, лайфхаки, спорт і харчування, краса. У минулому: повар, бариста, заводи в Польщі — це може бути контентом в майбутньому але не основа зараз. Основа: реальне щоденне life.'
   },
   demo:{
-    name:'Демо',brand:'Sprout · демо',design:'modern',reflectRotate:true,emoji:'🌱',color:'#0066FF',role:'демо-перегляд',
+    name:'Демо',brand:'Sprout · демо',design:'modern',reflectRotate:true,emoji:'🌱',color:'#22C55E',role:'демо-перегляд',
     heroTag:'✨ демо-сторінка',
     heroTitle:'Подивись як це <span style="color:var(--ac)">працює</span>',
     heroDesc:'Це приклад заповненої сторінки — з прикладами нотаток, статистики, рефлексії. Зареєструйся щоб мати свою.',
@@ -61,7 +61,7 @@ const USERS = {
     aiCtx:'Ти консультуєш гостя у демо-режимі платформи. Показуй приклади відповідей, які підійшли б типовому контент-творцю — конкретно, практично, дружньо.'
   },
   default:{
-    name:'Користувачка',brand:'Sprout',design:'modern',reflectRotate:true,emoji:'🌱',color:'#0066FF',role:'нова користувачка',
+    name:'Користувачка',brand:'Sprout',design:'modern',reflectRotate:true,emoji:'🌱',color:'#22C55E',role:'нова користувачка',
     heroTag:'✨ ласкаво просимо',
     heroTitle:'Твоя платформа<br>для <span style="color:var(--ac)">росту</span>',
     heroDesc:'Веди статистику, плануй контент, аналізуй з ШІ. Все що треба контент-творцеві в одному місці.',
@@ -932,10 +932,59 @@ function buildPersonalizedHero(p) {
   };
 }
 
+let _profileSnapshot = null;
+
+const PROFILE_FIELD_LABELS = {
+  name:"Ім'я",emoji:'Аватар',gender:'Рід',accent:'Колір акценту',
+  blogType:'Тип блогу',profession:'Професія',fieldexp:'Досвід у сфері',
+  hasblog:'Наявність блогу',blogtopic:'Тема блогу',blogexp:'Досвід блогерства',
+  hours:'Години на тиждень',blockers:'Блокери',blockersOther:'Інший блокер',
+  needs:'Потреби',needsOther:'Інша потреба',monetization:'Монетизація',goals:'Цілі',
+};
+
+function getProfileFormState() {
+  const get = id => document.getElementById(id)?.value || '';
+  const multi = name => Array.from(document.querySelectorAll(`.multi-chips[data-name="${name}"] .m-chip.on`)).map(c=>c.dataset.value).sort().join(',');
+  return {
+    name:get('p-name'), emoji:get('p-emoji'), gender:get('p-gender'),
+    accent:document.querySelector('.color-swatch.on')?.dataset.color||'',
+    blogType:document.querySelector('.blogtype-toggle .btype-btn.on')?.dataset.value||'',
+    profession:get('p-profession'), fieldexp:get('p-fieldexp'), hasblog:get('p-hasblog'),
+    blogtopic:get('p-blogtopic'), blogexp:get('p-blogexp'), hours:get('p-hours'),
+    blockers:multi('blockers'), blockersOther:get('p-blockersOther'),
+    needs:multi('needs'), needsOther:get('p-needsOther'),
+    monetization:get('p-monetization'), goals:get('p-goals'),
+  };
+}
+
 async function openProfileModal() {
   const p = await dbProfile() || {};
   document.getElementById('profileForm').innerHTML = profileFormHTML(p);
   document.getElementById('profile-modal').classList.add('on');
+  // snapshot after render so form values are populated
+  requestAnimationFrame(() => { _profileSnapshot = getProfileFormState(); });
+}
+
+function closeProfileModal() {
+  const current = getProfileFormState();
+  const snap = _profileSnapshot;
+  if (!snap) { document.getElementById('profile-modal').classList.remove('on'); return; }
+  const changed = Object.keys(PROFILE_FIELD_LABELS).filter(k => (current[k]||'') !== (snap[k]||''));
+  if (!changed.length) { document.getElementById('profile-modal').classList.remove('on'); return; }
+  // Show unsaved changes overlay
+  document.getElementById('unsaved-list').innerHTML = changed.map(k=>`<li>${PROFILE_FIELD_LABELS[k]}</li>`).join('');
+  document.getElementById('unsaved-overlay').classList.add('on');
+}
+
+async function saveProfileAndClose() {
+  document.getElementById('unsaved-overlay').classList.remove('on');
+  await saveProfile();
+}
+
+function discardProfileChanges() {
+  document.getElementById('unsaved-overlay').classList.remove('on');
+  document.getElementById('profile-modal').classList.remove('on');
+  _profileSnapshot = null;
 }
 
 function showToast(msg, kind) {
@@ -1880,8 +1929,22 @@ async function renderChatList() {
     <div class="chat-list-day">${day}</div>
     ${chats.map(c => `<div class="chat-list-item ${String(c.id)===String(currentChatId)?'active':''}" onclick="loadChat('${c.id}')">
       <span class="chat-list-title">${escapeHTML(c.title || 'Без назви')}</span>
+      <button class="chat-list-del" onclick="event.stopPropagation();deleteChatById('${c.id}')" title="Видалити чат">×</button>
     </div>`).join('')}
   `).join('');
+}
+
+async function deleteChatById(id) {
+  await dbDelChat(id);
+  if (String(currentChatId) === String(id)) {
+    currentChatId = null;
+    chatHistory = [];
+    document.getElementById('chatTitle').textContent = 'Новий чат';
+    document.getElementById('delChatBtn').style.display = 'none';
+    document.getElementById('renameChatBtn').style.display = 'none';
+    renderChatMessages();
+  }
+  renderChatList();
 }
 
 async function loadChat(id) {

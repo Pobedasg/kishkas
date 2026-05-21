@@ -217,13 +217,31 @@ create policy if not exists "own_baseline" on baseline
 
 <!-- PROFILE / QUESTIONNAIRE MODAL -->
 <div class="modal-bg" id="profile-modal">
-  <div class="modal" style="max-width:620px">
-    <h2>Профіль</h2>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:18px">Чим точніше заповниш — тим релевантнішими будуть поради ШІ та рекомендації. Можна оновлювати будь-коли.</p>
-    <div id="profileForm" class="profile-form"></div>
-    <div style="display:flex;gap:8px;margin-top:18px">
+  <div class="modal modal-profile" style="max-width:620px">
+    <div class="modal-head">
+      <div>
+        <h2>Профіль</h2>
+        <p style="font-size:13px;color:var(--muted);margin:4px 0 0">Чим точніше заповниш — тим релевантнішими будуть поради ШІ.</p>
+      </div>
+      <button class="modal-close-btn" onclick="closeProfileModal()" aria-label="Закрити">×</button>
+    </div>
+    <div id="profileForm" class="profile-form modal-body"></div>
+    <div class="modal-foot">
       <button class="btn btn-ac" onclick="saveProfile()">Зберегти</button>
-      <button class="btn btn-out" onclick="document.getElementById('profile-modal').classList.remove('on')">Скасувати</button>
+      <button class="btn btn-out" onclick="closeProfileModal()">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- UNSAVED CHANGES CONFIRM -->
+<div class="unsaved-overlay" id="unsaved-overlay">
+  <div class="unsaved-box">
+    <h3>Є незбережені зміни</h3>
+    <ul class="unsaved-changes-list" id="unsaved-list"></ul>
+    <div class="unsaved-foot">
+      <button class="btn btn-ac" onclick="saveProfileAndClose()">Зберегти</button>
+      <button class="btn btn-red" onclick="discardProfileChanges()">Не зберігати</button>
+      <button class="btn btn-out" onclick="document.getElementById('unsaved-overlay').classList.remove('on')">Повернутись</button>
     </div>
   </div>
 </div>
