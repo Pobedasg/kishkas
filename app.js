@@ -1551,9 +1551,17 @@ async function openNote(id) {
 }
 
 async function saveNote() {
-  const title = document.getElementById('nttl').value || 'Без назви';
+  const titleEl = document.getElementById('nttl');
+  const title = titleEl.value.trim();
+  if (!title) {
+    titleEl.classList.remove('input-error');
+    void titleEl.offsetWidth; // restart animation
+    titleEl.classList.add('input-error');
+    titleEl.focus();
+    titleEl.addEventListener('input', () => titleEl.classList.remove('input-error'), { once: true });
+    return;
+  }
   const content = document.getElementById('ntxt').value;
-  if (!content.trim()) return;
   const note = curNoteId === '__new__'
     ? { id: Date.now().toString(), title, content, date: new Date().toLocaleDateString('uk-UA'), _new: true }
     : { id: curNoteId, title, content };
@@ -1563,17 +1571,19 @@ async function saveNote() {
   showToast('✓ Збережено', 'success');
 }
 
-async function delNote() {
-  if (!curNoteId || !confirm('Видалити?')) return;
-  await delNoteById(curNoteId);
-}
-
 async function delNoteById(id) {
+  if (!confirm('Видалити нотатку назавжди?')) return;
   await dbDelNote(id);
   if (curNoteId === id) closeNote();
   await loadNotes();
   renderHome();
 }
+
+async function delNote() {
+  if (!curNoteId || !confirm('Видалити?')) return;
+  await delNoteById(curNoteId);
+}
+
 
 function closeNote() {
   curNoteId = null;

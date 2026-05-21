@@ -117,6 +117,9 @@ body.theme-modern .snb.on{color:var(--ink);background:var(--border);}
 .btn-red{background:#fee2e2;color:#dc2626;}.btn-red:hover{background:#fecaca;}
 input,textarea,select{width:100%;background:var(--bg);border:1.5px solid var(--b2);border-radius:9px;padding:9px 12px;font-size:14px;color:var(--ink);font-family:'Geologica',sans-serif;outline:none;transition:border-color .2s;}
 input:focus,textarea:focus,select:focus{border-color:var(--ink);}
+.input-error{border-color:#ef4444!important;background:#fff5f5!important;}
+@keyframes inputShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.input-error{animation:inputShake .35s ease;}
 textarea{resize:vertical;min-height:74px;}
 label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;}
 .divider{height:1px;background:linear-gradient(to right,transparent,var(--b2),transparent);margin:32px 0;}
@@ -173,10 +176,11 @@ body.theme-modern .chat-sidebar{background:transparent;}
 .chat-main{flex:1;min-width:0;}
 .chat-list{display:flex;flex-direction:column;gap:4px;}
 .chat-list-item{padding:8px 10px 8px 12px;border-radius:9px;cursor:pointer;font-size:13px;line-height:1.4;color:var(--ink2);transition:background .15s;display:flex;align-items:center;gap:6px;}
-.chat-list-item:hover{background:rgba(0,0,0,.04);}
-body.theme-modern .chat-list-item:hover{background:var(--border);}
+.chat-list-item:hover{background:rgba(0,0,0,.04);color:var(--ink2);}
+body.theme-modern .chat-list-item:hover{background:var(--border);color:var(--ink2);}
 .chat-list-item.active{background:var(--ink);color:var(--bg);}
-.chat-list-item .chat-list-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.chat-list-item.active:hover{background:var(--ink);color:var(--bg);}
+.chat-list-item .chat-list-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:inherit;}
 .chat-list-del{opacity:0;flex-shrink:0;background:none;border:none;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;border-radius:5px;transition:opacity .15s,background .15s;}
 .chat-list-item:hover .chat-list-del{opacity:1;}
 .chat-list-item.active .chat-list-del{color:rgba(255,255,255,.5);}
