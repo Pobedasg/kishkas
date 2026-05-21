@@ -138,7 +138,7 @@ function enterResetMode() {
   document.getElementById('areset-banner').style.display = 'block';
   document.getElementById('aemail-wrap').style.display = 'none';
   document.getElementById('apass-wrap').style.display = 'block';
-  document.getElementById('aname-wrap').style.display = 'none';
+
   document.getElementById('aforgot-link').style.display = 'none';
   document.getElementById('aforgot-ok').style.display = 'none';
   document.getElementById('aerr').style.display = 'none';
@@ -188,7 +188,7 @@ function restoreAuthUI() {
   document.getElementById('areset-banner').style.display = 'none';
   document.getElementById('aemail-wrap').style.display = 'block';
   document.getElementById('apass-wrap').style.display = 'block';
-  document.getElementById('aname-wrap').style.display = 'none';
+
   document.getElementById('aforgot-link').style.display = 'block';
   document.getElementById('aforgot-ok').style.display = 'none';
   document.getElementById('aerr').style.display = 'none';
@@ -210,7 +210,6 @@ function setMode(mode, el) {
   document.getElementById('areset-banner').style.display = 'none';
   document.getElementById('aemail-wrap').style.display = 'block';
   document.getElementById('apass-wrap').style.display = isForgot ? 'none' : 'block';
-  document.getElementById('aname-wrap').style.display = mode === 'reg' ? 'block' : 'none';
   document.getElementById('aforgot-link').style.display = (mode === 'login') ? 'block' : 'none';
   document.getElementById('aforgot-ok').style.display = 'none';
   document.getElementById('aerr').style.display = 'none';
@@ -261,10 +260,9 @@ async function doAuth() {
   btn.textContent = '...'; btn.disabled = true;
   try {
     if (authMode === 'reg') {
-      const name = document.getElementById('aname').value || 'Користувачка';
       const { data, error } = await sb.auth.signUp({
         email, password: pass,
-        options: { data: { profile: 'default', name } }
+        options: { data: { profile: 'default' } }
       });
       if (error) throw error;
       if (data.user) { sbUser = data.user; CU = 'default'; loginSuccess(); }
