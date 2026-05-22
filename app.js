@@ -111,22 +111,24 @@ let authMode = 'login';
 // ══════════════════════════════════════════
 async function init() {
   sb.auth.onAuthStateChange((event, session) => {
-    if (event === 'PASSWORD_RECOVERY') {
-      enterResetMode();
-    }
+    if (event === 'PASSWORD_RECOVERY') enterResetMode();
   });
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     sbUser = session.user;
     const meta = session.user.user_metadata;
     const profileKey = meta?.profile;
-    if (profileKey && USERS[profileKey]) {
-      CU = profileKey;
-    } else {
-      CU = 'default';
-    }
+    CU = (profileKey && USERS[profileKey]) ? profileKey : 'default';
     loginSuccess();
-    return;
+  }
+  // Remove loader and mark page as ready
+  document.documentElement.classList.add('ready');
+  const loader = document.getElementById('loader');
+  if (loader) {
+    setTimeout(() => {
+      loader.style.opacity = '0';
+      setTimeout(() => loader.remove(), 320);
+    }, 150);
   }
 }
 
@@ -323,31 +325,32 @@ function startDemoTour() {
     return false;
   };
 
-  // Mobile: simplified tour — all centered popovers, no element targeting
+  // Mobile: centered popovers, navigate between tabs so user sees context
   if (isMobile) {
+    const mn = (tab, ms = 450) => () => { goTab(tab); setTimeout(() => md.moveNext(), ms); return false; };
     const md = driver({
-      showProgress: true,
-      progressText: '{{current}} / {{total}}',
-      nextBtnText: 'Далі →',
-      prevBtnText: 'Назад',
-      doneBtnText: 'Готово 🚀',
-      allowClose: true,
-      overlayOpacity: 0,
+      showProgress: true, progressText: '{{current}} / {{total}}',
+      nextBtnText: 'Далі →', prevBtnText: '← Назад', doneBtnText: 'Готово 🚀',
+      allowClose: true, overlayOpacity: 0.35, smoothScroll: true,
       popoverClass: 'sprout-tour',
       onDestroyStarted: () => { md.destroy(); localStorage.setItem('ksk_tour_seen', '1'); },
       steps: [
-        { popover: { title: '👋 Ласкаво просимо!', description: 'Це Sprout — платформа для зростання в соцмережах. Покажу що тут є. Гортай стрілками.', side:'over', align:'center' } },
-        { popover: { title: '🗂 Навігація', description: '<b>Головна</b> — дашборд · <b>Прогрес</b> — статистика · <b>Навчання</b> — ментор, рефлексія, інструменти · <b>ШІ-чат</b> · <b>Нотатки</b>', side:'over', align:'center' } },
-        { popover: { title: '📊 Дашборд', description: 'Головна — це твій центр: стрік, цілі, нотатки, статистика. Блоки можна обирати і переставляти.', side:'over', align:'center' } },
-        { popover: { title: '📈 Прогрес', description: 'Вносиш цифри щомісяця — підписники, охоплення, пости. З\'являються графіки росту по всіх платформах.', side:'over', align:'center',
-          onNextClick: () => { goTab('ai'); setTimeout(() => md.moveNext(), 400); return false; } } },
-        { popover: { title: '🤖 ШІ-наставник', description: 'Знає твою статистику і профіль — аналізує, генерує ідеї, пише тексти. Натискаєш чіп або пишеш своє питання.', side:'over', align:'center',
-          onNextClick: () => { goTab('notes'); setTimeout(() => md.moveNext(), 400); return false; } } },
-        { popover: { title: '📝 Нотатки', description: 'Записуй ідеї для постів, плани, чернетки. Все синхронізується між пристроями.', side:'over', align:'center',
-          onNextClick: () => { goTab('mentor'); setTimeout(() => md.moveNext(), 500); return false; } } },
-        { popover: { title: '📚 Навчання', description: '<b>Ментор</b> — персональний план від ШІ · <b>Практика</b> · <b>Теорія</b> · <b>Рефлексія</b> · <b>Інструменти</b> — перевірені застосунки.', side:'over', align:'center',
-          onNextClick: () => { goTab('home'); setTimeout(() => md.moveNext(), 400); return false; } } },
-        { popover: { title: '👤 Профіль', description: 'Заповни тему блогу, блокери, цілі — і ШІ стане точнішим. Можна обрати свій акцентний колір.', side:'over', align:'center' } },
+        { popover: { title: '👋 Ласкаво просимо!', description: 'Це Sprout — платформа для зростання в соцмережах. Покажу всі розділи на практиці.', side:'over', align:'center' } },
+        { popover: { title: '📊 Головна — дашборд', description: 'Зараз ти на головній. Тут — стрік, цілі, остання статистика. Блоки можна обирати і переставляти.', side:'over', align:'center',
+          onNextClick: mn('stats') } },
+        { popover: { title: '📈 Прогрес', description: 'Вносиш цифри щомісяця — підписники, охоплення, пости. Будуються графіки росту по всіх платформах.', side:'over', align:'center',
+          onNextClick: mn('ai') } },
+        { popover: { title: '🤖 ШІ-чат', description: 'Твій наставник знає статистику і профіль — аналізує, пише тексти, генерує ідеї. Натисни чіп або пиши своє питання.', side:'over', align:'center',
+          onNextClick: mn('notes') } },
+        { popover: { title: '📝 Нотатки', description: 'Записуй ідеї для постів, плани, чернетки. Кнопка ＋ внизу праворуч — швидко додати нотатку.', side:'over', align:'center',
+          onNextClick: mn('mentor', 550) } },
+        { popover: { title: '📚 Навчання — Ментор', description: 'ШІ генерує персональний план розвитку на основі твого профілю, блокерів і цілей.', side:'over', align:'center',
+          onNextClick: mn('reflect', 500) } },
+        { popover: { title: '🪞 Рефлексія', description: 'Питання для глибшого розуміння себе. Відповідаєш — ШІ аналізує і дає зворотній зв\'язок.', side:'over', align:'center',
+          onNextClick: mn('tools', 500) } },
+        { popover: { title: '🛠 Інструменти', description: 'Перевірені застосунки для монтажу, дизайну, аналітики — з посиланнями і описами.', side:'over', align:'center',
+          onNextClick: mn('home', 450) } },
+        { popover: { title: '👤 Профіль', description: 'Заповни тему блогу, блокери, цілі — і ШІ стане точнішим. Налаштуй акцентний колір.', side:'over', align:'center' } },
         { popover: { title: '🚀 Готово!', description: 'Це демо — дані не зберігаються. <b>Зареєструйся</b> щоб мати власний акаунт і персонального ШІ-наставника.', side:'over', align:'center',
           onNextClick: () => { md.destroy(); document.getElementById('auth-screen').style.display='flex'; document.getElementById('app').style.display='none'; } } },
       ]
@@ -687,6 +690,8 @@ function goTab(name) {
   if(name==='mentor') renderMentor();
   closeMenu();
   window.scrollTo({top:0,behavior:'instant'});
+  const fab = document.getElementById('fab-note');
+  if (fab) fab.style.display = (name === 'notes') ? 'flex' : 'none';
 }
 
 function goLearn() {

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Sprout · платформа для росту</title>
+<script>(function(){try{const m=localStorage.getItem('kishkas-theme-mode');if(m==='dark')document.documentElement.classList.add('dark');}catch(e){}})()</script>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Geologica:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -15,6 +16,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1/dist/driver.css">
 </head>
 <body>
+<div id="loader" style="position:fixed;inset:0;background:#111;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:'Unbounded',sans-serif;font-size:18px;font-weight:700;color:#fff;letter-spacing:-.5px;transition:opacity .3s ease;visibility:visible;">🌱 sprout</div>
 
 <!-- AUTH -->
 <div id="auth-screen">
@@ -602,6 +604,11 @@ create policy if not exists "own_baseline" on baseline
     </div>
   </div>
 </div>
+
+<!-- FAB: Нова нотатка -->
+<button id="fab-note" onclick="newNote()" aria-label="Нова нотатка" style="display:none;position:fixed;bottom:24px;right:24px;z-index:500;width:56px;height:56px;border-radius:50%;background:var(--ac);border:none;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.22);align-items:center;justify-content:center;transition:transform .15s,box-shadow .15s;color:#fff;">
+  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="11" y1="2" x2="11" y2="20"/><line x1="2" y1="11" x2="20" y2="11"/></svg>
+</button>
 
 <!-- DIALOGS — outside nav and #app to avoid backdrop-filter stacking context -->
 <div class="ios-dlg" id="logout-modal" style="display:none">
