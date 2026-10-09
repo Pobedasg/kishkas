@@ -5,6 +5,14 @@ const SB_URL = 'https://lrronntdfuyrzmkdeusa.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxycm9ubnRkZnV5cnpta2RldXNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzUwOTYsImV4cCI6MjA5NDc1MTA5Nn0.XVZJ3L7MvIzkdYCTfqx9SZxDDtk0Ym37jg0y_HxS7FE';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 
+// All Claude calls go through here so the server can check the Supabase session.
+async function chatFetch(url, opts = {}) {
+  const { data: { session } } = await sb.auth.getSession();
+  const headers = { ...(opts.headers || {}) };
+  if (session?.access_token) headers['Authorization'] = 'Bearer ' + session.access_token;
+  return fetch(url, { ...opts, headers });
+}
+
 // ══════════════════════════════════════════
 // USER PROFILES
 // ══════════════════════════════════════════
@@ -1437,6 +1445,7 @@ function extractJSON(text) {
 }
 
 async function generateMentorPlan() {
+  if (!requireAuth()) return;
   if (window._mentorGenerating) { showToast('Вже генерую — зачекай', 'error'); return; }
   const profile = await dbProfile();
   if (!profile || (!profile.has_blog && (!profile.blockers || !profile.blockers.length) && !profile.profession)) {
@@ -1508,7 +1517,7 @@ async function generateMentorPlan() {
   const userMsg = `${profileCtx}\n\nДодатково: статистика за ${stats.length} місяців${audience?.ai_result?', портрет ЦА вже згенеровано':''}.\n\nЗгенеруй мій персональний ментор-план як JSON.`;
 
   try {
-    const res = await fetch('/api/chat', {
+    const res = await chatFetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2400,7 +2409,7 @@ async function sendChat() {
 
   let reply = '';
   try {
-    const res = await fetch('/api/chat', {
+    const res = await chatFetch('/api/chat', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1000, system:sys, messages:chatHistory })
@@ -2617,6 +2626,7 @@ function renderReflect() {
 }
 
 async function analyzeReflect(idx) {
+  if (!requireAuth()) return;
   const ans = document.getElementById('rq'+idx).value.trim();
   if (!ans) return;
   const st = document.getElementById('rst'+idx);
@@ -2624,7 +2634,7 @@ async function analyzeReflect(idx) {
   st.textContent = '⏳'; out.classList.remove('on');
   const q = REFLECT_QS[CU][idx].q;
   try {
-    const res = await fetch('/api/chat',{
+    const res = await chatFetch('/api/chat',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',max_tokens:600,
@@ -2784,13 +2794,14 @@ async function dbSaveAudience(input, result) {
 }
 
 async function generateAudiencePortrait() {
+  if (!requireAuth()) return;
   const input = document.getElementById('audienceInput').value.trim();
   if (!input) return alert('Опиши що знаєш про аудиторію');
   const out = document.getElementById('audienceResult');
   const btn = document.getElementById('audienceBtn');
   btn.disabled = true; const orig = btn.textContent; btn.textContent = '⏳';
   try {
-    const res = await fetch('/api/chat',{
+    const res = await chatFetch('/api/chat',{
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6', max_tokens:1200,
@@ -3043,6 +3054,7 @@ function renderPractice() {
 }
 
 async function analyzePractice(id) {
+  if (!requireAuth()) return;
   let practice = null;
   for (const c of PRACTICES) {
     const found = c.items.find(p => p.id === id);
@@ -3055,7 +3067,7 @@ async function analyzePractice(id) {
   out.textContent = 'ШІ думає...';
   out.classList.add('on');
   try {
-    const res = await fetch('/api/chat',{
+    const res = await chatFetch('/api/chat',{
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6', max_tokens:1000,
