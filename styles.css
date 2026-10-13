@@ -821,7 +821,7 @@ body.theme-modern.dark #fab-note{color:#fff;}
   font-family:'Geologica',sans-serif;
   box-shadow:0 20px 60px rgba(0,0,0,.18);
   max-width:320px;
-  position:relative;
+  /* NOT position:relative — driver.js sets position:fixed and computes top/left itself */
 }
 @media(max-width:640px){.driver-popover.sprout-tour{max-width:88vw;}}
 
@@ -883,3 +883,23 @@ body.dark .driver-popover.sprout-tour .driver-popover-close-btn{color:#444;}
 body.dark .driver-popover.sprout-tour .driver-popover-close-btn:hover{background:rgba(255,255,255,.06);color:#777;}
 body.dark .driver-popover.sprout-tour .driver-popover-progress-text{color:#555;}
 body.dark .driver-popover.sprout-tour .driver-popover-arrow{display:none;}
+
+/* Force-center popovers that have no target element (side:over) */
+.driver-popover.sprout-tour[data-side="over"]{
+  position:fixed!important;
+  top:50%!important;
+  left:50%!important;
+  transform:translate(-50%,-50%)!important;
+}
+
+/* ── Tour: smooth transitions between steps/tabs ───── */
+.driver-overlay,
+.driver-popover.sprout-tour{transition:opacity .25s ease;}
+body.tour-switching .driver-overlay,
+body.tour-switching .driver-popover.sprout-tour{opacity:0!important;}
+@keyframes tourTabIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+body.tour-on .tab.on{animation:tourTabIn .4s ease both;}
+@media(prefers-reduced-motion:reduce){
+  .driver-overlay,.driver-popover.sprout-tour{transition:none;}
+  body.tour-on .tab.on{animation:none;}
+}

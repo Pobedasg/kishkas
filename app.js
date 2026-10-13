@@ -5,6 +5,14 @@ const SB_URL = 'https://lrronntdfuyrzmkdeusa.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxycm9ubnRkZnV5cnpta2RldXNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzUwOTYsImV4cCI6MjA5NDc1MTA5Nn0.XVZJ3L7MvIzkdYCTfqx9SZxDDtk0Ym37jg0y_HxS7FE';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 
+// All Claude calls go through here so the server can check the Supabase session.
+async function chatFetch(url, opts = {}) {
+  const { data: { session } } = await sb.auth.getSession();
+  const headers = { ...(opts.headers || {}) };
+  if (session?.access_token) headers['Authorization'] = 'Bearer ' + session.access_token;
+  return fetch(url, { ...opts, headers });
+}
+
 // ══════════════════════════════════════════
 // USER PROFILES
 // ══════════════════════════════════════════
@@ -318,22 +326,34 @@ function startDemoTour() {
   const { driver } = window.driver.js;
   const isMobile = window.innerWidth < 900;
 
+  // Smooth tab switch inside the tour: fade the overlay/popover out, swap the tab,
+  // move to the next step while hidden, then fade back in (see body.tour-switching in CSS).
+  const swap = (tab, ms, next) => {
+    document.body.classList.add('tour-on', 'tour-switching');
+    setTimeout(() => {
+      goTab(tab);
+      setTimeout(() => {
+        next();
+        setTimeout(() => document.body.classList.remove('tour-switching'), 80);
+      }, ms);
+    }, 240);
+  };
   const nav = (tab, ms = 500) => () => {
     if (isMobile) closeMenu();
-    goTab(tab);
-    setTimeout(() => d.moveNext(), ms);
+    swap(tab, ms, () => d.moveNext());
     return false;
   };
 
   // Mobile: centered popovers, navigate between tabs so user sees context
   if (isMobile) {
-    const mn = (tab, ms = 450) => () => { goTab(tab); setTimeout(() => md.moveNext(), ms); return false; };
+    const mn = (tab, ms = 450) => () => { swap(tab, ms, () => md.moveNext()); return false; };
     const md = driver({
       showProgress: true, progressText: '{{current}} / {{total}}',
       nextBtnText: 'Далі →', prevBtnText: '← Назад', doneBtnText: 'Готово 🚀',
       allowClose: true, overlayOpacity: 0.35, smoothScroll: true,
       popoverClass: 'sprout-tour',
       onDestroyStarted: () => { md.destroy(); localStorage.setItem('ksk_tour_seen', '1'); },
+      onDestroyed: () => document.body.classList.remove('tour-on', 'tour-switching'),
       steps: [
         { popover: { title: '👋 Ласкаво просимо!', description: 'Це Sprout — платформа для зростання в соцмережах. Покажу всі розділи на практиці.', side:'over', align:'center' } },
         { popover: { title: '📊 Головна — дашборд', description: 'Зараз ти на головній. Тут — стрік, цілі, остання статистика. Блоки можна обирати і переставляти.', side:'over', align:'center',
@@ -371,6 +391,7 @@ function startDemoTour() {
     animate: true,
     popoverClass: 'sprout-tour',
     onDestroyStarted: () => { d.destroy(); localStorage.setItem('ksk_tour_seen', '1'); },
+    onDestroyed: () => document.body.classList.remove('tour-on', 'tour-switching'),
     steps: [
 
       // ── 1. Welcome ──────────────────────────────────────
@@ -394,11 +415,11 @@ function startDemoTour() {
 
       // ── 3. Dashboard ────────────────────────────────────
       {
-        element: '#dashboardWidgets',
+        element: '#dashboardWidgets > :first-child',
         popover: {
           title: '📊 Дашборд',
           description: 'Твій центр управління. Тут — стрік, цілі, остання статистика, нотатки. Кожен блок ти обираєш сам_а.',
-          side: 'top', align: 'center',
+          side: 'bottom', align: 'start',
         }
       },
 
@@ -425,11 +446,11 @@ function startDemoTour() {
 
       // ── 6. Stats form ────────────────────────────────────
       {
-        element: '#statsForm',
+        element: '#tab-stats .stitle',
         popover: {
           title: '📈 Прогрес',
           description: 'Щомісяця вносиш цифри по кожній платформі — підписники, охоплення, пости, Reels. Платформа будує графіки росту.',
-          side: 'top', align: 'center',
+          side: 'bottom', align: 'start',
         }
       },
 
@@ -497,11 +518,11 @@ function startDemoTour() {
 
       // ── 13. Mentor ───────────────────────────────────────
       {
-        element: '#mentorcontent',
+        element: '#mtitle',
         popover: {
           title: '🎯 Менторський план',
           description: 'ШІ генерує персональний план розвитку — на основі твого профілю, блокерів і цілей. Розбиває на тижні і конкретні дії.',
-          side: 'top', align: 'center',
+          side: 'bottom', align: 'start',
           onNextClick: nav('reflect', 550),
         }
       },
@@ -513,28 +534,28 @@ function startDemoTour() {
           title: '🪞 Рефлексія',
           description: 'Питання для глибшого розуміння себе як блогера. Відповідаєш — ШІ аналізує і дає зворотній зв\'язок. Щоразу нові питання.',
           side: 'bottom', align: 'start',
-          onNextClick: () => { goTab('reflect'); setTimeout(() => d.moveNext(), 500); return false; },
+          onNextClick: nav('reflect', 500),
         }
       },
 
       // ── 15. Reflect content ──────────────────────────────
       {
-        element: '#reflectqs',
+        element: '#tab-reflect .stitle',
         popover: {
           title: '💬 Питання для роздумів',
           description: 'Обираєш питання, пишеш відповідь — і отримуєш чесний, підтримуючий аналіз від ШІ. Допомагає краще зрозуміти свої блокери.',
-          side: 'top', align: 'center',
+          side: 'bottom', align: 'start',
           onNextClick: nav('tools', 550),
         }
       },
 
       // ── 16. Tools ────────────────────────────────────────
       {
-        element: '#toolscontent',
+        element: '#tab-tools .stitle',
         popover: {
           title: '🛠 Інструменти',
           description: 'Перевірена добірка застосунків для монтажу, дизайну, аналітики і планування. З посиланнями і описами.',
-          side: 'top', align: 'center',
+          side: 'bottom', align: 'start',
           onNextClick: nav('home', 500),
         }
       },
@@ -1437,6 +1458,7 @@ function extractJSON(text) {
 }
 
 async function generateMentorPlan() {
+  if (!requireAuth()) return;
   if (window._mentorGenerating) { showToast('Вже генерую — зачекай', 'error'); return; }
   const profile = await dbProfile();
   if (!profile || (!profile.has_blog && (!profile.blockers || !profile.blockers.length) && !profile.profession)) {
@@ -1508,7 +1530,7 @@ async function generateMentorPlan() {
   const userMsg = `${profileCtx}\n\nДодатково: статистика за ${stats.length} місяців${audience?.ai_result?', портрет ЦА вже згенеровано':''}.\n\nЗгенеруй мій персональний ментор-план як JSON.`;
 
   try {
-    const res = await fetch('/api/chat', {
+    const res = await chatFetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2400,7 +2422,7 @@ async function sendChat() {
 
   let reply = '';
   try {
-    const res = await fetch('/api/chat', {
+    const res = await chatFetch('/api/chat', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1000, system:sys, messages:chatHistory })
@@ -2617,6 +2639,7 @@ function renderReflect() {
 }
 
 async function analyzeReflect(idx) {
+  if (!requireAuth()) return;
   const ans = document.getElementById('rq'+idx).value.trim();
   if (!ans) return;
   const st = document.getElementById('rst'+idx);
@@ -2624,7 +2647,7 @@ async function analyzeReflect(idx) {
   st.textContent = '⏳'; out.classList.remove('on');
   const q = REFLECT_QS[CU][idx].q;
   try {
-    const res = await fetch('/api/chat',{
+    const res = await chatFetch('/api/chat',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',max_tokens:600,
@@ -2784,13 +2807,14 @@ async function dbSaveAudience(input, result) {
 }
 
 async function generateAudiencePortrait() {
+  if (!requireAuth()) return;
   const input = document.getElementById('audienceInput').value.trim();
   if (!input) return alert('Опиши що знаєш про аудиторію');
   const out = document.getElementById('audienceResult');
   const btn = document.getElementById('audienceBtn');
   btn.disabled = true; const orig = btn.textContent; btn.textContent = '⏳';
   try {
-    const res = await fetch('/api/chat',{
+    const res = await chatFetch('/api/chat',{
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6', max_tokens:1200,
@@ -3043,6 +3067,7 @@ function renderPractice() {
 }
 
 async function analyzePractice(id) {
+  if (!requireAuth()) return;
   let practice = null;
   for (const c of PRACTICES) {
     const found = c.items.find(p => p.id === id);
@@ -3055,7 +3080,7 @@ async function analyzePractice(id) {
   out.textContent = 'ШІ думає...';
   out.classList.add('on');
   try {
-    const res = await fetch('/api/chat',{
+    const res = await chatFetch('/api/chat',{
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6', max_tokens:1000,
