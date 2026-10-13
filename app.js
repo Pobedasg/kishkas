@@ -315,8 +315,7 @@ async function doAuth() {
       loginSuccess();
     }
   } catch(e) {
-    if (authMode === 'login' && (e?.code === 'invalid_credentials' || /Invalid login credentials/i.test(e?.message || ''))) showLoginHelp();
-    else showErr(authError(e));
+    showErr(authError(e));
   } finally { btn.disabled = false; btn.textContent = authMode === 'reg' ? 'Зареєструватись →' : 'Увійти →'; }
 }
 
@@ -357,17 +356,6 @@ async function resendConfirmation() {
   }
   ok.style.display = 'block';
   setTimeout(() => { btn.disabled = false; }, 30000);
-}
-
-// We cannot say whether the email exists (that would let anyone check who is registered),
-// so give the user the next steps instead.
-function showLoginHelp() {
-  const el = document.getElementById('aerr');
-  el.innerHTML = `Невірний email або пароль.<div style="margin-top:8px;font-size:12px;line-height:1.7;color:rgba(255,255,255,.6)">
-    Можливо, ти реєструвалась з іншою поштою — спробуй її.<br>
-    <a href="#" onclick="setMode('forgot'); return false;" style="color:#7ee0a0">Забула пароль?</a> ·
-    <a href="#" onclick="setMode('reg', document.querySelector('.mtab[onclick*=&quot;reg&quot;]')); return false;" style="color:#7ee0a0">Створити акаунт</a></div>`;
-  el.style.display = 'block';
 }
 
 function showErr(msg) {
