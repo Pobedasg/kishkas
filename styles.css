@@ -821,7 +821,7 @@ body.theme-modern.dark #fab-note{color:#fff;}
   font-family:'Geologica',sans-serif;
   box-shadow:0 20px 60px rgba(0,0,0,.18);
   max-width:320px;
-  position:relative;
+  /* NOT position:relative — driver.js sets position:fixed and computes top/left itself */
 }
 @media(max-width:640px){.driver-popover.sprout-tour{max-width:88vw;}}
 
