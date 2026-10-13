@@ -891,3 +891,15 @@ body.dark .driver-popover.sprout-tour .driver-popover-arrow{display:none;}
   left:50%!important;
   transform:translate(-50%,-50%)!important;
 }
+
+/* ── Tour: smooth transitions between steps/tabs ───── */
+.driver-overlay,
+.driver-popover.sprout-tour{transition:opacity .25s ease;}
+body.tour-switching .driver-overlay,
+body.tour-switching .driver-popover.sprout-tour{opacity:0!important;}
+@keyframes tourTabIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+body.tour-on .tab.on{animation:tourTabIn .4s ease both;}
+@media(prefers-reduced-motion:reduce){
+  .driver-overlay,.driver-popover.sprout-tour{transition:none;}
+  body.tour-on .tab.on{animation:none;}
+}

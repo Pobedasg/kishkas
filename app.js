@@ -326,22 +326,34 @@ function startDemoTour() {
   const { driver } = window.driver.js;
   const isMobile = window.innerWidth < 900;
 
+  // Smooth tab switch inside the tour: fade the overlay/popover out, swap the tab,
+  // move to the next step while hidden, then fade back in (see body.tour-switching in CSS).
+  const swap = (tab, ms, next) => {
+    document.body.classList.add('tour-on', 'tour-switching');
+    setTimeout(() => {
+      goTab(tab);
+      setTimeout(() => {
+        next();
+        setTimeout(() => document.body.classList.remove('tour-switching'), 80);
+      }, ms);
+    }, 240);
+  };
   const nav = (tab, ms = 500) => () => {
     if (isMobile) closeMenu();
-    goTab(tab);
-    setTimeout(() => d.moveNext(), ms);
+    swap(tab, ms, () => d.moveNext());
     return false;
   };
 
   // Mobile: centered popovers, navigate between tabs so user sees context
   if (isMobile) {
-    const mn = (tab, ms = 450) => () => { goTab(tab); setTimeout(() => md.moveNext(), ms); return false; };
+    const mn = (tab, ms = 450) => () => { swap(tab, ms, () => md.moveNext()); return false; };
     const md = driver({
       showProgress: true, progressText: '{{current}} / {{total}}',
       nextBtnText: 'Далі →', prevBtnText: '← Назад', doneBtnText: 'Готово 🚀',
       allowClose: true, overlayOpacity: 0.35, smoothScroll: true,
       popoverClass: 'sprout-tour',
       onDestroyStarted: () => { md.destroy(); localStorage.setItem('ksk_tour_seen', '1'); },
+      onDestroyed: () => document.body.classList.remove('tour-on', 'tour-switching'),
       steps: [
         { popover: { title: '👋 Ласкаво просимо!', description: 'Це Sprout — платформа для зростання в соцмережах. Покажу всі розділи на практиці.', side:'over', align:'center' } },
         { popover: { title: '📊 Головна — дашборд', description: 'Зараз ти на головній. Тут — стрік, цілі, остання статистика. Блоки можна обирати і переставляти.', side:'over', align:'center',
@@ -379,6 +391,7 @@ function startDemoTour() {
     animate: true,
     popoverClass: 'sprout-tour',
     onDestroyStarted: () => { d.destroy(); localStorage.setItem('ksk_tour_seen', '1'); },
+    onDestroyed: () => document.body.classList.remove('tour-on', 'tour-switching'),
     steps: [
 
       // ── 1. Welcome ──────────────────────────────────────
@@ -521,7 +534,7 @@ function startDemoTour() {
           title: '🪞 Рефлексія',
           description: 'Питання для глибшого розуміння себе як блогера. Відповідаєш — ШІ аналізує і дає зворотній зв\'язок. Щоразу нові питання.',
           side: 'bottom', align: 'start',
-          onNextClick: () => { goTab('reflect'); setTimeout(() => d.moveNext(), 500); return false; },
+          onNextClick: nav('reflect', 500),
         }
       },
 
