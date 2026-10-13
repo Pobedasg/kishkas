@@ -402,11 +402,11 @@ function startDemoTour() {
 
       // ── 3. Dashboard ────────────────────────────────────
       {
-        element: '#dashboardWidgets',
+        element: '#dashboardWidgets > :first-child',
         popover: {
           title: '📊 Дашборд',
           description: 'Твій центр управління. Тут — стрік, цілі, остання статистика, нотатки. Кожен блок ти обираєш сам_а.',
-          side: 'top', align: 'center',
+          side: 'bottom', align: 'start',
         }
       },
 
@@ -433,11 +433,11 @@ function startDemoTour() {
 
       // ── 6. Stats form ────────────────────────────────────
       {
-        element: '#statsForm',
+        element: '#tab-stats .stitle',
         popover: {
           title: '📈 Прогрес',
           description: 'Щомісяця вносиш цифри по кожній платформі — підписники, охоплення, пости, Reels. Платформа будує графіки росту.',
-          side: 'top', align: 'center',
+          side: 'bottom', align: 'start',
         }
       },
 
@@ -505,11 +505,11 @@ function startDemoTour() {
 
       // ── 13. Mentor ───────────────────────────────────────
       {
-        element: '#mentorcontent',
+        element: '#mtitle',
         popover: {
           title: '🎯 Менторський план',
           description: 'ШІ генерує персональний план розвитку — на основі твого профілю, блокерів і цілей. Розбиває на тижні і конкретні дії.',
-          side: 'top', align: 'center',
+          side: 'bottom', align: 'start',
           onNextClick: nav('reflect', 550),
         }
       },
@@ -527,22 +527,22 @@ function startDemoTour() {
 
       // ── 15. Reflect content ──────────────────────────────
       {
-        element: '#reflectqs',
+        element: '#tab-reflect .stitle',
         popover: {
           title: '💬 Питання для роздумів',
           description: 'Обираєш питання, пишеш відповідь — і отримуєш чесний, підтримуючий аналіз від ШІ. Допомагає краще зрозуміти свої блокери.',
-          side: 'top', align: 'center',
+          side: 'bottom', align: 'start',
           onNextClick: nav('tools', 550),
         }
       },
 
       // ── 16. Tools ────────────────────────────────────────
       {
-        element: '#toolscontent',
+        element: '#tab-tools .stitle',
         popover: {
           title: '🛠 Інструменти',
           description: 'Перевірена добірка застосунків для монтажу, дизайну, аналітики і планування. З посиланнями і описами.',
-          side: 'top', align: 'center',
+          side: 'bottom', align: 'start',
           onNextClick: nav('home', 500),
         }
       },
