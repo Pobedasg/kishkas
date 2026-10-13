@@ -1187,6 +1187,12 @@ function profileFormHTML(p) {
     multi('blockers', 'Головні блокери зараз', PROFILE_BLOCKERS, p.blockers, 'p-blockersOther', p.blockers_other),
     multi('needs', 'Що найбільше потрібно', PROFILE_NEEDS, p.needs, 'p-needsOther', p.needs_other),
     ta('p-goals', 'Цілі на найближчі 3–6 місяців', p.goals, 'Наприклад: дійти до 5k підписників, запустити курс, побороти страх показувати обличчя...'),
+    ,head('Небезпечна зона'),
+    `<div class="pf-row">
+      <label>Видалити акаунт</label>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.5">Акаунт і всі твої дані (нотатки, статистика, плани, чати, профіль) будуть видалені назавжди. Це не можна скасувати.</div>
+      <button type="button" class="btn btn-out btn-sm" style="color:#d33;border-color:#d33" onclick="deleteAccount()">Видалити акаунт</button>
+    </div>`
   ].join('');
 }
 
@@ -1504,6 +1510,25 @@ async function saveProfile() {
     console.error('saveProfile crash', e);
     showToast('Помилка: ' + e.message, 'error');
   }
+}
+
+async function deleteAccount() {
+  if (!sbUser) return;
+  const word = prompt('Це видалить акаунт і ВСІ твої дані (нотатки, статистику, плани, чати) назавжди.\n\nЩоб підтвердити, напиши слово: ВИДАЛИТИ');
+  if (word === null) return;
+  if (word.trim().toUpperCase() !== 'ВИДАЛИТИ') { showToast('Не підтверджено — акаунт не видалено', 'error'); return; }
+  const { error } = await sb.rpc('delete_my_account');
+  if (error) {
+    console.warn('delete account', error);
+    showToast('Не вдалося видалити акаунт. Спробуй ще раз пізніше', 'error');
+    return;
+  }
+  const prefix = `ksk_${CU}_`;
+  try { Object.keys(localStorage).filter(k => k.startsWith(prefix)).forEach(k => localStorage.removeItem(k)); } catch(e) {}
+  document.getElementById('profile-modal').classList.remove('on');
+  _profileSnapshot = null;
+  await performLogout();
+  showToast('Акаунт видалено', 'success');
 }
 
 function dismissProfileNudge() {
