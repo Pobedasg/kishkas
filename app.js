@@ -219,9 +219,14 @@ async function doAuth() {
   btn.textContent = '...'; btn.disabled = true;
   try {
     if (authMode === 'reg') {
+      const dp = DEMO_MEM.profile || {};
+      const pending = {};
+      if (dp.display_name) pending.display_name = dp.display_name;
+      if (dp.display_emoji) pending.display_emoji = dp.display_emoji;
+      if (dp.accent_color) pending.accent_color = dp.accent_color;
       const { data, error } = await sb.auth.signUp({
         email, password: pass,
-        options: { data: { profile: 'default' } }
+        options: { data: { profile: 'default', ...(Object.keys(pending).length ? { pending_profile: pending } : {}) } }
       });
       if (error) throw error;
       if (data.session) {
@@ -249,8 +254,10 @@ function showErr(msg) {
 
 function enterDemo() {
   CU = 'demo'; sbUser = null;
-  if (!localStorage.getItem(`ksk_demo_notes`)) lsave('notes', DEMO_NOTES);
-  if (!localStorage.getItem(`ksk_demo_stats`)) lsave('stats', DEMO_STATS);
+  // Remove demo data that older versions saved in the browser
+  try { Object.keys(localStorage).filter(k => k.startsWith('ksk_demo_')).forEach(k => localStorage.removeItem(k)); } catch(e) {}
+  if (!('notes' in DEMO_MEM)) lsave('notes', DEMO_NOTES);
+  if (!('stats' in DEMO_MEM)) lsave('stats', DEMO_STATS);
   loginSuccess();
   // Offer tour unless already seen
   if (!localStorage.getItem('ksk_tour_seen')) {
@@ -695,8 +702,16 @@ function toggleTheme(){
 // STORAGE — Supabase + localStorage fallback
 // ══════════════════════════════════════════
 const LK = k => `ksk_${CU}_${k}`;
-const lsave = (k,v) => localStorage.setItem(LK(k), JSON.stringify(v));
-const lload = (k,d) => { try { const v=localStorage.getItem(LK(k)); return v?JSON.parse(v):d; } catch{return d;} };
+// Demo data lives in memory only: it is gone after a page reload (nothing is written to localStorage).
+const DEMO_MEM = {};
+const lsave = (k,v) => {
+  if (CU === 'demo') { DEMO_MEM[k] = JSON.parse(JSON.stringify(v)); return; }
+  localStorage.setItem(LK(k), JSON.stringify(v));
+};
+const lload = (k,d) => {
+  if (CU === 'demo') return (k in DEMO_MEM) ? JSON.parse(JSON.stringify(DEMO_MEM[k])) : d;
+  try { const v=localStorage.getItem(LK(k)); return v?JSON.parse(v):d; } catch{return d;}
+};
 
 async function dbNotes() {
   if (!sbUser) return lload('notes',[]);
@@ -972,6 +987,29 @@ function profileFormHTML(p) {
       </div>
     </div>`;
 
+  if (CU === 'demo') {
+    // Demo: only look-and-feel settings; the rest needs an account
+    return [
+      head('Про тебе'),
+      `<div class="pf-row">
+        <label>Як тебе називати (ім'я, нік, псевдонім)</label>
+        <input type="text" id="p-name" value="${(p.display_name||'').replace(/"/g,'&quot;')}" placeholder="Наприклад: Олена, або Olenka_blog">
+      </div>`,
+      `<div class="pf-row">
+        <label>Емодзі для лівого кутка</label>
+        <div class="emoji-row">
+          <span class="emoji-current" id="emojiCurrent">${p.display_emoji || '🙂'}</span>
+          <input type="hidden" id="p-emoji" value="${(p.display_emoji||'').replace(/"/g,'&quot;')}">
+          <button type="button" class="btn btn-out btn-sm" onclick="toggleEmojiPicker()">Обрати →</button>
+          <button type="button" class="btn btn-out btn-sm" onclick="pickEmoji('')">Без емодзі</button>
+        </div>
+        <div id="emojiPicker" class="emoji-picker" style="display:none">${emojiPickerHTML()}</div>
+      </div>`,
+      colorPaletteHTML,
+      `<div class="cl cl-dk" style="margin-top:6px">🔒 Інформація про блог, час, монетизацію, блокери і цілі заповнюється після реєстрації — тоді ШІ-ментор зможе скласти план саме під тебе. Ім'я, емодзі й колір з демо перенесуться на твій акаунт.<div style="margin-top:10px"><button type="button" class="btn btn-ac btn-sm" onclick="goRegisterFromDemo()">Зареєструватись →</button></div></div>`,
+    ].join('');
+  }
+
   return [
     head('Про тебе'),
     `<div class="pf-row">
@@ -1152,7 +1190,30 @@ function showConfirm({ title, desc = '', yesText = 'Так', onYes }) {
 }
 
 
+// Go from the demo to the sign-up form (demo look-and-feel stays in memory and is carried over)
+async function goRegisterFromDemo() {
+  document.getElementById('profile-modal').classList.remove('on');
+  _profileSnapshot = null;
+  await performLogout();
+  setMode('reg', document.querySelector('.mtab[onclick*="reg"]'));
+}
+
+// Name / emoji / accent colour chosen in the demo are stored in the new account's metadata at sign-up
+// and copied into its profile on the first login (works with and without email confirmation).
+async function adoptPendingProfile() {
+  const pend = sbUser?.user_metadata?.pending_profile;
+  if (!pend) return;
+  try {
+    const cur = await dbProfile();
+    if (!cur || (!cur.display_name && !cur.display_emoji && !cur.accent_color)) {
+      await dbSaveProfile({ ...(cur || {}), ...pend });
+    }
+    await sb.auth.updateUser({ data: { pending_profile: null } });
+  } catch(e) { console.warn('pending profile', e); }
+}
+
 async function applyProfileOverrides() {
+  await adoptPendingProfile();
   const p = await dbProfile();
     const u = USERS[CU] || {};
     const defaultEmoji = u.emoji || '🌱';
