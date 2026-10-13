@@ -66,6 +66,8 @@ let authMode = 'login';
 // ══════════════════════════════════════════
 // AUTH HELPERS
 // ══════════════════════════════════════════
+// Flip to true after the Google provider is enabled in Supabase (Authentication -> Sign In / Providers -> Google)
+const ENABLE_GOOGLE_LOGIN = false;
 const CAME_FROM_RECOVERY = /type=recovery/.test(location.hash);
 const MIN_PASSWORD = 8;
 
@@ -92,6 +94,22 @@ function authError(e) {
   return 'Щось пішло не так. Спробуй ще раз';
 }
 
+function refreshGoogleBtn() {
+  const w = document.getElementById('agoogle-wrap');
+  if (!w) return;
+  w.style.display = (ENABLE_GOOGLE_LOGIN && (authMode === 'login' || authMode === 'reg')) ? 'block' : 'none';
+}
+
+async function signInWithGoogle() {
+  try {
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/' }
+    });
+    if (error) throw error;
+  } catch(e) { showErr(authError(e)); }
+}
+
 // Log the user in from a session (used by the email-confirmation link, also in another tab)
 function adoptSession(session) {
   if (!session || sbUser || authMode === 'reset' || CAME_FROM_RECOVERY) return;
@@ -107,6 +125,7 @@ function adoptSession(session) {
 // INIT
 // ══════════════════════════════════════════
 async function init() {
+  refreshGoogleBtn();
   sb.auth.onAuthStateChange((event, session) => {
     if (event === 'PASSWORD_RECOVERY') { enterResetMode(); return; }
     if (event === 'SIGNED_IN') setTimeout(() => adoptSession(session), 0);
@@ -228,6 +247,7 @@ function setMode(mode, el) {
     btn.textContent = mode === 'reg' ? 'Зареєструватись →' : 'Увійти →';
     btn.onclick = doAuth;
   }
+  refreshGoogleBtn();
 }
 
 async function doForgot() {
@@ -302,6 +322,7 @@ async function doAuth() {
 function showCheckEmail(email) {
   ['aemail-wrap','apass-wrap','aforgot-link','aforgot-ok','aerr'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
   document.getElementById('abtn').style.display = 'none';
+  document.getElementById('agoogle-wrap').style.display = 'none';
   document.querySelector('.mtabs').style.display = 'none';
   const safe = email.replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
   const box = document.getElementById('acheck');
