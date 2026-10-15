@@ -417,7 +417,7 @@ function startDemoTour() {
     const md = driver({
       showProgress: true, progressText: '{{current}} / {{total}}',
       nextBtnText: 'Далі →', prevBtnText: '← Назад', doneBtnText: 'Готово 🚀',
-      allowClose: true, overlayOpacity: 0.35, smoothScroll: true,
+      allowClose: true, overlayClickBehavior: () => {}, overlayOpacity: 0.35, smoothScroll: true,
       popoverClass: 'sprout-tour',
       onDestroyStarted: () => { md.destroy(); localStorage.setItem('ksk_tour_seen', '1'); },
       onDestroyed: () => document.body.classList.remove('tour-on', 'tour-switching'),
@@ -452,7 +452,7 @@ function startDemoTour() {
     nextBtnText: 'Далі →',
     prevBtnText: '← Назад',
     doneBtnText: 'Готово 🚀',
-    allowClose: true,
+    allowClose: true, overlayClickBehavior: () => {},
     overlayOpacity: 0.5,
     smoothScroll: true,
     animate: true,
