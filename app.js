@@ -115,9 +115,26 @@ function refreshGoogleBtn() {
   w.style.display = (ENABLE_GOOGLE_LOGIN && (authMode === 'login' || authMode === 'reg')) ? 'block' : 'none';
 }
 
+// Name / emoji / accent colour chosen in the demo, carried over to a new account.
+// Google sign-in leaves the page (DEMO_MEM is lost on the redirect), so it also goes to sessionStorage.
+const PENDING_PROFILE_KEY = 'ksk_pending_profile';
+function demoPendingProfile() {
+  const dp = DEMO_MEM.profile || {};
+  const pending = {};
+  if (dp.display_name) pending.display_name = dp.display_name;
+  if (dp.display_emoji) pending.display_emoji = dp.display_emoji;
+  if (dp.accent_color) pending.accent_color = dp.accent_color;
+  return pending;
+}
+
 async function signInWithGoogle() {
   const btn = document.getElementById('agoogle');
   if (btn) btn.disabled = true;
+  try {
+    const pending = demoPendingProfile();
+    if (Object.keys(pending).length) sessionStorage.setItem(PENDING_PROFILE_KEY, JSON.stringify(pending));
+    else sessionStorage.removeItem(PENDING_PROFILE_KEY);
+  } catch(e) {}
   try {
     const { error } = await sb.auth.signInWithOAuth({
       provider: 'google',
@@ -326,11 +343,7 @@ async function doAuth() {
   btn.textContent = '...'; btn.disabled = true;
   try {
     if (authMode === 'reg') {
-      const dp = DEMO_MEM.profile || {};
-      const pending = {};
-      if (dp.display_name) pending.display_name = dp.display_name;
-      if (dp.display_emoji) pending.display_emoji = dp.display_emoji;
-      if (dp.accent_color) pending.accent_color = dp.accent_color;
+      const pending = demoPendingProfile();
       const { data, error } = await sb.auth.signUp({
         email, password: pass,
         options: {
@@ -1354,21 +1367,45 @@ async function goRegisterFromDemo() {
 }
 
 // Name / emoji / accent colour chosen in the demo are stored in the new account's metadata at sign-up
-// and copied into its profile on the first login (works with and without email confirmation).
+// (or in sessionStorage before the Google redirect) and copied into its profile on the first login.
 async function adoptPendingProfile() {
-  const pend = sbUser?.user_metadata?.pending_profile;
+  const fromMeta = sbUser?.user_metadata?.pending_profile;
+  let fromGoogle = null;
+  try {
+    fromGoogle = JSON.parse(sessionStorage.getItem(PENDING_PROFILE_KEY) || 'null');
+    sessionStorage.removeItem(PENDING_PROFILE_KEY);
+  } catch(e) {}
+  const pend = fromMeta || fromGoogle;
   if (!pend) return;
   try {
     const cur = await dbProfile();
     if (!cur || (!cur.display_name && !cur.display_emoji && !cur.accent_color)) {
       await dbSaveProfile({ ...(cur || {}), ...pend });
     }
-    await sb.auth.updateUser({ data: { pending_profile: null } });
+    if (fromMeta) await sb.auth.updateUser({ data: { pending_profile: null } });
   } catch(e) { console.warn('pending profile', e); }
+}
+
+// First Google sign-in: the account has no app metadata yet. Give it the 'default' profile like an email
+// sign-up and take the display name from Google if the profile has none. Email accounts already have
+// metadata.profile (also when Google is linked to them by email), so their data is never touched here.
+async function prepareOAuthUser() {
+  const meta = sbUser?.user_metadata || {};
+  if (!sbUser || meta.profile) return;
+  try {
+    const { data: upd } = await sb.auth.updateUser({ data: { profile: 'default' } });
+    if (upd?.user) sbUser = upd.user;
+    const googleName = String(meta.full_name || meta.name || '').trim();
+    if (!googleName) return;
+    const { data: rows } = await sb.from('user_questionnaire').select('*').eq('user_id', sbUser.id);
+    const cur = rows && rows[0];
+    if (!cur?.display_name) await dbSaveProfile({ ...(cur || {}), display_name: googleName });
+  } catch(e) { console.warn('oauth profile', e); }
 }
 
 async function applyProfileOverrides() {
   await adoptPendingProfile();
+  await prepareOAuthUser();
   const p = await dbProfile();
     const u = USERS[CU] || {};
     const defaultEmoji = u.emoji || '🌱';
