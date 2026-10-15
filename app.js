@@ -64,11 +64,71 @@ let chatHistory = [];
 let authMode = 'login';
 
 // ══════════════════════════════════════════
+// AUTH HELPERS
+// ══════════════════════════════════════════
+// Flip to true after the Google provider is enabled in Supabase (Authentication -> Sign In / Providers -> Google)
+const ENABLE_GOOGLE_LOGIN = false;
+const CAME_FROM_RECOVERY = /type=recovery/.test(location.hash);
+const MIN_PASSWORD = 8;
+
+// Length matters more than special characters: at least 8 characters, with a letter and a digit.
+function validatePassword(p) {
+  if (!p || p.length < MIN_PASSWORD) return `Пароль має бути мінімум ${MIN_PASSWORD} символів`;
+  if (!/[A-Za-zА-Яа-яІіЇїЄєҐґ]/.test(p) || !/\d/.test(p)) return 'Додай у пароль хоча б одну літеру і одну цифру';
+  return '';
+}
+
+// Supabase returns English messages: show everything in Ukrainian.
+function authError(e) {
+  const code = e?.code || '';
+  const msg = String(e?.message || '');
+  if (code === 'invalid_credentials' || /Invalid login credentials/i.test(msg)) return 'Невірний email або пароль';
+  if (code === 'email_not_confirmed' || /Email not confirmed/i.test(msg)) return 'Спочатку підтверди email — ми надіслали лист із кнопкою підтвердження';
+  if (code === 'user_already_exists' || /already registered/i.test(msg)) return 'Акаунт з цією поштою вже існує — спробуй увійти';
+  if (code === 'weak_password' || /Password should|least \d+ characters|weak/i.test(msg)) return `Пароль замалий або занадто простий: мінімум ${MIN_PASSWORD} символів, літери й цифри`;
+  if (code === 'same_password' || /different from the old/i.test(msg)) return 'Новий пароль має відрізнятись від старого';
+  if (code === 'email_address_invalid' || /invalid format|Unable to validate email|valid email/i.test(msg)) return 'Перевір email — схоже, він введений неправильно';
+  if (code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit' || /rate limit|too many/i.test(msg)) return 'Забагато спроб. Зачекай хвилину і спробуй ще раз';
+  if (code === 'signup_disabled') return 'Реєстрація тимчасово вимкнена';
+  if (/Failed to fetch|NetworkError|network/i.test(msg)) return 'Немає зв\'язку з сервером. Перевір інтернет і спробуй ще раз';
+  return 'Щось пішло не так. Спробуй ще раз';
+}
+
+function refreshGoogleBtn() {
+  const w = document.getElementById('agoogle-wrap');
+  if (!w) return;
+  w.style.display = (ENABLE_GOOGLE_LOGIN && (authMode === 'login' || authMode === 'reg')) ? 'block' : 'none';
+}
+
+async function signInWithGoogle() {
+  try {
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/' }
+    });
+    if (error) throw error;
+  } catch(e) { showErr(authError(e)); }
+}
+
+// Log the user in from a session (used by the email-confirmation link, also in another tab)
+function adoptSession(session) {
+  if (!session || sbUser || authMode === 'reset' || CAME_FROM_RECOVERY) return;
+  sbUser = session.user;
+  const meta = session.user.user_metadata;
+  CU = (meta?.profile && USERS[meta.profile]) ? meta.profile : 'default';
+  const chk = document.getElementById('acheck');
+  if (chk) chk.style.display = 'none';
+  loginSuccess();
+}
+
+// ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
 async function init() {
+  refreshGoogleBtn();
   sb.auth.onAuthStateChange((event, session) => {
-    if (event === 'PASSWORD_RECOVERY') enterResetMode();
+    if (event === 'PASSWORD_RECOVERY') { enterResetMode(); return; }
+    if (event === 'SIGNED_IN') setTimeout(() => adoptSession(session), 0);
   });
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
@@ -102,7 +162,7 @@ function enterResetMode() {
   document.getElementById('aforgot-ok').style.display = 'none';
   document.getElementById('aerr').style.display = 'none';
   document.querySelector('#apass-wrap .albl').textContent = 'Новий пароль';
-  document.getElementById('apass').placeholder = 'Мінімум 6 символів';
+  document.getElementById('apass').placeholder = `Мінімум ${MIN_PASSWORD} символів, літери й цифри`;
   document.getElementById('apass').value = '';
   const btn = document.getElementById('abtn');
   btn.style.display = '';
@@ -114,8 +174,9 @@ async function doResetPassword() {
   const newPass = document.getElementById('apass').value;
   const errEl = document.getElementById('aerr');
   errEl.style.display = 'none';
-  if (!newPass || newPass.length < 6) {
-    errEl.textContent = 'Пароль має бути мінімум 6 символів';
+  const passErr = validatePassword(newPass);
+  if (passErr) {
+    errEl.textContent = passErr;
     errEl.style.display = 'block';
     return;
   }
@@ -135,7 +196,7 @@ async function doResetPassword() {
       loginSuccess();
     }
   } catch(e) {
-    errEl.textContent = e.message || 'Сталась помилка, спробуй ще раз';
+    errEl.textContent = authError(e);
     errEl.style.display = 'block';
     btn.disabled = false;
     btn.textContent = 'Зберегти пароль →';
@@ -173,7 +234,10 @@ function setMode(mode, el) {
   document.getElementById('aforgot-ok').style.display = 'none';
   document.getElementById('aerr').style.display = 'none';
   document.querySelector('#apass-wrap .albl').textContent = 'Пароль';
-  document.getElementById('apass').placeholder = '••••••';
+  document.getElementById('apass').placeholder = mode === 'reg' ? `Мінімум ${MIN_PASSWORD} символів, літери й цифри` : '••••••';
+  const chk = document.getElementById('acheck');
+  if (chk) chk.style.display = 'none';
+  document.querySelector('.mtabs').style.display = '';
   const btn = document.getElementById('abtn');
   btn.style.display = '';
   if (isForgot) {
@@ -183,6 +247,7 @@ function setMode(mode, el) {
     btn.textContent = mode === 'reg' ? 'Зареєструватись →' : 'Увійти →';
     btn.onclick = doAuth;
   }
+  refreshGoogleBtn();
 }
 
 async function doForgot() {
@@ -201,7 +266,7 @@ async function doForgot() {
     document.getElementById('aforgot-ok').style.display = 'block';
     btn.style.display = 'none';
   } catch(e) {
-    errEl.textContent = e.message || 'Сталась помилка, спробуй ще раз';
+    errEl.textContent = authError(e);
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false;
@@ -215,6 +280,10 @@ async function doAuth() {
   const errEl = document.getElementById('aerr');
   errEl.style.display = 'none';
   if (!email || !pass) { showErr('Введи email і пароль'); return; }
+  if (authMode === 'reg') {
+    const passErr = validatePassword(pass);
+    if (passErr) { showErr(passErr); return; }
+  }
   const btn = document.getElementById('abtn');
   btn.textContent = '...'; btn.disabled = true;
   try {
@@ -226,13 +295,16 @@ async function doAuth() {
       if (dp.accent_color) pending.accent_color = dp.accent_color;
       const { data, error } = await sb.auth.signUp({
         email, password: pass,
-        options: { data: { profile: 'default', ...(Object.keys(pending).length ? { pending_profile: pending } : {}) } }
+        options: {
+          emailRedirectTo: window.location.origin + '/',
+          data: { profile: 'default', ...(Object.keys(pending).length ? { pending_profile: pending } : {}) }
+        }
       });
       if (error) throw error;
       if (data.session) {
         sbUser = data.user; CU = 'default'; loginSuccess();
       } else {
-        showErr('Перевір пошту — надіслали листа для підтвердження акаунту');
+        showCheckEmail(email);
       }
     } else {
       const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
@@ -243,8 +315,47 @@ async function doAuth() {
       loginSuccess();
     }
   } catch(e) {
-    showErr(e.message === 'Invalid login credentials' ? 'Невірний email або пароль' : e.message);
+    showErr(authError(e));
   } finally { btn.disabled = false; btn.textContent = authMode === 'reg' ? 'Зареєструватись →' : 'Увійти →'; }
+}
+
+function showCheckEmail(email) {
+  ['aemail-wrap','apass-wrap','aforgot-link','aforgot-ok','aerr'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+  document.getElementById('abtn').style.display = 'none';
+  document.getElementById('agoogle-wrap').style.display = 'none';
+  document.querySelector('.mtabs').style.display = 'none';
+  const safe = email.replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+  const box = document.getElementById('acheck');
+  box.innerHTML = `
+    <div style="font-size:34px;margin-bottom:8px">📬</div>
+    <div style="font-weight:700;font-size:16px;color:#fff;margin-bottom:6px">Перевір пошту</div>
+    <div>Ми надіслали лист на <b style="color:#fff">${safe}</b>.<br>Натисни кнопку «Підтвердити» в листі — і ти одразу потрапиш у свій акаунт.</div>
+    <div style="margin-top:14px;font-size:12px;color:rgba(255,255,255,.45)">Не бачиш листа? Зазирни в «Спам» або «Промоції».</div>
+    <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+      <button type="button" class="btn btn-out btn-sm" id="aresend" onclick="resendConfirmation()">Надіслати ще раз</button>
+      <button type="button" class="btn btn-out btn-sm" onclick="setMode('reg', document.querySelector('.mtab[onclick*=&quot;reg&quot;]'))">← Змінити пошту</button>
+    </div>
+    <div id="aresend-ok" style="display:none;margin-top:10px;font-size:12px;color:rgba(255,255,255,.55)"></div>`;
+  box.dataset.email = email;
+  box.style.display = 'block';
+}
+
+async function resendConfirmation() {
+  const box = document.getElementById('acheck');
+  const email = box?.dataset.email;
+  const ok = document.getElementById('aresend-ok');
+  const btn = document.getElementById('aresend');
+  if (!email) return;
+  btn.disabled = true;
+  try {
+    const { error } = await sb.auth.resend({ type: 'signup', email, options: { emailRedirectTo: window.location.origin + '/' } });
+    if (error) throw error;
+    ok.textContent = 'Лист надіслано ще раз.';
+  } catch(e) {
+    ok.textContent = authError(e);
+  }
+  ok.style.display = 'block';
+  setTimeout(() => { btn.disabled = false; }, 30000);
 }
 
 function showErr(msg) {
