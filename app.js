@@ -69,6 +69,18 @@ let authMode = 'login';
 // Google provider is configured in Supabase (Authentication -> Sign In / Providers -> Google)
 const ENABLE_GOOGLE_LOGIN = true;
 const CAME_FROM_RECOVERY = /type=recovery/.test(location.hash);
+// What the OAuth redirect left in the URL: tokens (implicit), a code (PKCE) or an error (e.g. access_denied).
+// Read once at load, before init() cleans the address bar.
+const OAUTH_RETURN = (() => {
+  const q = new URLSearchParams(location.search);
+  const h = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const get = k => q.get(k) || h.get(k) || '';
+  return {
+    isCallback: !!(get('access_token') || get('code') || get('error') || get('error_code')),
+    error: get('error'), errorCode: get('error_code'), errorDescription: get('error_description'),
+  };
+})();
+const OAUTH_PARAMS = ['access_token','refresh_token','expires_in','expires_at','token_type','provider_token','provider_refresh_token','type','code','state','error','error_code','error_description'];
 const MIN_PASSWORD = 8;
 
 // Length matters more than special characters: at least 8 characters, with a letter and a digit.
@@ -90,6 +102,9 @@ function authError(e) {
   if (code === 'email_address_invalid' || /invalid format|Unable to validate email|valid email/i.test(msg)) return 'Перевір email — схоже, він введений неправильно';
   if (code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit' || /rate limit|too many/i.test(msg)) return 'Забагато спроб. Зачекай хвилину і спробуй ще раз';
   if (code === 'signup_disabled') return 'Реєстрація тимчасово вимкнена';
+  if (code === 'access_denied' || /access_denied|denied/i.test(msg)) return 'Вхід через Google скасовано';
+  if (code === 'provider_disabled' || /provider is not enabled/i.test(msg)) return 'Вхід через Google зараз недоступний. Увійди через email';
+  if (code === 'bad_oauth_callback' || code === 'bad_oauth_state' || /oauth|external code|provider/i.test(msg)) return 'Не вдалося увійти через Google. Спробуй ще раз';
   if (/Failed to fetch|NetworkError|network/i.test(msg)) return 'Немає зв\'язку з сервером. Перевір інтернет і спробуй ще раз';
   return 'Щось пішло не так. Спробуй ще раз';
 }
@@ -101,13 +116,28 @@ function refreshGoogleBtn() {
 }
 
 async function signInWithGoogle() {
+  const btn = document.getElementById('agoogle');
+  if (btn) btn.disabled = true;
   try {
     const { error } = await sb.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin + '/' }
     });
     if (error) throw error;
-  } catch(e) { showErr(authError(e)); }
+  } catch(e) {
+    showErr(authError(e));
+    if (btn) btn.disabled = false;
+  }
+}
+
+// Remove OAuth tokens / code / error from the address bar (supabase-js leaves a bare '#' and never clears errors)
+function cleanAuthUrl() {
+  if (!OAUTH_RETURN.isCallback && location.hash !== '#') return;
+  const url = new URL(location.href);
+  OAUTH_PARAMS.forEach(k => url.searchParams.delete(k));
+  const h = new URLSearchParams(url.hash.replace(/^#/, ''));
+  if (!url.hash || url.hash === '#' || OAUTH_PARAMS.some(k => h.has(k))) url.hash = '';
+  history.replaceState(history.state, '', url.pathname + url.search + url.hash);
 }
 
 // Log the user in from a session (used by the email-confirmation link, also in another tab)
@@ -131,13 +161,19 @@ async function init() {
     if (event === 'SIGNED_IN') setTimeout(() => adoptSession(session), 0);
   });
   const { data: { session } } = await sb.auth.getSession();
-  if (session) {
+  // adoptSession() may already have logged in from the SIGNED_IN event: log in only once
+  if (session && !sbUser) {
     sbUser = session.user;
     const meta = session.user.user_metadata;
     const profileKey = meta?.profile;
     CU = (profileKey && USERS[profileKey]) ? profileKey : 'default';
     loginSuccess();
   }
+  if (!session && OAUTH_RETURN.error) {
+    const { error, errorCode, errorDescription } = OAUTH_RETURN;
+    showErr(authError({ code: error === 'access_denied' ? error : (errorCode || error), message: errorDescription }));
+  }
+  if (!CAME_FROM_RECOVERY) cleanAuthUrl();
   // Remove loader and mark page as ready
   document.documentElement.classList.add('ready');
   const loader = document.getElementById('loader');
