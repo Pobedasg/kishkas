@@ -66,8 +66,8 @@ let authMode = 'login';
 // ══════════════════════════════════════════
 // AUTH HELPERS
 // ══════════════════════════════════════════
-// Flip to true after the Google provider is enabled in Supabase (Authentication -> Sign In / Providers -> Google)
-const ENABLE_GOOGLE_LOGIN = false;
+// Google provider is configured in Supabase (Authentication -> Sign In / Providers -> Google)
+const ENABLE_GOOGLE_LOGIN = true;
 const CAME_FROM_RECOVERY = /type=recovery/.test(location.hash);
 const MIN_PASSWORD = 8;
 
@@ -168,6 +168,7 @@ function enterResetMode() {
   btn.style.display = '';
   btn.textContent = 'Зберегти пароль →';
   btn.onclick = doResetPassword;
+  refreshGoogleBtn();
 }
 
 async function doResetPassword() {
@@ -220,6 +221,7 @@ function restoreAuthUI() {
   btn.style.display = '';
   btn.textContent = 'Увійти →';
   btn.onclick = doAuth;
+  refreshGoogleBtn();
 }
 
 function setMode(mode, el) {

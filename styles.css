@@ -43,6 +43,12 @@ body{font-family:'Geologica',sans-serif;background:var(--bg);color:var(--ink);li
 .abtn{width:100%;padding:12px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:none;font-family:'Geologica',sans-serif;background:var(--ac);color:white;margin-top:4px;transition:opacity .2s;}
 .abtn:hover{opacity:.88;}
 .aerr{font-size:12px;color:#ff8a8a;margin-top:6px;display:none;}
+/* Google sign-in button: follows Google's branding (white surface, full-colour G, neutral border) */
+.gbtn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#1f1f1f;border:1px solid #747775;border-radius:10px;padding:11px 14px;font-size:14px;font-weight:500;font-family:'Geologica',sans-serif;cursor:pointer;transition:background .2s,box-shadow .2s;}
+.gbtn:hover{background:#f7f8f8;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+.gbtn:focus-visible{outline:2px solid var(--ac);outline-offset:2px;}
+.gbtn:disabled{opacity:.6;cursor:default;}
+.gbtn-logo{width:18px;height:18px;flex-shrink:0;}
 .qlogins{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);}
 .qlbl{font-size:10px;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;}
 .qbtns{display:flex;flex-direction:column;gap:6px;}
