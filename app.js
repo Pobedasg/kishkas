@@ -66,9 +66,21 @@ let authMode = 'login';
 // ══════════════════════════════════════════
 // AUTH HELPERS
 // ══════════════════════════════════════════
-// Flip to true after the Google provider is enabled in Supabase (Authentication -> Sign In / Providers -> Google)
-const ENABLE_GOOGLE_LOGIN = false;
+// Google provider is configured in Supabase (Authentication -> Sign In / Providers -> Google)
+const ENABLE_GOOGLE_LOGIN = true;
 const CAME_FROM_RECOVERY = /type=recovery/.test(location.hash);
+// What the OAuth redirect left in the URL: tokens (implicit), a code (PKCE) or an error (e.g. access_denied).
+// Read once at load, before init() cleans the address bar.
+const OAUTH_RETURN = (() => {
+  const q = new URLSearchParams(location.search);
+  const h = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const get = k => q.get(k) || h.get(k) || '';
+  return {
+    isCallback: !!(get('access_token') || get('code') || get('error') || get('error_code')),
+    error: get('error'), errorCode: get('error_code'), errorDescription: get('error_description'),
+  };
+})();
+const OAUTH_PARAMS = ['access_token','refresh_token','expires_in','expires_at','token_type','provider_token','provider_refresh_token','type','code','state','error','error_code','error_description'];
 const MIN_PASSWORD = 8;
 
 // Length matters more than special characters: at least 8 characters, with a letter and a digit.
@@ -90,6 +102,9 @@ function authError(e) {
   if (code === 'email_address_invalid' || /invalid format|Unable to validate email|valid email/i.test(msg)) return 'Перевір email — схоже, він введений неправильно';
   if (code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit' || /rate limit|too many/i.test(msg)) return 'Забагато спроб. Зачекай хвилину і спробуй ще раз';
   if (code === 'signup_disabled') return 'Реєстрація тимчасово вимкнена';
+  if (code === 'access_denied' || /access_denied|denied/i.test(msg)) return 'Вхід через Google скасовано';
+  if (code === 'provider_disabled' || /provider is not enabled/i.test(msg)) return 'Вхід через Google зараз недоступний. Увійди через email';
+  if (code === 'bad_oauth_callback' || code === 'bad_oauth_state' || /oauth|external code|provider/i.test(msg)) return 'Не вдалося увійти через Google. Спробуй ще раз';
   if (/Failed to fetch|NetworkError|network/i.test(msg)) return 'Немає зв\'язку з сервером. Перевір інтернет і спробуй ще раз';
   return 'Щось пішло не так. Спробуй ще раз';
 }
@@ -100,14 +115,47 @@ function refreshGoogleBtn() {
   w.style.display = (ENABLE_GOOGLE_LOGIN && (authMode === 'login' || authMode === 'reg')) ? 'block' : 'none';
 }
 
+// Name / emoji / accent colour chosen in the demo, carried over to a new account.
+// Google sign-in leaves the page (DEMO_MEM is lost on the redirect), so it also goes to sessionStorage.
+const PENDING_PROFILE_KEY = 'ksk_pending_profile';
+function demoPendingProfile() {
+  const dp = DEMO_MEM.profile || {};
+  const pending = {};
+  if (dp.display_name) pending.display_name = dp.display_name;
+  if (dp.display_emoji) pending.display_emoji = dp.display_emoji;
+  if (dp.accent_color) pending.accent_color = dp.accent_color;
+  return pending;
+}
+
 async function signInWithGoogle() {
+  const btn = document.getElementById('agoogle');
+  if (btn) btn.disabled = true;
+  try {
+    const pending = demoPendingProfile();
+    if (Object.keys(pending).length) sessionStorage.setItem(PENDING_PROFILE_KEY, JSON.stringify(pending));
+    else sessionStorage.removeItem(PENDING_PROFILE_KEY);
+  } catch(e) {}
   try {
     const { error } = await sb.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin + '/' }
     });
     if (error) throw error;
-  } catch(e) { showErr(authError(e)); }
+  } catch(e) {
+    showErr(authError(e));
+    if (btn) btn.disabled = false;
+  }
+}
+
+// Remove OAuth tokens / code / error from the address bar (supabase-js leaves a bare '#' and never clears errors)
+function cleanAuthUrl() {
+  // location.hash is '' for a bare trailing '#', so look at the full URL
+  if (!OAUTH_RETURN.isCallback && !location.href.endsWith('#')) return;
+  const url = new URL(location.href);
+  OAUTH_PARAMS.forEach(k => url.searchParams.delete(k));
+  const h = new URLSearchParams(url.hash.replace(/^#/, ''));
+  if (!url.hash || url.hash === '#' || OAUTH_PARAMS.some(k => h.has(k))) url.hash = '';
+  history.replaceState(history.state, '', url.pathname + url.search + url.hash);
 }
 
 // Log the user in from a session (used by the email-confirmation link, also in another tab)
@@ -131,13 +179,19 @@ async function init() {
     if (event === 'SIGNED_IN') setTimeout(() => adoptSession(session), 0);
   });
   const { data: { session } } = await sb.auth.getSession();
-  if (session) {
+  // adoptSession() may already have logged in from the SIGNED_IN event: log in only once
+  if (session && !sbUser) {
     sbUser = session.user;
     const meta = session.user.user_metadata;
     const profileKey = meta?.profile;
     CU = (profileKey && USERS[profileKey]) ? profileKey : 'default';
     loginSuccess();
   }
+  if (!session && OAUTH_RETURN.error) {
+    const { error, errorCode, errorDescription } = OAUTH_RETURN;
+    showErr(authError({ code: error === 'access_denied' ? error : (errorCode || error), message: errorDescription }));
+  }
+  if (!CAME_FROM_RECOVERY) cleanAuthUrl();
   // Remove loader and mark page as ready
   document.documentElement.classList.add('ready');
   const loader = document.getElementById('loader');
@@ -168,6 +222,7 @@ function enterResetMode() {
   btn.style.display = '';
   btn.textContent = 'Зберегти пароль →';
   btn.onclick = doResetPassword;
+  refreshGoogleBtn();
 }
 
 async function doResetPassword() {
@@ -220,6 +275,7 @@ function restoreAuthUI() {
   btn.style.display = '';
   btn.textContent = 'Увійти →';
   btn.onclick = doAuth;
+  refreshGoogleBtn();
 }
 
 function setMode(mode, el) {
@@ -288,11 +344,7 @@ async function doAuth() {
   btn.textContent = '...'; btn.disabled = true;
   try {
     if (authMode === 'reg') {
-      const dp = DEMO_MEM.profile || {};
-      const pending = {};
-      if (dp.display_name) pending.display_name = dp.display_name;
-      if (dp.display_emoji) pending.display_emoji = dp.display_emoji;
-      if (dp.accent_color) pending.accent_color = dp.accent_color;
+      const pending = demoPendingProfile();
       const { data, error } = await sb.auth.signUp({
         email, password: pass,
         options: {
@@ -1316,21 +1368,45 @@ async function goRegisterFromDemo() {
 }
 
 // Name / emoji / accent colour chosen in the demo are stored in the new account's metadata at sign-up
-// and copied into its profile on the first login (works with and without email confirmation).
+// (or in sessionStorage before the Google redirect) and copied into its profile on the first login.
 async function adoptPendingProfile() {
-  const pend = sbUser?.user_metadata?.pending_profile;
+  const fromMeta = sbUser?.user_metadata?.pending_profile;
+  let fromGoogle = null;
+  try {
+    fromGoogle = JSON.parse(sessionStorage.getItem(PENDING_PROFILE_KEY) || 'null');
+    sessionStorage.removeItem(PENDING_PROFILE_KEY);
+  } catch(e) {}
+  const pend = fromMeta || fromGoogle;
   if (!pend) return;
   try {
     const cur = await dbProfile();
     if (!cur || (!cur.display_name && !cur.display_emoji && !cur.accent_color)) {
       await dbSaveProfile({ ...(cur || {}), ...pend });
     }
-    await sb.auth.updateUser({ data: { pending_profile: null } });
+    if (fromMeta) await sb.auth.updateUser({ data: { pending_profile: null } });
   } catch(e) { console.warn('pending profile', e); }
+}
+
+// First Google sign-in: the account has no app metadata yet. Give it the 'default' profile like an email
+// sign-up and take the display name from Google if the profile has none. Email accounts already have
+// metadata.profile (also when Google is linked to them by email), so their data is never touched here.
+async function prepareOAuthUser() {
+  const meta = sbUser?.user_metadata || {};
+  if (!sbUser || meta.profile) return;
+  try {
+    const { data: upd } = await sb.auth.updateUser({ data: { profile: 'default' } });
+    if (upd?.user) sbUser = upd.user;
+    const googleName = String(meta.full_name || meta.name || '').trim();
+    if (!googleName) return;
+    const { data: rows } = await sb.from('user_questionnaire').select('*').eq('user_id', sbUser.id);
+    const cur = rows && rows[0];
+    if (!cur?.display_name) await dbSaveProfile({ ...(cur || {}), display_name: googleName });
+  } catch(e) { console.warn('oauth profile', e); }
 }
 
 async function applyProfileOverrides() {
   await adoptPendingProfile();
+  await prepareOAuthUser();
   const p = await dbProfile();
     const u = USERS[CU] || {};
     const defaultEmoji = u.emoji || '🌱';
