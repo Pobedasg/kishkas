@@ -149,7 +149,8 @@ async function signInWithGoogle() {
 
 // Remove OAuth tokens / code / error from the address bar (supabase-js leaves a bare '#' and never clears errors)
 function cleanAuthUrl() {
-  if (!OAUTH_RETURN.isCallback && location.hash !== '#') return;
+  // location.hash is '' for a bare trailing '#', so look at the full URL
+  if (!OAUTH_RETURN.isCallback && !location.href.endsWith('#')) return;
   const url = new URL(location.href);
   OAUTH_PARAMS.forEach(k => url.searchParams.delete(k));
   const h = new URLSearchParams(url.hash.replace(/^#/, ''));
