@@ -396,8 +396,9 @@ body.theme-modern .res-item:hover{box-shadow:var(--shadow-card-hover);}
 .tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(225px,1fr));gap:8px;}
 .toolc{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:15px;}
 .toole{font-size:20px;margin-bottom:7px;display:block;}
-.brand-icon{width:28px;height:28px;display:block;margin-bottom:9px;object-fit:contain;}
-body.theme-modern.dark .brand-icon{filter:brightness(1.1);}
+.brand-icon{width:28px;height:28px;display:block;margin-bottom:9px;color:var(--ink);}
+/* Letter badge for tools without a brand mark */
+.tool-badge{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:9px;font-size:14px;font-weight:700;line-height:1;color:var(--ac);background:color-mix(in srgb,var(--ac) 14%,transparent);}
 .tooln{font-size:13px;font-weight:700;margin-bottom:3px;}
 .toold{font-size:13px;color:#555;line-height:1.6;}
 .tooltag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--bg);color:var(--muted);margin-top:6px;}
