@@ -1794,30 +1794,31 @@ async function regenerateMentorPlan() {
   await generateMentorPlan();
 }
 
+// The plan is AI-generated JSON: every field is escaped, nothing is trusted as HTML.
 function renderMentorPlan(plan) {
   const u = USERS[CU];
   const c = u.color;
-  const positioning = plan.positioning ? `<div class="cncpt"><div class="cnl" style="color:${c}">🎯 позиціонування</div><p class="cnt">${plan.positioning}</p></div>` : '';
+  const positioning = plan.positioning ? `<div class="cncpt"><div class="cnl" style="color:${c}">🎯 позиціонування</div><p class="cnt">${esc(plan.positioning)}</p></div>` : '';
   const thisWeek = (plan.this_week && plan.this_week.length) ? `
     <div class="card" style="border-left:3px solid ${c}">
       <div class="ctitle">📌 Що зробити цього тижня</div>
-      <ul class="qlist" style="margin-top:8px">${plan.this_week.map(t=>`<li>${t}</li>`).join('')}</ul>
+      <ul class="qlist" style="margin-top:8px">${plan.this_week.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
     </div>` : '';
   const pillars = plan.pillars && plan.pillars.length ? `
     <div class="slbl">Опори контенту</div>
     <div class="pillars">${plan.pillars.map(p=>`
       <div class="pillar">
-        <span class="pe">${p.emoji||'🎯'}</span>
-        <div class="pname">${p.name||''}</div>
-        <div class="pdesc">${p.desc||''}</div>
-        ${(p.tags&&p.tags.length)?`<div class="ptags">${p.tags.map(t=>`<span class="ptag">${t}</span>`).join('')}</div>`:''}
+        <span class="pe">${esc(p.emoji||'🎯')}</span>
+        <div class="pname">${esc(p.name)}</div>
+        <div class="pdesc">${esc(p.desc)}</div>
+        ${(p.tags&&p.tags.length)?`<div class="ptags">${p.tags.map(t=>`<span class="ptag">${esc(t)}</span>`).join('')}</div>`:''}
       </div>`).join('')}</div>` : '';
   const formula = plan.formula && plan.formula.parts ? `
-    <div class="slbl">Формула контенту${plan.formula.label?' — '+plan.formula.label:''}</div>
+    <div class="slbl">Формула контенту${plan.formula.label?' — '+esc(plan.formula.label):''}</div>
     <div class="fmlbox">${plan.formula.parts.map(p=>`
       <div>
-        <div class="fpct" style="color:${c}">${p.percent||''}</div>
-        <div class="flbl">${(p.label||'')}${p.desc?' — '+p.desc:''}</div>
+        <div class="fpct" style="color:${c}">${esc(p.percent)}</div>
+        <div class="flbl">${esc(p.label)}${p.desc?' — '+esc(p.desc):''}</div>
       </div>`).join('')}</div>` : '';
   const weeks = plan.weeks && plan.weeks.length ? `
     <div class="slbl">Тижнева дорога</div>
@@ -1825,12 +1826,12 @@ function renderMentorPlan(plan) {
       <div class="wkcard">
         <div class="wkg">
           <div class="wkn" style="background:#111">
-            <div class="wknum" style="color:${c}">${w.num||''}</div>
-            <div class="wkname">${w.name||''}</div>
+            <div class="wknum" style="color:${c}">${esc(w.num)}</div>
+            <div class="wkname">${esc(w.name)}</div>
           </div>
           <div class="wkc">
-            <div class="wkf">${w.focus||''}</div>
-            <ul class="wki">${(w.items||[]).map(i=>`<li>${i}</li>`).join('')}</ul>
+            <div class="wkf">${esc(w.focus)}</div>
+            <ul class="wki">${(w.items||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
           </div>
         </div>
       </div>`).join('')}` : '';
@@ -1838,12 +1839,12 @@ function renderMentorPlan(plan) {
     <div class="slbl">Стратегії під твої блокери</div>
     ${plan.strategy_per_blocker.map(b=>`
       <div class="card">
-        <div style="font-size:14px;font-weight:700;color:${c};margin-bottom:6px">${b.blocker||''}</div>
-        <div style="font-size:14px;line-height:1.6;color:var(--ink2)">${b.advice||''}</div>
+        <div style="font-size:14px;font-weight:700;color:${c};margin-bottom:6px">${esc(b.blocker)}</div>
+        <div style="font-size:14px;line-height:1.6;color:var(--ink2)">${esc(b.advice)}</div>
       </div>`).join('')}` : '';
   const prompts = plan.quick_prompts && plan.quick_prompts.length ? `
     <div class="slbl">Швидкі ШІ-промпти під твою нішу</div>
-    <div class="chips" style="margin-bottom:18px">${plan.quick_prompts.map(p=>`<div class="chip" onclick="askAiFromDash(${JSON.stringify(p.text||'').replace(/"/g,'&quot;')})">${p.label||''}</div>`).join('')}</div>` : '';
+    <div class="chips" style="margin-bottom:18px">${plan.quick_prompts.map(p=>`<div class="chip" onclick="askAiFromDash(${jsArg(p.text)})">${esc(p.label)}</div>`).join('')}</div>` : '';
 
   return `<div class="sec">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:8px">
@@ -2075,7 +2076,7 @@ async function widgetAudience() {
   const a = await dbAudience();
   if (!a || !a.ai_result) return '';
   const preview = a.ai_result.slice(0,280) + (a.ai_result.length > 280 ? '...' : '');
-  const body = `<div style="font-size:13px;color:var(--ink2);line-height:1.6;white-space:pre-wrap">${preview}</div>`;
+  const body = `<div style="font-size:13px;color:var(--ink2);line-height:1.6;white-space:pre-wrap">${esc(preview)}</div>`;
   return blk('audience', body, {fn:"goTab('stats')", label:'Повний →'});
 }
 
