@@ -13,6 +13,10 @@ const ESC_MAP = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
 function esc(v) {
   return v == null ? '' : String(v).replace(/[&<>"']/g, c => ESC_MAP[c]);
 }
+// Colours from the profile end up in style attributes and CSS variables: accept only #rgb / #rrggbb
+function isHexColor(v) {
+  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(v || ''));
+}
 // A value passed as an argument inside an inline handler: onclick="fn(${jsArg(id)})"
 function jsArg(v) {
   return esc(JSON.stringify(v == null ? '' : String(v)));
@@ -728,7 +732,7 @@ function loginSuccess() {
 
   // Apply cached accent color immediately to avoid flash of default green
   const cached = lload('profile', null);
-  const accentColor = cached?.accent_color || u.color;
+  const accentColor = isHexColor(cached?.accent_color) ? cached.accent_color : u.color;
   document.documentElement.style.setProperty('--ac', accentColor);
 
   document.getElementById('auth-screen').style.display = 'none';
@@ -1151,14 +1155,14 @@ function profileFormHTML(p) {
     </div>`;
 
   const PALETTE = ['#FF6B9D','#FF4444','#4DA6FF','#7C3AED','#14B8A6','#FF6B35','#16A34A','#F59E0B','#06B6D4','#6366F1','#EC4899','#0E0E10'];
-  const isCustom = p.accent_color && !PALETTE.includes(p.accent_color);
+  const isCustom = isHexColor(p.accent_color) && !PALETTE.includes(p.accent_color);
   const colorPaletteHTML = `
     <div class="pf-row">
       <label>Акцентний колір</label>
       <div class="color-palette" data-name="accent_color">
         ${PALETTE.map(c => `<button type="button" class="color-swatch ${p.accent_color===c?'on':''}" data-color="${c}" style="background:${c}" onclick="selectAccentColor('${c}')"></button>`).join('')}
         <label class="color-custom-wrap" title="Свій колір" ${isCustom?'style="border-style:solid;border-color:'+p.accent_color+'"':''}>
-          <input type="color" id="p-customColor" value="${esc(p.accent_color || '#FF6B9D')}" oninput="selectAccentColor(this.value,true)">
+          <input type="color" id="p-customColor" value="${isHexColor(p.accent_color) ? p.accent_color : '#FF6B9D'}" oninput="selectAccentColor(this.value,true)">
         </label>
       </div>
     </div>`;
@@ -1439,7 +1443,7 @@ async function applyProfileOverrides() {
   if (em) em.textContent = usedEmoji;
   setEmojiFavicon(usedEmoji);
   document.title = `${usedName} · платформа для росту`;
-  if (p.accent_color) {
+  if (isHexColor(p.accent_color)) {
     document.documentElement.style.setProperty('--ac', p.accent_color);
     const nbrand = document.getElementById('nbrand');
     if (nbrand) nbrand.style.color = p.accent_color;
