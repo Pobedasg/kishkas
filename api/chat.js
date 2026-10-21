@@ -1,6 +1,7 @@
 // Serverless proxy to the Claude API.
 // - requires a valid Supabase session (Authorization: Bearer <access_token>)
 // - model is fixed on the server, max_tokens is capped
+// - per-user rate limit (supabase/migrations/*_chat_rate_limit.sql), checked before every Claude call
 // - the Anthropic key lives only in the ANTHROPIC_API_KEY env var on Vercel
 
 const MODEL = 'claude-sonnet-4-6';
@@ -16,6 +17,17 @@ async function getUser(token) {
     headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
   });
   return r.ok ? r.json() : null;
+}
+
+// Counts this request against the user's hourly limit. Runs as the user (their token), so no service key is needed.
+async function hitRateLimit(token) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/chat_rate_hit`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (!r.ok) throw new Error(`chat_rate_hit ${r.status}: ${await r.text()}`);
+  return r.json();
 }
 
 export default async function handler(req, res) {
@@ -46,6 +58,19 @@ export default async function handler(req, res) {
     const { max_tokens, system, messages } = req.body;
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'messages are required' });
+    }
+
+    // Fail closed: if the limit cannot be checked, Claude is not called.
+    let limit;
+    try {
+      limit = await hitRateLimit(token);
+    } catch (e) {
+      console.error('Rate limit check failed', e);
+      return res.status(503).json({ error: 'rate_limit_unavailable' });
+    }
+    if (!limit.allowed) {
+      res.setHeader('Retry-After', String(limit.retry_after));
+      return res.status(429).json({ error: 'rate_limited', limit: limit.limit, retry_after: limit.retry_after });
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
