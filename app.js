@@ -1104,7 +1104,7 @@ function profileFormHTML(p) {
     </div>`;
   const multi = (name, label, options, current, otherId, otherValue) => {
     const cur = Array.isArray(current) ? current : [];
-    const otherInput = otherId ? `<input type="text" id="${otherId}" value="${(otherValue||'').replace(/"/g,'&quot;')}" placeholder="Свій варіант (опціонально)" style="margin-top:8px">` : '';
+    const otherInput = otherId ? `<input type="text" id="${otherId}" value="${esc(otherValue)}" placeholder="Свій варіант (опціонально)" style="margin-top:8px">` : '';
     return `<div class="pf-row">
       <label>${label}</label>
       <div class="multi-chips" data-name="${name}">
@@ -1116,7 +1116,7 @@ function profileFormHTML(p) {
   const ta = (id, label, current, placeholder='') => `
     <div class="pf-row">
       <label>${label}</label>
-      <textarea id="${id}" placeholder="${placeholder}" style="min-height:60px">${(current||'').replace(/</g,'&lt;')}</textarea>
+      <textarea id="${id}" placeholder="${placeholder}" style="min-height:60px">${esc(current)}</textarea>
     </div>`;
   const head = (t) => `<div class="pf-head">${t}</div>`;
 
@@ -1158,7 +1158,7 @@ function profileFormHTML(p) {
       <div class="color-palette" data-name="accent_color">
         ${PALETTE.map(c => `<button type="button" class="color-swatch ${p.accent_color===c?'on':''}" data-color="${c}" style="background:${c}" onclick="selectAccentColor('${c}')"></button>`).join('')}
         <label class="color-custom-wrap" title="Свій колір" ${isCustom?'style="border-style:solid;border-color:'+p.accent_color+'"':''}>
-          <input type="color" id="p-customColor" value="${p.accent_color || '#FF6B9D'}" oninput="selectAccentColor(this.value,true)">
+          <input type="color" id="p-customColor" value="${esc(p.accent_color || '#FF6B9D')}" oninput="selectAccentColor(this.value,true)">
         </label>
       </div>
     </div>`;
@@ -1169,13 +1169,13 @@ function profileFormHTML(p) {
       head('Про тебе'),
       `<div class="pf-row">
         <label>Як тебе називати (ім'я, нік, псевдонім)</label>
-        <input type="text" id="p-name" value="${(p.display_name||'').replace(/"/g,'&quot;')}" placeholder="Наприклад: Олена, або Olenka_blog">
+        <input type="text" id="p-name" value="${esc(p.display_name)}" placeholder="Наприклад: Олена, або Olenka_blog">
       </div>`,
       `<div class="pf-row">
         <label>Емодзі для лівого кутка</label>
         <div class="emoji-row">
-          <span class="emoji-current" id="emojiCurrent">${p.display_emoji || '🙂'}</span>
-          <input type="hidden" id="p-emoji" value="${(p.display_emoji||'').replace(/"/g,'&quot;')}">
+          <span class="emoji-current" id="emojiCurrent">${esc(p.display_emoji || '🙂')}</span>
+          <input type="hidden" id="p-emoji" value="${esc(p.display_emoji)}">
           <button type="button" class="btn btn-out btn-sm" onclick="toggleEmojiPicker()">Обрати →</button>
           <button type="button" class="btn btn-out btn-sm" onclick="pickEmoji('')">Без емодзі</button>
         </div>
@@ -1190,13 +1190,13 @@ function profileFormHTML(p) {
     head('Про тебе'),
     `<div class="pf-row">
       <label>Як тебе називати (ім'я, нік, псевдонім)</label>
-      <input type="text" id="p-name" value="${(p.display_name||'').replace(/"/g,'&quot;')}" placeholder="Наприклад: Олена, або Olenka_blog, або просто Анонім">
+      <input type="text" id="p-name" value="${esc(p.display_name)}" placeholder="Наприклад: Олена, або Olenka_blog, або просто Анонім">
     </div>`,
     `<div class="pf-row">
       <label>Емодзі для лівого кутка</label>
       <div class="emoji-row">
-        <span class="emoji-current" id="emojiCurrent">${p.display_emoji || '🙂'}</span>
-        <input type="hidden" id="p-emoji" value="${(p.display_emoji||'').replace(/"/g,'&quot;')}">
+        <span class="emoji-current" id="emojiCurrent">${esc(p.display_emoji || '🙂')}</span>
+        <input type="hidden" id="p-emoji" value="${esc(p.display_emoji)}">
         <button type="button" class="btn btn-out btn-sm" onclick="toggleEmojiPicker()">Обрати →</button>
         <button type="button" class="btn btn-out btn-sm" onclick="pickEmoji('')">Без емодзі</button>
       </div>
@@ -1457,7 +1457,7 @@ function buildPersonalizedHero(p) {
   const ac = 'color:var(--ac)';
   const w = t => `<span style="${ac}">${t}</span>`;
   const name = p?.display_name || '';
-  const greeting = name ? `${name.split(' ')[0]}, ` : '';
+  const greeting = name ? `${esc(name.split(' ')[0])}, ` : '';
 
   const blockerMap = {
     fear:        { tag:'💪 подолай страх',       title:`${greeting}від страху<br>до першого ${w('поста')}` },
@@ -1981,9 +1981,9 @@ async function widgetGoals() {
   const body = goals.map(g=>{
     const cur=last[g.network]||0, pct=g.target>0?Math.min(100,Math.round(cur/g.target*100)):0;
     return `<div class="goal-row">
-      <div class="goal-head"><strong style="font-size:14px">${g.network==='ig'?'Instagram':g.network==='tt'?'TikTok':g.network==='tg'?'Telegram':'YouTube'}: ${cur}/${g.target}</strong></div>
+      <div class="goal-head"><strong style="font-size:14px">${g.network==='ig'?'Instagram':g.network==='tt'?'TikTok':g.network==='tg'?'Telegram':'YouTube'}: ${esc(cur)}/${esc(g.target)}</strong></div>
       <div class="goal-bar"><div class="goal-fill" style="width:${pct}%;background:${WIDGET_BY_ID.goals.color}"></div></div>
-      <div class="goal-meta">${pct}%${g.deadline?` · до ${g.deadline}`:''}</div>
+      <div class="goal-meta">${pct}%${g.deadline?` · до ${esc(g.deadline)}`:''}</div>
     </div>`;
   }).join('');
   return blk('goals', body, {fn:"goTab('stats')", label:'Управління →'});
@@ -2005,8 +2005,8 @@ async function widgetStats() {
     platforms.includes('ig') && {k:'posts',l:'Постів IG'},
     platforms.includes('ig') && {k:'reach',l:'Охоплення'},
   ].filter(Boolean);
-  const body = `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${last.month} ${last.year}</div>
-    <div class="scards">${allCards.map(s=>`<div class="scard"><div class="sv">${last[s.k]||0}</div><div class="sl">${s.l}</div>${chg(last,prev,s.k)}</div>`).join('')}</div>`;
+  const body = `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${esc(last.month)} ${esc(last.year)}</div>
+    <div class="scards">${allCards.map(s=>`<div class="scard"><div class="sv">${esc(last[s.k]||0)}</div><div class="sl">${s.l}</div>${chg(last,prev,s.k)}</div>`).join('')}</div>`;
   return blk('stats', body, {fn:"goTab('stats')", label:'Детальніше →'});
 }
 
@@ -2043,9 +2043,9 @@ async function widgetNotes() {
     return blk('notes', '<div style="color:var(--muted);font-size:14px">Нотаток ще немає.</div>', {fn:"goTab('notes')", label:'Створити →'});
   }
   const body = notes.slice(0,3).map(n=>`<div class="nitem" onclick="event.stopPropagation();goTab('notes')" style="margin-bottom:8px">
-    <div class="ndt">${n.created_at?new Date(n.created_at).toLocaleDateString('uk-UA'):(n.date||'')}</div>
-    <div class="nttl">${n.title||'Без назви'}</div>
-    <div class="nprv">${n.content||n.text||''}</div>
+    <div class="ndt">${n.created_at?new Date(n.created_at).toLocaleDateString('uk-UA'):esc(n.date)}</div>
+    <div class="nttl">${esc(n.title||'Без назви')}</div>
+    <div class="nprv">${esc(n.content||n.text)}</div>
   </div>`).join('');
   return blk('notes', body, {fn:"goTab('notes')", label:'Всі →'});
 }
@@ -2104,11 +2104,11 @@ async function loadNotes() {
   const list = document.getElementById('nlist');
   list.innerHTML = !notes.length
     ? '<div style="color:var(--muted);font-size:14px">Нотаток ще немає</div>'
-    : notes.map(n=>`<div class="nitem${curNoteId===n.id?' on':''}" onclick="openNote('${n.id}')">
-        <button class="ndel" onclick="event.stopPropagation();delNoteById('${n.id}')">✕</button>
-        <div class="ndt">${n.created_at ? new Date(n.created_at).toLocaleDateString('uk-UA') : (n.date||'')}</div>
-        <div class="nttl">${n.title||'Без назви'}</div>
-        <div class="nprv">${(n.content||n.text||'')}</div></div>`).join('');
+    : notes.map(n=>`<div class="nitem${curNoteId===n.id?' on':''}" onclick="openNote(${jsArg(n.id)})">
+        <button class="ndel" onclick="event.stopPropagation();delNoteById(${jsArg(n.id)})">✕</button>
+        <div class="ndt">${n.created_at ? new Date(n.created_at).toLocaleDateString('uk-UA') : esc(n.date)}</div>
+        <div class="nttl">${esc(n.title||'Без назви')}</div>
+        <div class="nprv">${esc(n.content||n.text)}</div></div>`).join('');
 }
 
 function newNote() {
@@ -2254,14 +2254,14 @@ async function loadStats() {
   document.getElementById('mlist').innerHTML = !stats.length
     ? '<div style="color:var(--muted);font-size:14px">Місяців ще немає</div>'
     : [...stats].reverse().map(m=>`<div class="mrow">
-        <div><div class="mn">${m.month} ${m.year}</div>${m.note?`<div class="mm">${m.note.substring(0,60)}${m.note.length>60?'...':''}</div>`:''}</div>
+        <div><div class="mn">${esc(m.month)} ${esc(m.year)}</div>${m.note?`<div class="mm">${esc(m.note.substring(0,60))}${m.note.length>60?'...':''}</div>`:''}</div>
         <div class="mbadges">
-          ${platforms.includes('ig')?`<span class="mbadge">IG ${m.ig||0}</span>`:''}
-          ${platforms.includes('tt')?`<span class="mbadge">TT ${m.tt||0}</span>`:''}
-          ${platforms.includes('tg')?`<span class="mbadge">TG ${m.tg||0}</span>`:''}
-          ${platforms.includes('yt')?`<span class="mbadge">YT ${m.yt||0}</span>`:''}
-          <button class="btn btn-out btn-sm" onclick="editMonth('${m.id}')">✎</button>
-          <button class="btn btn-red btn-sm" onclick="delMonthById('${m.id}')">✕</button>
+          ${platforms.includes('ig')?`<span class="mbadge">IG ${esc(m.ig||0)}</span>`:''}
+          ${platforms.includes('tt')?`<span class="mbadge">TT ${esc(m.tt||0)}</span>`:''}
+          ${platforms.includes('tg')?`<span class="mbadge">TG ${esc(m.tg||0)}</span>`:''}
+          ${platforms.includes('yt')?`<span class="mbadge">YT ${esc(m.yt||0)}</span>`:''}
+          <button class="btn btn-out btn-sm" onclick="editMonth(${jsArg(m.id)})">✎</button>
+          <button class="btn btn-red btn-sm" onclick="delMonthById(${jsArg(m.id)})">✕</button>
         </div></div>`).join('');
 }
 
@@ -2440,7 +2440,7 @@ function addMsg(role, text) {
   const wrap = document.getElementById('chatw');
   const div = document.createElement('div');
   div.className = 'chatm' + (role==='user'?' u':'');
-  div.innerHTML = `<div class="chatav">${role==='user'?u.emoji:'🤖'}</div><div class="chatb">${text}</div>`;
+  div.innerHTML = `<div class="chatav">${role==='user'?u.emoji:'🤖'}</div><div class="chatb">${esc(text)}</div>`;
   wrap.appendChild(div);
   wrap.scrollTop = wrap.scrollHeight;
   return div.querySelector('.chatb');
@@ -2531,9 +2531,9 @@ async function renderChatList() {
   });
   el.innerHTML = Object.entries(groups).map(([day, chats]) => `
     <div class="chat-list-day">${day}</div>
-    ${chats.map(c => `<div class="chat-list-item ${String(c.id)===String(currentChatId)?'active':''}" onclick="loadChat('${c.id}')">
+    ${chats.map(c => `<div class="chat-list-item ${String(c.id)===String(currentChatId)?'active':''}" onclick="loadChat(${jsArg(c.id)})">
       <span class="chat-list-title">${esc(c.title || 'Без назви')}</span>
-      <button class="chat-list-del" onclick="event.stopPropagation();deleteChatById('${c.id}')" title="Видалити чат">×</button>
+      <button class="chat-list-del" onclick="event.stopPropagation();deleteChatById(${jsArg(c.id)})" title="Видалити чат">×</button>
     </div>`).join('')}
   `).join('');
 }
@@ -2823,7 +2823,7 @@ function renderReflect() {
     : '';
   document.getElementById('reflectqs').innerHTML = shuffleBtn + indices.map(idx=>{
     const q = pool[idx]; if (!q) return '';
-    const ans = (answers[idx] || '').replace(/</g,'&lt;');
+    const ans = esc(answers[idx]);
     const catBadge = u.reflectRotate ? `<div class="rqcat">${q.cat}</div>` : '';
     return `
       <div class="rqbox">
@@ -3132,7 +3132,7 @@ async function renderBaseline() {
   ].filter(Boolean);
   el.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:12px 0">
-      ${allCards.map(c=>`<div><div class="sv" style="font-size:22px">${c.v}</div><div class="sl">${c.l}</div></div>`).join('')}
+      ${allCards.map(c=>`<div><div class="sv" style="font-size:22px">${esc(c.v)}</div><div class="sl">${c.l}</div></div>`).join('')}
     </div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Станом на ${date}</div>
     <button class="btn btn-out btn-sm" onclick="prepBaselineForm().then(()=>showBaselineForm())">Редагувати</button>`;
@@ -3165,11 +3165,11 @@ async function renderProgress() {
         const remain = Math.max(0, g.target - cur);
         const label = g.network === 'ig' ? 'Instagram' : 'TikTok';
         return `<div class="goal-row">
-          <div class="goal-head"><strong>${label}: ${cur} / ${g.target}</strong>
-            <button class="btn btn-red btn-sm" onclick="dbDelGoal('${g.id}')">✕</button>
+          <div class="goal-head"><strong>${label}: ${esc(cur)} / ${esc(g.target)}</strong>
+            <button class="btn btn-red btn-sm" onclick="dbDelGoal(${jsArg(g.id)})">✕</button>
           </div>
           <div class="goal-bar"><div class="goal-fill" style="width:${pct}%"></div></div>
-          <div class="goal-meta">${pct}% · залишилось ${remain}${g.deadline?` · до ${g.deadline}`:''}</div>
+          <div class="goal-meta">${pct}% · залишилось ${esc(remain)}${g.deadline?` · до ${esc(g.deadline)}`:''}</div>
         </div>`;
       }).join('');
 
