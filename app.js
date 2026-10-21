@@ -5,6 +5,19 @@ const SB_URL = 'https://lrronntdfuyrzmkdeusa.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxycm9ubnRkZnV5cnpta2RldXNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzUwOTYsImV4cCI6MjA5NDc1MTA5Nn0.XVZJ3L7MvIzkdYCTfqx9SZxDDtk0Ym37jg0y_HxS7FE';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 
+// ══════════════════════════════════════════
+// HTML ESCAPING
+// ══════════════════════════════════════════
+// Everything that comes from the user, the database or the AI goes through esc() before it reaches innerHTML.
+const ESC_MAP = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+function esc(v) {
+  return v == null ? '' : String(v).replace(/[&<>"']/g, c => ESC_MAP[c]);
+}
+// A value passed as an argument inside an inline handler: onclick="fn(${jsArg(id)})"
+function jsArg(v) {
+  return esc(JSON.stringify(v == null ? '' : String(v)));
+}
+
 // All Claude calls go through here so the server can check the Supabase session.
 async function chatFetch(url, opts = {}) {
   const { data: { session } } = await sb.auth.getSession();
@@ -2475,10 +2488,6 @@ async function dbDelChat(id) {
   await sb.from('chats').delete().eq('id', id);
 }
 
-function escapeHTML(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
-}
-
 function renderChatMessages() {
   const u = USERS[CU];
   const wrap = document.getElementById('chatw');
@@ -2489,7 +2498,7 @@ function renderChatMessages() {
   wrap.innerHTML = chatHistory.map(m => {
     const av = m.role === 'user' ? u.emoji : '🤖';
     const cls = 'chatm' + (m.role === 'user' ? ' u' : '');
-    return `<div class="${cls}"><div class="chatav">${av}</div><div class="chatb">${escapeHTML(m.content)}</div></div>`;
+    return `<div class="${cls}"><div class="chatav">${av}</div><div class="chatb">${esc(m.content)}</div></div>`;
   }).join('');
   wrap.scrollTop = wrap.scrollHeight;
 }
@@ -2523,7 +2532,7 @@ async function renderChatList() {
   el.innerHTML = Object.entries(groups).map(([day, chats]) => `
     <div class="chat-list-day">${day}</div>
     ${chats.map(c => `<div class="chat-list-item ${String(c.id)===String(currentChatId)?'active':''}" onclick="loadChat('${c.id}')">
-      <span class="chat-list-title">${escapeHTML(c.title || 'Без назви')}</span>
+      <span class="chat-list-title">${esc(c.title || 'Без назви')}</span>
       <button class="chat-list-del" onclick="event.stopPropagation();deleteChatById('${c.id}')" title="Видалити чат">×</button>
     </div>`).join('')}
   `).join('');
