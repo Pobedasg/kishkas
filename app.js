@@ -5,6 +5,23 @@ const SB_URL = 'https://lrronntdfuyrzmkdeusa.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxycm9ubnRkZnV5cnpta2RldXNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzUwOTYsImV4cCI6MjA5NDc1MTA5Nn0.XVZJ3L7MvIzkdYCTfqx9SZxDDtk0Ym37jg0y_HxS7FE';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 
+// ══════════════════════════════════════════
+// HTML ESCAPING
+// ══════════════════════════════════════════
+// Everything that comes from the user, the database or the AI goes through esc() before it reaches innerHTML.
+const ESC_MAP = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+function esc(v) {
+  return v == null ? '' : String(v).replace(/[&<>"']/g, c => ESC_MAP[c]);
+}
+// Colours from the profile end up in style attributes and CSS variables: accept only #rgb / #rrggbb
+function isHexColor(v) {
+  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(v || ''));
+}
+// A value passed as an argument inside an inline handler: onclick="fn(${jsArg(id)})"
+function jsArg(v) {
+  return esc(JSON.stringify(v == null ? '' : String(v)));
+}
+
 // All Claude calls go through here so the server can check the Supabase session.
 async function chatFetch(url, opts = {}) {
   const { data: { session } } = await sb.auth.getSession();
@@ -728,7 +745,7 @@ function loginSuccess() {
 
   // Apply cached accent color immediately to avoid flash of default green
   const cached = lload('profile', null);
-  const accentColor = cached?.accent_color || u.color;
+  const accentColor = isHexColor(cached?.accent_color) ? cached.accent_color : u.color;
   document.documentElement.style.setProperty('--ac', accentColor);
 
   document.getElementById('auth-screen').style.display = 'none';
@@ -1104,7 +1121,7 @@ function profileFormHTML(p) {
     </div>`;
   const multi = (name, label, options, current, otherId, otherValue) => {
     const cur = Array.isArray(current) ? current : [];
-    const otherInput = otherId ? `<input type="text" id="${otherId}" value="${(otherValue||'').replace(/"/g,'&quot;')}" placeholder="Свій варіант (опціонально)" style="margin-top:8px">` : '';
+    const otherInput = otherId ? `<input type="text" id="${otherId}" value="${esc(otherValue)}" placeholder="Свій варіант (опціонально)" style="margin-top:8px">` : '';
     return `<div class="pf-row">
       <label>${label}</label>
       <div class="multi-chips" data-name="${name}">
@@ -1116,7 +1133,7 @@ function profileFormHTML(p) {
   const ta = (id, label, current, placeholder='') => `
     <div class="pf-row">
       <label>${label}</label>
-      <textarea id="${id}" placeholder="${placeholder}" style="min-height:60px">${(current||'').replace(/</g,'&lt;')}</textarea>
+      <textarea id="${id}" placeholder="${placeholder}" style="min-height:60px">${esc(current)}</textarea>
     </div>`;
   const head = (t) => `<div class="pf-head">${t}</div>`;
 
@@ -1151,14 +1168,14 @@ function profileFormHTML(p) {
     </div>`;
 
   const PALETTE = ['#FF6B9D','#FF4444','#4DA6FF','#7C3AED','#14B8A6','#FF6B35','#16A34A','#F59E0B','#06B6D4','#6366F1','#EC4899','#0E0E10'];
-  const isCustom = p.accent_color && !PALETTE.includes(p.accent_color);
+  const isCustom = isHexColor(p.accent_color) && !PALETTE.includes(p.accent_color);
   const colorPaletteHTML = `
     <div class="pf-row">
       <label>Акцентний колір</label>
       <div class="color-palette" data-name="accent_color">
         ${PALETTE.map(c => `<button type="button" class="color-swatch ${p.accent_color===c?'on':''}" data-color="${c}" style="background:${c}" onclick="selectAccentColor('${c}')"></button>`).join('')}
         <label class="color-custom-wrap" title="Свій колір" ${isCustom?'style="border-style:solid;border-color:'+p.accent_color+'"':''}>
-          <input type="color" id="p-customColor" value="${p.accent_color || '#FF6B9D'}" oninput="selectAccentColor(this.value,true)">
+          <input type="color" id="p-customColor" value="${isHexColor(p.accent_color) ? p.accent_color : '#FF6B9D'}" oninput="selectAccentColor(this.value,true)">
         </label>
       </div>
     </div>`;
@@ -1169,13 +1186,13 @@ function profileFormHTML(p) {
       head('Про тебе'),
       `<div class="pf-row">
         <label>Як тебе називати (ім'я, нік, псевдонім)</label>
-        <input type="text" id="p-name" value="${(p.display_name||'').replace(/"/g,'&quot;')}" placeholder="Наприклад: Олена, або Olenka_blog">
+        <input type="text" id="p-name" value="${esc(p.display_name)}" placeholder="Наприклад: Олена, або Olenka_blog">
       </div>`,
       `<div class="pf-row">
         <label>Емодзі для лівого кутка</label>
         <div class="emoji-row">
-          <span class="emoji-current" id="emojiCurrent">${p.display_emoji || '🙂'}</span>
-          <input type="hidden" id="p-emoji" value="${(p.display_emoji||'').replace(/"/g,'&quot;')}">
+          <span class="emoji-current" id="emojiCurrent">${esc(p.display_emoji || '🙂')}</span>
+          <input type="hidden" id="p-emoji" value="${esc(p.display_emoji)}">
           <button type="button" class="btn btn-out btn-sm" onclick="toggleEmojiPicker()">Обрати →</button>
           <button type="button" class="btn btn-out btn-sm" onclick="pickEmoji('')">Без емодзі</button>
         </div>
@@ -1190,13 +1207,13 @@ function profileFormHTML(p) {
     head('Про тебе'),
     `<div class="pf-row">
       <label>Як тебе називати (ім'я, нік, псевдонім)</label>
-      <input type="text" id="p-name" value="${(p.display_name||'').replace(/"/g,'&quot;')}" placeholder="Наприклад: Олена, або Olenka_blog, або просто Анонім">
+      <input type="text" id="p-name" value="${esc(p.display_name)}" placeholder="Наприклад: Олена, або Olenka_blog, або просто Анонім">
     </div>`,
     `<div class="pf-row">
       <label>Емодзі для лівого кутка</label>
       <div class="emoji-row">
-        <span class="emoji-current" id="emojiCurrent">${p.display_emoji || '🙂'}</span>
-        <input type="hidden" id="p-emoji" value="${(p.display_emoji||'').replace(/"/g,'&quot;')}">
+        <span class="emoji-current" id="emojiCurrent">${esc(p.display_emoji || '🙂')}</span>
+        <input type="hidden" id="p-emoji" value="${esc(p.display_emoji)}">
         <button type="button" class="btn btn-out btn-sm" onclick="toggleEmojiPicker()">Обрати →</button>
         <button type="button" class="btn btn-out btn-sm" onclick="pickEmoji('')">Без емодзі</button>
       </div>
@@ -1463,7 +1480,7 @@ async function applyProfileOverrides() {
   if (em) em.textContent = usedEmoji;
   setEmojiFavicon(usedEmoji, p.accent_color || u.color);
   document.title = `${usedName} · платформа для росту`;
-  if (p.accent_color) {
+  if (isHexColor(p.accent_color)) {
     document.documentElement.style.setProperty('--ac', p.accent_color);
     const nbrand = document.getElementById('nbrand');
     if (nbrand) nbrand.style.color = p.accent_color;
@@ -1481,7 +1498,7 @@ function buildPersonalizedHero(p) {
   const ac = 'color:var(--ac)';
   const w = t => `<span style="${ac}">${t}</span>`;
   const name = p?.display_name || '';
-  const greeting = name ? `${name.split(' ')[0]}, ` : '';
+  const greeting = name ? `${esc(name.split(' ')[0])}, ` : '';
 
   const blockerMap = {
     fear:        { tag:'💪 подолай страх',       title:`${greeting}від страху<br>до першого ${w('поста')}` },
@@ -1818,30 +1835,31 @@ async function regenerateMentorPlan() {
   await generateMentorPlan();
 }
 
+// The plan is AI-generated JSON: every field is escaped, nothing is trusted as HTML.
 function renderMentorPlan(plan) {
   const u = USERS[CU];
   const c = u.color;
-  const positioning = plan.positioning ? `<div class="cncpt"><div class="cnl" style="color:${c}">🎯 позиціонування</div><p class="cnt">${plan.positioning}</p></div>` : '';
+  const positioning = plan.positioning ? `<div class="cncpt"><div class="cnl" style="color:${c}">🎯 позиціонування</div><p class="cnt">${esc(plan.positioning)}</p></div>` : '';
   const thisWeek = (plan.this_week && plan.this_week.length) ? `
     <div class="card" style="border-left:3px solid ${c}">
       <div class="ctitle">📌 Що зробити цього тижня</div>
-      <ul class="qlist" style="margin-top:8px">${plan.this_week.map(t=>`<li>${t}</li>`).join('')}</ul>
+      <ul class="qlist" style="margin-top:8px">${plan.this_week.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
     </div>` : '';
   const pillars = plan.pillars && plan.pillars.length ? `
     <div class="slbl">Опори контенту</div>
     <div class="pillars">${plan.pillars.map(p=>`
       <div class="pillar">
-        <span class="pe">${p.emoji||'🎯'}</span>
-        <div class="pname">${p.name||''}</div>
-        <div class="pdesc">${p.desc||''}</div>
-        ${(p.tags&&p.tags.length)?`<div class="ptags">${p.tags.map(t=>`<span class="ptag">${t}</span>`).join('')}</div>`:''}
+        <span class="pe">${esc(p.emoji||'🎯')}</span>
+        <div class="pname">${esc(p.name)}</div>
+        <div class="pdesc">${esc(p.desc)}</div>
+        ${(p.tags&&p.tags.length)?`<div class="ptags">${p.tags.map(t=>`<span class="ptag">${esc(t)}</span>`).join('')}</div>`:''}
       </div>`).join('')}</div>` : '';
   const formula = plan.formula && plan.formula.parts ? `
-    <div class="slbl">Формула контенту${plan.formula.label?' — '+plan.formula.label:''}</div>
+    <div class="slbl">Формула контенту${plan.formula.label?' — '+esc(plan.formula.label):''}</div>
     <div class="fmlbox">${plan.formula.parts.map(p=>`
       <div>
-        <div class="fpct" style="color:${c}">${p.percent||''}</div>
-        <div class="flbl">${(p.label||'')}${p.desc?' — '+p.desc:''}</div>
+        <div class="fpct" style="color:${c}">${esc(p.percent)}</div>
+        <div class="flbl">${esc(p.label)}${p.desc?' — '+esc(p.desc):''}</div>
       </div>`).join('')}</div>` : '';
   const weeks = plan.weeks && plan.weeks.length ? `
     <div class="slbl">Тижнева дорога</div>
@@ -1849,12 +1867,12 @@ function renderMentorPlan(plan) {
       <div class="wkcard">
         <div class="wkg">
           <div class="wkn" style="background:#111">
-            <div class="wknum" style="color:${c}">${w.num||''}</div>
-            <div class="wkname">${w.name||''}</div>
+            <div class="wknum" style="color:${c}">${esc(w.num)}</div>
+            <div class="wkname">${esc(w.name)}</div>
           </div>
           <div class="wkc">
-            <div class="wkf">${w.focus||''}</div>
-            <ul class="wki">${(w.items||[]).map(i=>`<li>${i}</li>`).join('')}</ul>
+            <div class="wkf">${esc(w.focus)}</div>
+            <ul class="wki">${(w.items||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
           </div>
         </div>
       </div>`).join('')}` : '';
@@ -1862,12 +1880,12 @@ function renderMentorPlan(plan) {
     <div class="slbl">Стратегії під твої блокери</div>
     ${plan.strategy_per_blocker.map(b=>`
       <div class="card">
-        <div style="font-size:14px;font-weight:700;color:${c};margin-bottom:6px">${b.blocker||''}</div>
-        <div style="font-size:14px;line-height:1.6;color:var(--ink2)">${b.advice||''}</div>
+        <div style="font-size:14px;font-weight:700;color:${c};margin-bottom:6px">${esc(b.blocker)}</div>
+        <div style="font-size:14px;line-height:1.6;color:var(--ink2)">${esc(b.advice)}</div>
       </div>`).join('')}` : '';
   const prompts = plan.quick_prompts && plan.quick_prompts.length ? `
     <div class="slbl">Швидкі ШІ-промпти під твою нішу</div>
-    <div class="chips" style="margin-bottom:18px">${plan.quick_prompts.map(p=>`<div class="chip" onclick="askAiFromDash(${JSON.stringify(p.text||'').replace(/"/g,'&quot;')})">${p.label||''}</div>`).join('')}</div>` : '';
+    <div class="chips" style="margin-bottom:18px">${plan.quick_prompts.map(p=>`<div class="chip" onclick="askAiFromDash(${jsArg(p.text)})">${esc(p.label)}</div>`).join('')}</div>` : '';
 
   return `<div class="sec">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:8px">
@@ -2005,9 +2023,9 @@ async function widgetGoals() {
   const body = goals.map(g=>{
     const cur=last[g.network]||0, pct=g.target>0?Math.min(100,Math.round(cur/g.target*100)):0;
     return `<div class="goal-row">
-      <div class="goal-head"><strong style="font-size:14px">${g.network==='ig'?'Instagram':g.network==='tt'?'TikTok':g.network==='tg'?'Telegram':'YouTube'}: ${cur}/${g.target}</strong></div>
+      <div class="goal-head"><strong style="font-size:14px">${g.network==='ig'?'Instagram':g.network==='tt'?'TikTok':g.network==='tg'?'Telegram':'YouTube'}: ${esc(cur)}/${esc(g.target)}</strong></div>
       <div class="goal-bar"><div class="goal-fill" style="width:${pct}%;background:${WIDGET_BY_ID.goals.color}"></div></div>
-      <div class="goal-meta">${pct}%${g.deadline?` · до ${g.deadline}`:''}</div>
+      <div class="goal-meta">${pct}%${g.deadline?` · до ${esc(g.deadline)}`:''}</div>
     </div>`;
   }).join('');
   return blk('goals', body, {fn:"goTab('stats')", label:'Управління →'});
@@ -2029,8 +2047,8 @@ async function widgetStats() {
     platforms.includes('ig') && {k:'posts',l:'Постів IG'},
     platforms.includes('ig') && {k:'reach',l:'Охоплення'},
   ].filter(Boolean);
-  const body = `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${last.month} ${last.year}</div>
-    <div class="scards">${allCards.map(s=>`<div class="scard"><div class="sv">${last[s.k]||0}</div><div class="sl">${s.l}</div>${chg(last,prev,s.k)}</div>`).join('')}</div>`;
+  const body = `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${esc(last.month)} ${esc(last.year)}</div>
+    <div class="scards">${allCards.map(s=>`<div class="scard"><div class="sv">${esc(last[s.k]||0)}</div><div class="sl">${s.l}</div>${chg(last,prev,s.k)}</div>`).join('')}</div>`;
   return blk('stats', body, {fn:"goTab('stats')", label:'Детальніше →'});
 }
 
@@ -2067,9 +2085,9 @@ async function widgetNotes() {
     return blk('notes', '<div style="color:var(--muted);font-size:14px">Нотаток ще немає.</div>', {fn:"goTab('notes')", label:'Створити →'});
   }
   const body = notes.slice(0,3).map(n=>`<div class="nitem" onclick="event.stopPropagation();goTab('notes')" style="margin-bottom:8px">
-    <div class="ndt">${n.created_at?new Date(n.created_at).toLocaleDateString('uk-UA'):(n.date||'')}</div>
-    <div class="nttl">${n.title||'Без назви'}</div>
-    <div class="nprv">${n.content||n.text||''}</div>
+    <div class="ndt">${n.created_at?new Date(n.created_at).toLocaleDateString('uk-UA'):esc(n.date)}</div>
+    <div class="nttl">${esc(n.title||'Без назви')}</div>
+    <div class="nprv">${esc(n.content||n.text)}</div>
   </div>`).join('');
   return blk('notes', body, {fn:"goTab('notes')", label:'Всі →'});
 }
@@ -2099,7 +2117,7 @@ async function widgetAudience() {
   const a = await dbAudience();
   if (!a || !a.ai_result) return '';
   const preview = a.ai_result.slice(0,280) + (a.ai_result.length > 280 ? '...' : '');
-  const body = `<div style="font-size:13px;color:var(--ink2);line-height:1.6;white-space:pre-wrap">${preview}</div>`;
+  const body = `<div style="font-size:13px;color:var(--ink2);line-height:1.6;white-space:pre-wrap">${esc(preview)}</div>`;
   return blk('audience', body, {fn:"goTab('stats')", label:'Повний →'});
 }
 
@@ -2128,11 +2146,11 @@ async function loadNotes() {
   const list = document.getElementById('nlist');
   list.innerHTML = !notes.length
     ? '<div style="color:var(--muted);font-size:14px">Нотаток ще немає</div>'
-    : notes.map(n=>`<div class="nitem${curNoteId===n.id?' on':''}" onclick="openNote('${n.id}')">
-        <button class="ndel" onclick="event.stopPropagation();delNoteById('${n.id}')">✕</button>
-        <div class="ndt">${n.created_at ? new Date(n.created_at).toLocaleDateString('uk-UA') : (n.date||'')}</div>
-        <div class="nttl">${n.title||'Без назви'}</div>
-        <div class="nprv">${(n.content||n.text||'')}</div></div>`).join('');
+    : notes.map(n=>`<div class="nitem${curNoteId===n.id?' on':''}" onclick="openNote(${jsArg(n.id)})">
+        <button class="ndel" onclick="event.stopPropagation();delNoteById(${jsArg(n.id)})">✕</button>
+        <div class="ndt">${n.created_at ? new Date(n.created_at).toLocaleDateString('uk-UA') : esc(n.date)}</div>
+        <div class="nttl">${esc(n.title||'Без назви')}</div>
+        <div class="nprv">${esc(n.content||n.text)}</div></div>`).join('');
 }
 
 function newNote() {
@@ -2278,14 +2296,14 @@ async function loadStats() {
   document.getElementById('mlist').innerHTML = !stats.length
     ? '<div style="color:var(--muted);font-size:14px">Місяців ще немає</div>'
     : [...stats].reverse().map(m=>`<div class="mrow">
-        <div><div class="mn">${m.month} ${m.year}</div>${m.note?`<div class="mm">${m.note.substring(0,60)}${m.note.length>60?'...':''}</div>`:''}</div>
+        <div><div class="mn">${esc(m.month)} ${esc(m.year)}</div>${m.note?`<div class="mm">${esc(m.note.substring(0,60))}${m.note.length>60?'...':''}</div>`:''}</div>
         <div class="mbadges">
-          ${platforms.includes('ig')?`<span class="mbadge">IG ${m.ig||0}</span>`:''}
-          ${platforms.includes('tt')?`<span class="mbadge">TT ${m.tt||0}</span>`:''}
-          ${platforms.includes('tg')?`<span class="mbadge">TG ${m.tg||0}</span>`:''}
-          ${platforms.includes('yt')?`<span class="mbadge">YT ${m.yt||0}</span>`:''}
-          <button class="btn btn-out btn-sm" onclick="editMonth('${m.id}')">✎</button>
-          <button class="btn btn-red btn-sm" onclick="delMonthById('${m.id}')">✕</button>
+          ${platforms.includes('ig')?`<span class="mbadge">IG ${esc(m.ig||0)}</span>`:''}
+          ${platforms.includes('tt')?`<span class="mbadge">TT ${esc(m.tt||0)}</span>`:''}
+          ${platforms.includes('tg')?`<span class="mbadge">TG ${esc(m.tg||0)}</span>`:''}
+          ${platforms.includes('yt')?`<span class="mbadge">YT ${esc(m.yt||0)}</span>`:''}
+          <button class="btn btn-out btn-sm" onclick="editMonth(${jsArg(m.id)})">✎</button>
+          <button class="btn btn-red btn-sm" onclick="delMonthById(${jsArg(m.id)})">✕</button>
         </div></div>`).join('');
 }
 
@@ -2464,7 +2482,7 @@ function addMsg(role, text) {
   const wrap = document.getElementById('chatw');
   const div = document.createElement('div');
   div.className = 'chatm' + (role==='user'?' u':'');
-  div.innerHTML = `<div class="chatav">${role==='user'?u.emoji:'🤖'}</div><div class="chatb">${text}</div>`;
+  div.innerHTML = `<div class="chatav">${role==='user'?u.emoji:'🤖'}</div><div class="chatb">${esc(text)}</div>`;
   wrap.appendChild(div);
   wrap.scrollTop = wrap.scrollHeight;
   return div.querySelector('.chatb');
@@ -2512,10 +2530,6 @@ async function dbDelChat(id) {
   await sb.from('chats').delete().eq('id', id);
 }
 
-function escapeHTML(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
-}
-
 function renderChatMessages() {
   const u = USERS[CU];
   const wrap = document.getElementById('chatw');
@@ -2526,7 +2540,7 @@ function renderChatMessages() {
   wrap.innerHTML = chatHistory.map(m => {
     const av = m.role === 'user' ? u.emoji : '🤖';
     const cls = 'chatm' + (m.role === 'user' ? ' u' : '');
-    return `<div class="${cls}"><div class="chatav">${av}</div><div class="chatb">${escapeHTML(m.content)}</div></div>`;
+    return `<div class="${cls}"><div class="chatav">${av}</div><div class="chatb">${esc(m.content)}</div></div>`;
   }).join('');
   wrap.scrollTop = wrap.scrollHeight;
 }
@@ -2559,9 +2573,9 @@ async function renderChatList() {
   });
   el.innerHTML = Object.entries(groups).map(([day, chats]) => `
     <div class="chat-list-day">${day}</div>
-    ${chats.map(c => `<div class="chat-list-item ${String(c.id)===String(currentChatId)?'active':''}" onclick="loadChat('${c.id}')">
-      <span class="chat-list-title">${escapeHTML(c.title || 'Без назви')}</span>
-      <button class="chat-list-del" onclick="event.stopPropagation();deleteChatById('${c.id}')" title="Видалити чат">×</button>
+    ${chats.map(c => `<div class="chat-list-item ${String(c.id)===String(currentChatId)?'active':''}" onclick="loadChat(${jsArg(c.id)})">
+      <span class="chat-list-title">${esc(c.title || 'Без назви')}</span>
+      <button class="chat-list-del" onclick="event.stopPropagation();deleteChatById(${jsArg(c.id)})" title="Видалити чат">×</button>
     </div>`).join('')}
   `).join('');
 }
@@ -2851,7 +2865,7 @@ function renderReflect() {
     : '';
   document.getElementById('reflectqs').innerHTML = shuffleBtn + indices.map(idx=>{
     const q = pool[idx]; if (!q) return '';
-    const ans = (answers[idx] || '').replace(/</g,'&lt;');
+    const ans = esc(answers[idx]);
     const catBadge = u.reflectRotate ? `<div class="rqcat">${q.cat}</div>` : '';
     return `
       <div class="rqbox">
@@ -3160,7 +3174,7 @@ async function renderBaseline() {
   ].filter(Boolean);
   el.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:12px 0">
-      ${allCards.map(c=>`<div><div class="sv" style="font-size:22px">${c.v}</div><div class="sl">${c.l}</div></div>`).join('')}
+      ${allCards.map(c=>`<div><div class="sv" style="font-size:22px">${esc(c.v)}</div><div class="sl">${c.l}</div></div>`).join('')}
     </div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Станом на ${date}</div>
     <button class="btn btn-out btn-sm" onclick="prepBaselineForm().then(()=>showBaselineForm())">Редагувати</button>`;
@@ -3193,11 +3207,11 @@ async function renderProgress() {
         const remain = Math.max(0, g.target - cur);
         const label = g.network === 'ig' ? 'Instagram' : 'TikTok';
         return `<div class="goal-row">
-          <div class="goal-head"><strong>${label}: ${cur} / ${g.target}</strong>
-            <button class="btn btn-red btn-sm" onclick="dbDelGoal('${g.id}')">✕</button>
+          <div class="goal-head"><strong>${label}: ${esc(cur)} / ${esc(g.target)}</strong>
+            <button class="btn btn-red btn-sm" onclick="dbDelGoal(${jsArg(g.id)})">✕</button>
           </div>
           <div class="goal-bar"><div class="goal-fill" style="width:${pct}%"></div></div>
-          <div class="goal-meta">${pct}% · залишилось ${remain}${g.deadline?` · до ${g.deadline}`:''}</div>
+          <div class="goal-meta">${pct}% · залишилось ${esc(remain)}${g.deadline?` · до ${esc(g.deadline)}`:''}</div>
         </div>`;
       }).join('');
 
