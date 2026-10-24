@@ -1000,14 +1000,39 @@ const DASHBOARD_WIDGETS = [
 
 const WIDGET_BY_ID = Object.fromEntries(DASHBOARD_WIDGETS.map(w => [w.id, w]));
 
+// Block width: 'wide' = full row, 'half' = one of two columns. Saved per user, chosen with the tabs on each block.
+function getDashSizes() {
+  try { return JSON.parse(localStorage.getItem('kishkas-dashboard-sizes-'+CU) || '{}') || {}; } catch { return {}; }
+}
+function getDashSize(id) {
+  const saved = getDashSizes()[id];
+  if (saved === 'wide' || saved === 'half') return saved;
+  return WIDGET_BY_ID[id].size === 'wide' ? 'wide' : 'half';
+}
+function setDashSize(id, size) {
+  const sizes = getDashSizes();
+  sizes[id] = size;
+  try { localStorage.setItem('kishkas-dashboard-sizes-'+CU, JSON.stringify(sizes)); } catch {}
+  const el = document.querySelector(`.dash-block[data-widget="${id}"]`);
+  if (!el) return;
+  el.classList.toggle('size-wide', size === 'wide');
+  el.querySelectorAll('.dash-size button').forEach(b => b.classList.toggle('on', b.dataset.size === size));
+  if (id === 'growth' && charts['dashGrowth']) charts['dashGrowth'].resize();
+}
+
 function blk(id, body, action) {
   const cfg = WIDGET_BY_ID[id];
-  const sizeClass = cfg.size === 'wide' ? ' size-wide' : '';
+  const size = getDashSize(id);
+  const sizeClass = size === 'wide' ? ' size-wide' : '';
   const iconHTML = cfg.icon ? `<i data-lucide="${cfg.icon}" style="width:15px;height:15px;color:${cfg.color};vertical-align:-2px"></i>` : '';
   const actBtn = action ? `<button class="dash-block-action" onclick="${action.fn}">${action.label}</button>` : '';
+  const sizeTabs = `<span class="dash-size" role="group" aria-label="Ширина блока">
+      <button type="button" data-size="half" class="${size === 'half' ? 'on' : ''}" onclick="setDashSize('${id}','half')" aria-label="Половина ширини" title="Половина"><svg width="14" height="12" viewBox="0 0 14 12" fill="currentColor"><rect x="1" y="1" width="5" height="10" rx="1.5"/><rect x="8" y="1" width="5" height="10" rx="1.5" opacity=".35"/></svg></button>
+      <button type="button" data-size="wide" class="${size === 'wide' ? 'on' : ''}" onclick="setDashSize('${id}','wide')" aria-label="Вся ширина" title="Вся ширина"><svg width="14" height="12" viewBox="0 0 14 12" fill="currentColor"><rect x="1" y="1" width="12" height="10" rx="1.5"/></svg></button>
+    </span>`;
   return `<div class="dash-block${sizeClass}" data-widget="${id}">
     <div class="dash-accent" style="background:${cfg.color}"></div>
-    <div class="dash-block-title"><span style="display:inline-flex;align-items:center;gap:8px">${iconHTML}${cfg.name}</span>${actBtn}</div>
+    <div class="dash-block-title"><span style="display:inline-flex;align-items:center;gap:8px">${iconHTML}${cfg.name}</span><span class="dash-block-tools">${actBtn}${sizeTabs}</span></div>
     ${body}
   </div>`;
 }
@@ -1974,6 +1999,8 @@ function initDashSortable() {
     ghostClass: 'dash-drag-ghost',
     chosenClass: 'dash-drag-chosen',
     handle: '.dash-block-title',
+    filter: '.dash-size, .dash-block-action',
+    preventOnFilter: false,
     onEnd: function() {
       try {
         const order = Array.from(container.querySelectorAll('.dash-block')).map(b => b.dataset.widget);
