@@ -10,8 +10,21 @@ async function chatFetch(url, opts = {}) {
   const { data: { session } } = await sb.auth.getSession();
   const headers = { ...(opts.headers || {}) };
   if (session?.access_token) headers['Authorization'] = 'Bearer ' + session.access_token;
-  return fetch(url, { ...opts, headers });
+  const res = await fetch(url, { ...opts, headers });
+  if (res.status === 429 || res.status === 503) {
+    const body = await res.clone().json().catch(() => ({}));
+    if (body.error === 'rate_limited') {
+      const min = Math.max(1, Math.ceil((Number(body.retry_after) || 3600) / 60));
+      throw new ChatError(`Ліміт ШІ-запитів вичерпано (${body.limit || 30} на годину). Спробуй знову через ${min} хв.`);
+    }
+    if (body.error === 'rate_limit_unavailable') throw new ChatError('ШІ тимчасово недоступний. Спробуй трохи пізніше.');
+  }
+  return res;
 }
+
+// An error whose message is ready to show to the user
+class ChatError extends Error {}
+const chatErrorText = (e, fallback) => (e instanceof ChatError ? e.message : fallback);
 
 // ══════════════════════════════════════════
 // USER PROFILES
@@ -1791,7 +1804,7 @@ async function generateMentorPlan() {
     renderMentor();
   } catch(e) {
     console.error('[mentor plan] gen failed:', e);
-    showToast('Помилка: ' + e.message, 'error');
+    showToast(e instanceof ChatError ? e.message : 'Помилка: ' + e.message, 'error');
     if (btn) { btn.disabled = false; btn.textContent = '🤖 Згенерувати персональний план'; }
     regenBtns.forEach(b => { b.disabled = false; b.textContent = '↻ Перегенерувати'; });
   } finally {
@@ -2667,7 +2680,7 @@ async function sendChat() {
     document.getElementById('aist').textContent = '✓';
     setTimeout(()=>document.getElementById('aist').textContent='',2000);
   } catch(e) {
-    bubbleEl.textContent = 'Помилка з\'єднання. Перевір інтернет.';
+    bubbleEl.textContent = chatErrorText(e, 'Помилка з\'єднання. Перевір інтернет.');
     document.getElementById('aist').textContent = '❌';
     return;
   }
@@ -2876,7 +2889,7 @@ async function analyzeReflect(idx) {
     const reply = data.content?.find(b=>b.type==='text')?.text || 'Помилка.';
     out.textContent = reply; out.classList.add('on');
     st.textContent = '✓'; setTimeout(()=>st.textContent='',2000);
-  } catch { out.textContent='Помилка з\'єднання.'; out.classList.add('on'); st.textContent='❌'; }
+  } catch(e) { out.textContent=chatErrorText(e, 'Помилка з\'єднання.'); out.classList.add('on'); st.textContent='❌'; }
 }
 
 // ══════════════════════════════════════════
@@ -3045,7 +3058,7 @@ async function generateAudiencePortrait() {
     out.classList.add('on');
     await dbSaveAudience(input, reply);
   } catch (e) {
-    out.textContent = 'Помилка з\'єднання.';
+    out.textContent = chatErrorText(e, 'Помилка з\'єднання.');
     out.classList.add('on');
   } finally {
     btn.disabled = false; btn.textContent = orig;
@@ -3308,7 +3321,7 @@ async function analyzePractice(id) {
     const data = await res.json();
     out.textContent = data.content?.find(b=>b.type==='text')?.text || 'Помилка.';
   } catch(e) {
-    out.textContent = 'Помилка з\'єднання.';
+    out.textContent = chatErrorText(e, 'Помилка з\'єднання.');
   }
 }
 
