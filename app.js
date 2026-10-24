@@ -791,7 +791,7 @@ async function performLogout() {
   document.querySelectorAll('.pcard').forEach(c => c.classList.remove('sel'));
   // Reset title and favicon to platform defaults
   document.title = 'Sprout · платформа для росту';
-  setEmojiFavicon('🌱');
+  setEmojiFavicon('🌱', '#22C55E');
   goTab('home');
 }
 
@@ -1314,7 +1314,9 @@ function pickEmoji(e) {
   if (pick && e) pick.style.display = 'none';
 }
 
-function setEmojiFavicon(emoji) {
+// Browser-tab icon (SVG) plus the iOS home-screen icon (PNG, because
+// apple-touch-icon does not accept SVG). Both follow the user's emoji and accent colour.
+function setEmojiFavicon(emoji, color) {
   if (!emoji) emoji = '🌱';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50" y="55" font-size="78" text-anchor="middle" dominant-baseline="middle">${emoji}</text></svg>`;
   const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
@@ -1326,6 +1328,28 @@ function setEmojiFavicon(emoji) {
     document.head.appendChild(link);
   }
   link.href = url;
+  setAppleTouchIcon(emoji, color);
+}
+
+function setAppleTouchIcon(emoji, color) {
+  const link = document.getElementById('apple-touch-icon');
+  if (!link) return;
+  try {
+    const bg = /^#[0-9a-f]{6}$/i.test(color || '') ? color : '#22C55E';
+    const size = 180;
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = bg;            // iOS fills transparency with black, so paint a solid background
+    ctx.fillRect(0, 0, size, size);
+    ctx.font = `${Math.round(size * 0.62)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(emoji, size / 2, size / 2 + size * 0.04);
+    link.href = c.toDataURL('image/png');
+  } catch (e) {
+    // keep the static assets/apple-touch-icon.png from index.html
+  }
 }
 
 function requireAuth() {
@@ -1412,7 +1436,7 @@ async function applyProfileOverrides() {
     const defaultEmoji = u.emoji || '🌱';
     const defaultName = u.brand || u.name || 'користувач';
     if (!p) {
-      setEmojiFavicon(defaultEmoji);
+      setEmojiFavicon(defaultEmoji, u.color);
       document.title = `${defaultName} · платформа для росту`;
       return;
     }
@@ -1424,7 +1448,7 @@ async function applyProfileOverrides() {
   const usedName = p.display_name || defaultName;
   const em = document.getElementById('nbemoji');
   if (em) em.textContent = usedEmoji;
-  setEmojiFavicon(usedEmoji);
+  setEmojiFavicon(usedEmoji, p.accent_color || u.color);
   document.title = `${usedName} · платформа для росту`;
   if (p.accent_color) {
     document.documentElement.style.setProperty('--ac', p.accent_color);
