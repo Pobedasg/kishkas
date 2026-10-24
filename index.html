@@ -319,7 +319,7 @@ create policy if not exists "own_baseline" on baseline
       </div>
       <div id="dashboardWidgets" class="dash-grid"></div>
       <button id="dashSettingsBtn" class="btn btn-out btn-sm" onclick="openDashSettings()" style="margin-top:16px">⚙ Налаштувати дашборд</button>
-      <div id="dashDragHint" style="font-size:12px;color:var(--muted);margin-top:8px">Перетягни блоки щоб змінити порядок — він збережеться.</div>
+      <div id="dashDragHint" style="font-size:12px;color:var(--muted);margin-top:8px">Перетягни блоки щоб змінити порядок, а вкладками на блоці — ширину. Усе збережеться.</div>
     </div>
   </div>
 
@@ -645,7 +645,7 @@ create policy if not exists "own_baseline" on baseline
 <script src="app.js"></script>
 
 <!-- TOUR OFFER BANNER -->
-<div id="tour-offer" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:8000;background:var(--ink);color:var(--bg);border-radius:16px;padding:16px 20px;display:none;align-items:center;gap:14px;box-shadow:0 12px 40px rgba(0,0,0,.25);max-width:92%;white-space:nowrap;animation:toastIn .3s ease;">
+<div id="tour-offer" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:8000;background:var(--ink);color:var(--bg);border-radius:16px;padding:16px 20px;display:none;align-items:center;gap:14px;box-shadow:0 12px 40px rgba(0,0,0,.25);width:max-content;max-width:calc(100vw - 24px);flex-wrap:wrap;justify-content:center;animation:toastIn .3s ease;">
   <span style="font-size:18px">👋</span>
   <span style="font-size:14px;font-weight:500">Хочеш екскурсію по платформі?</span>
   <button onclick="startDemoTour()" style="background:var(--ac);color:#fff;border:none;padding:8px 16px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Так, покажи →</button>
