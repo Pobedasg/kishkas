@@ -198,25 +198,35 @@ alter table baseline enable row level security;
 alter table chats enable row level security;
 alter table user_questionnaire enable row level security;
 alter table mentor_plan enable row level security;
-create policy if not exists "own_chats" on chats
+drop policy if exists "own_chats" on chats;
+create policy "own_chats" on chats
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
-create policy if not exists "own_questionnaire" on user_questionnaire
+drop policy if exists "own_questionnaire" on user_questionnaire;
+create policy "own_questionnaire" on user_questionnaire
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
-create policy if not exists "own_mentor_plan" on mentor_plan
+drop policy if exists "own_mentor_plan" on mentor_plan;
+create policy "own_mentor_plan" on mentor_plan
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
-create policy if not exists "own_notes" on notes
+drop policy if exists "own_notes" on notes;
+create policy "own_notes" on notes
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
-create policy if not exists "own_stats" on stats
+drop policy if exists "own_stats" on stats;
+create policy "own_stats" on stats
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
-create policy if not exists "own_reflections" on reflections
+drop policy if exists "own_reflections" on reflections;
+create policy "own_reflections" on reflections
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
-create policy if not exists "own_streak" on streak_days
+drop policy if exists "own_streak" on streak_days;
+create policy "own_streak" on streak_days
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
-create policy if not exists "own_goals" on goals
+drop policy if exists "own_goals" on goals;
+create policy "own_goals" on goals
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
-create policy if not exists "own_audience" on audience_portrait
+drop policy if exists "own_audience" on audience_portrait;
+create policy "own_audience" on audience_portrait
   using (auth.uid()=user_id) with check (auth.uid()=user_id);
-create policy if not exists "own_baseline" on baseline
+drop policy if exists "own_baseline" on baseline;
+create policy "own_baseline" on baseline
   using (auth.uid()=user_id) with check (auth.uid()=user_id);</pre>
     <button class="btn btn-ink" onclick="document.getElementById('setup-modal').classList.remove('on')">Зрозуміло</button>
   </div>
